@@ -58,7 +58,7 @@ struct DetailView: View {
             await viewModel.loadDetail(path: detailURL)
         }
         .fullScreenCover(item: $playingSource) { source in
-            PlayerView(source: source)
+            PlayerView(source: source, allSources: viewModel.sources)
         }
     }
 
@@ -187,46 +187,116 @@ struct DetailView: View {
 
 struct PlayerView: View {
     let source: PlaySource
+    let allSources: [PlaySource]
     @Environment(\.dismiss) private var dismiss
+    @State private var currentSource: PlaySource
     @State private var player: AVPlayer?
     @State private var errorMessage: String?
 
+    private let episodeColumns = [
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8)
+    ]
+
+    init(source: PlaySource, allSources: [PlaySource]) {
+        self.source = source
+        self.allSources = allSources
+        _currentSource = State(initialValue: source)
+    }
+
     var body: some View {
+        VStack(spacing: 0) {
+            playerArea
+            episodePanel
+        }
+        .background(Color.black.ignoresSafeArea())
+    }
+
+    private var playerArea: some View {
         Group {
             if let error = errorMessage {
                 VStack(spacing: 16) {
                     Text("播放失败")
                         .font(.headline)
+                        .foregroundColor(.white)
                     Text(error)
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
-                    Button("关闭") {
-                        dismiss()
-                    }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding()
             } else if let player = player {
                 VideoPlayer(player: player)
+                    .aspectRatio(16/9, contentMode: .fit)
                     .onDisappear {
                         player.pause()
                     }
             } else {
                 ProgressView("加载中...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-        }
-        .task {
-            await setupPlayer()
         }
     }
 
-    private func setupPlayer() async {
-        guard let url = URL(string: source.url), !source.url.isEmpty else {
+    private var episodePanel: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 8) {
+                if availableEpisodes.isEmpty {
+                    Text("暂无剧集")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                } else {
+                    LazyVGrid(columns: episodeColumns, spacing: 8) {
+                        ForEach(availableEpisodes) { episode in
+                            Button(action: {
+                                switchTo(episode)
+                            }) {
+                                Text(episode.name)
+                                    .font(.caption)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 8)
+                                    .background(currentSource.id == episode.id ? Color.blue : Color.white.opacity(0.12))
+                                    .foregroundColor(.white)
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
+            .padding(.bottom, 16)
+        }
+        .background(Color(.systemGray6).opacity(0.08))
+    }
+
+    private var availableEpisodes: [PlaySource] {
+        allSources.flatMap { source in
+            source.episodes.isEmpty ? [source] : source.episodes
+        }
+    }
+
+    private func switchTo(_ newSource: PlaySource) {
+        currentSource = newSource
+        player?.pause()
+        player = nil
+        errorMessage = nil
+        setupPlayer()
+    }
+
+    private func setupPlayer() {
+        guard let url = URL(string: currentSource.url), !currentSource.url.isEmpty else {
             errorMessage = "播放地址无效"
             return
         }
         let item = AVPlayerItem(url: url)
-        player = AVPlayer(playerItem: item)
-        player?.play()
+        let newPlayer = AVPlayer(playerItem: item)
+        player = newPlayer
+        newPlayer.play()
     }
 }
