@@ -3,6 +3,7 @@ import Foundation
 @MainActor
 final class DetailViewModel: ObservableObject {
     @Published var movieTitle = ""
+    @Published var posterURL: String?
     @Published var sources: [PlaySource] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
@@ -35,6 +36,7 @@ final class DetailViewModel: ObservableObject {
         do {
             let detail = try await source.fetchMovieDetail(path: path)
             movieTitle = detail.title
+            posterURL = detail.posterURL
             sources = detail.sources
         } catch {
             errorMessage = error.localizedDescription
@@ -56,6 +58,7 @@ final class DetailViewModel: ObservableObject {
             }
             let detail = try await source.fetchMovieDetail(path: matched.id)
             movieTitle = detail.title
+            posterURL = detail.posterURL
             sources = detail.sources
         } catch {
             errorMessage = error.localizedDescription

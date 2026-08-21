@@ -1,4 +1,4 @@
-﻿import Foundation
+import Foundation
 
 struct MovieItem: Identifiable, Codable, Hashable {
     let id: String
@@ -21,6 +21,7 @@ struct PlaySource: Identifiable, Hashable {
 struct MovieDetail {
     let movieId: String
     let title: String
+    let posterURL: String?
     let sources: [PlaySource]
 }
 

@@ -22,42 +22,24 @@ struct DetailView: View {
                     }
                 }
             } else {
-                VStack {
-                    Picker("采集站", selection: $viewModel.selectedSite) {
-                        ForEach(viewModel.sites) { site in
-                            Text(site.name).tag(site)
-                        }
-                    }
-                    .pickerStyle(SegmentedPickerStyle())
-                    .padding(.horizontal)
-                    .onChange(of: viewModel.selectedSite) { newSite in
-                        Task { await viewModel.loadDetail(path: detailURL, site: newSite) }
-                    }
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        headerView
 
-                    List {
-                        ForEach(viewModel.sources) { source in
-                            if source.episodes.isEmpty {
-                                Button(action: {
-                                    playingSource = source
-                                }) {
-                                    sourceRow(source)
-                                }
-                            } else {
-                                DisclosureGroup {
-                                    ForEach(source.episodes) { episode in
-                                        Button(action: {
-                                            playingSource = episode
-                                        }) {
-                                            sourceRow(episode)
-                                        }
-                                    }
-                                } label: {
-                                    Text(source.name)
-                                        .font(.headline)
-                                }
+                        Picker("采集站", selection: $viewModel.selectedSite) {
+                            ForEach(viewModel.sites) { site in
+                                Text(site.name).tag(site)
                             }
                         }
+                        .pickerStyle(SegmentedPickerStyle())
+                        .padding(.horizontal)
+                        .onChange(of: viewModel.selectedSite) { newSite in
+                            Task { await viewModel.loadDetail(path: detailURL, site: newSite) }
+                        }
+
+                        episodeSection
                     }
+                    .padding(.vertical)
                 }
             }
         }
@@ -70,14 +52,95 @@ struct DetailView: View {
         }
     }
 
-    private func sourceRow(_ source: PlaySource) -> some View {
-        HStack {
-            Text(source.name)
+    private var headerView: some View {
+        HStack(alignment: .top, spacing: 16) {
+            if let posterURL = viewModel.posterURL, let url = URL(string: posterURL) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().aspectRatio(2/3, contentMode: .fill)
+                    default:
+                        posterPlaceholder
+                    }
+                }
+                .frame(width: 100, height: 150)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            } else {
+                posterPlaceholder
+                    .frame(width: 100, height: 150)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(viewModel.movieTitle)
+                    .font(.headline)
+                    .lineLimit(3)
+                Text("采集站：\(viewModel.selectedSite.name)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
             Spacer()
-            Text(source.format.uppercased())
-                .font(.caption)
-                .foregroundColor(.secondary)
         }
+        .padding(.horizontal)
+    }
+
+    private var posterPlaceholder: some View {
+        RoundedRectangle(cornerRadius: 8)
+            .fill(
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color(red: 0.15, green: 0.18, blue: 0.28),
+                        Color(red: 0.30, green: 0.24, blue: 0.42)
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .overlay(
+                Image(systemName: "film")
+                    .font(.title)
+                    .foregroundColor(.white.opacity(0.7))
+            )
+    }
+
+    private var episodeSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(viewModel.sources) { source in
+                if source.episodes.isEmpty {
+                    Button(action: {
+                        playingSource = source
+                    }) {
+                        Text(source.name)
+                            .font(.subheadline)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(Color.blue.opacity(0.15))
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                    }
+                } else {
+                    Text(source.name)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(source.episodes) { episode in
+                                Button(action: {
+                                    playingSource = episode
+                                }) {
+                                    Text(episode.name)
+                                        .font(.caption)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 8)
+                                        .background(Color.blue.opacity(0.15))
+                                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .padding(.horizontal)
     }
 }
 

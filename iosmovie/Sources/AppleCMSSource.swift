@@ -40,7 +40,7 @@ final class AppleCMSSource: MovieSourceProtocol {
         let title = item.vod_name
         let sources = parsePlaySources(from: item.vod_play_url, playFrom: item.vod_play_from)
 
-        return MovieDetail(movieId: movieId, title: title, sources: sources)
+        return MovieDetail(movieId: movieId, title: title, posterURL: item.vod_pic, sources: sources)
     }
 
     func fetchCategories() async throws -> [MovieCategory] {
