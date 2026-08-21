@@ -29,7 +29,9 @@ final class DDYSSource: MovieSourceProtocol {
         guard let path = path else { return nil }
         let slug = path.replacingOccurrences(of: "/movie/", with: "")
         return "https://img.ddys.io/movies/\(slug).webp"
-    }    func searchMovies(keyword: String) async throws -> [MovieItem] {
+    }
+
+    func searchMovies(keyword: String) async throws -> [MovieItem] {
         guard let encoded = keyword.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
               let url = URL(string: baseURL + "/api/search-suggest?q=" + encoded) else { throw URLError(.badURL) }
         let (data, _) = try await session.data(from: url)
