@@ -122,7 +122,7 @@ final class DDYSSource: MovieSourceProtocol {
               let match = regex.firstMatch(in: snippet, range: NSRange(snippet.startIndex..<snippet.endIndex, in: snippet)),
               let urlRange = Range(match.range(at: 1), in: snippet) else { return nil }
         let rawURL = String(snippet[urlRange])
-        return rawURL.replacingOccurrences(of: "\/", with: "/")
+        return rawURL
     }
 }
 
