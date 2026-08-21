@@ -1,12 +1,14 @@
 import Foundation
 
 final class AppleCMSSource: MovieSourceProtocol {
-    let sourceName = "苹果CMS"
-    let baseURL = "https://cj.lziapi.com/api.php/provide/vod/from/lzm3u8"
+    let sourceName: String
+    let baseURL: String
 
     private let session: URLSession
 
-    init() {
+    init(site: CMSSite = .defaultSite) {
+        sourceName = site.name
+        baseURL = site.baseURL
         let config = URLSessionConfiguration.default
         config.httpAdditionalHeaders = [
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",

@@ -22,26 +22,39 @@ struct DetailView: View {
                     }
                 }
             } else {
-                List {
-                    ForEach(viewModel.sources) { source in
-                        if source.episodes.isEmpty {
-                            Button(action: {
-                                playingSource = source
-                            }) {
-                                sourceRow(source)
-                            }
-                        } else {
-                            DisclosureGroup {
-                                ForEach(source.episodes) { episode in
-                                    Button(action: {
-                                        playingSource = episode
-                                    }) {
-                                        sourceRow(episode)
-                                    }
+                VStack {
+                    Picker("采集站", selection: $viewModel.selectedSite) {
+                        ForEach(viewModel.sites) { site in
+                            Text(site.name).tag(site)
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    .padding(.horizontal)
+                    .onChange(of: viewModel.selectedSite) { newSite in
+                        Task { await viewModel.loadDetail(path: detailURL, site: newSite) }
+                    }
+
+                    List {
+                        ForEach(viewModel.sources) { source in
+                            if source.episodes.isEmpty {
+                                Button(action: {
+                                    playingSource = source
+                                }) {
+                                    sourceRow(source)
                                 }
-                            } label: {
-                                Text(source.name)
-                                    .font(.headline)
+                            } else {
+                                DisclosureGroup {
+                                    ForEach(source.episodes) { episode in
+                                        Button(action: {
+                                            playingSource = episode
+                                        }) {
+                                            sourceRow(episode)
+                                        }
+                                    }
+                                } label: {
+                                    Text(source.name)
+                                        .font(.headline)
+                                }
                             }
                         }
                     }
