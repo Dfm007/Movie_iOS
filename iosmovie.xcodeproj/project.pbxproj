@@ -63,6 +63,7 @@
 				AA0000000007 /* DetailView.swift */,
 				AA0000000008 /* HomeView.swift */,
 				AA0000000009 /* AppleCMSSource.swift */,
+				A1000000009 /* CacheManager.swift */,
 				CC0000000001 /* Info.plist */,
 			);
 			path = iosmovie;
@@ -76,7 +77,6 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-				A1000000009 /* CacheManager.swift */,
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -144,10 +144,10 @@
 				BB0000000007 /* DetailView.swift in Sources */,
 				BB0000000008 /* HomeView.swift in Sources */,
 				BB0000000009 /* AppleCMSSource.swift in Sources */,
+				B1000000009 /* CacheManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-				B1000000009 /* CacheManager.swift in Sources */,
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
