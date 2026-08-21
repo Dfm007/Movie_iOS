@@ -81,7 +81,7 @@ final class DDYSSource: MovieSourceProtocol {
                 let id = String(html[idRange])
                 let rawURL = String(html[urlRange])
                 let format = String(html[formatRange])
-                let cleanURL = rawURL.replacingOccurrences(of: "\/", with: "/")
+                let cleanURL = rawURL
                 sources.append(contentsOf: parseSource(id: id, rawURL: cleanURL, format: format))
             }
         }
