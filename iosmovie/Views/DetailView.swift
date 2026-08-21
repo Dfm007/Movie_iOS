@@ -1,4 +1,4 @@
-﻿import SwiftUI
+import SwiftUI
 import AVKit
 
 struct DetailView: View {
@@ -22,7 +22,7 @@ struct DetailView: View {
                 }
             } else {
                 List {
-                    ForEach(viewModel.detail?.sources ?? []) { source in
+                    ForEach(viewModel.sources) { source in
                         Button(action: {
                             playSource(source)
                         }) {
@@ -38,7 +38,7 @@ struct DetailView: View {
                 }
             }
         }
-        .navigationTitle(viewModel.detail?.title ?? "")
+        .navigationTitle(viewModel.movieTitle)
         .task {
             await viewModel.loadDetail(path: detailURL)
         }
