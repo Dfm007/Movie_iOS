@@ -20,7 +20,7 @@ final class DDYSSource: MovieSourceProtocol {
         let (data, _) = try await session.data(from: url)
         let resp = try JSONDecoder().decode(HotMoviesResponse.self, from: data)
         return resp.data.map { item in
-            MovieItem(id: String(item.id ?? 0), title: item.title, type: item.type ?? "", year: String(item.year ?? 0), rating: item.rating ?? "", detailURL: item.url ?? "")
+            MovieItem(id: String(item.id ?? 0), title: item.title, type: item.type ?? "", year: String(item.year ?? 0), rating: item.rating ?? "", detailURL: item.url ?? "", posterURL: "https://img.ddys.io/movies/\(item.slug ?? "").webp")
         }
     }
 
@@ -30,7 +30,7 @@ final class DDYSSource: MovieSourceProtocol {
         let (data, _) = try await session.data(from: url)
         let resp = try JSONDecoder().decode(SearchResponse.self, from: data)
         return resp.data.map { item in
-            MovieItem(id: item.slug ?? "", title: item.title, type: item.type ?? "", year: String(item.year ?? 0), rating: item.rating ?? "", detailURL: item.url ?? "")
+            MovieItem(id: item.slug ?? "", title: item.title, type: item.type ?? "", year: String(item.year ?? 0), rating: item.rating ?? "", detailURL: item.url ?? "", posterURL: "https://img.ddys.io/movies/\(item.slug ?? "").webp")
         }
     }
 

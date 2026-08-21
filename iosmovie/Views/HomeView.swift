@@ -1,4 +1,4 @@
-﻿import SwiftUI
+import SwiftUI
 
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
@@ -31,7 +31,7 @@ struct HomeView: View {
                             ForEach(viewModel.movies) { movie in
                                 NavigationLink(destination: DetailView(detailURL: movie.detailURL)) {
                                     VStack(alignment: .leading, spacing: 6) {
-                                        posterPlaceholder(for: movie)
+                                        posterView(for: movie)
                                         Text(movie.title)
                                             .font(.caption)
                                             .fontWeight(.medium)
@@ -66,6 +66,31 @@ struct HomeView: View {
             .task {
                 await viewModel.loadHome()
             }
+        }
+    }
+
+    @ViewBuilder
+    private func posterView(for movie: MovieItem) -> some View {
+        if let posterURL = movie.posterURL, let url = URL(string: posterURL) {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .empty:
+                    posterPlaceholder(for: movie)
+                        .overlay(ProgressView())
+                case .success(let image):
+                    image
+                        .resizable()
+                        .aspectRatio(2/3, contentMode: .fill)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                case .failure:
+                    posterPlaceholder(for: movie)
+                @unknown default:
+                    posterPlaceholder(for: movie)
+                }
+            }
+            .aspectRatio(2/3, contentMode: .fit)
+        } else {
+            posterPlaceholder(for: movie)
         }
     }
 
