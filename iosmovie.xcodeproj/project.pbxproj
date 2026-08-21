@@ -9,7 +9,6 @@
 		BB0000000001 /* iosmovieApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000001 /* iosmovieApp.swift */; };
 		BB0000000002 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000002 /* Models.swift */; };
 		BB0000000003 /* MovieSourceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000003 /* MovieSourceProtocol.swift */; };
-		BB0000000004 /* DDYSSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000004 /* DDYSSource.swift */; };
 		BB0000000005 /* DetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000005 /* DetailViewModel.swift */; };
 		BB0000000006 /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000006 /* HomeViewModel.swift */; };
 		BB0000000007 /* DetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000007 /* DetailView.swift */; };
@@ -23,7 +22,6 @@
 		AA0000000001 /* iosmovieApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "iosmovieApp.swift"; sourceTree = "<group>"; };
 		AA0000000002 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Models/Models.swift"; sourceTree = "<group>"; };
 		AA0000000003 /* MovieSourceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Protocols/MovieSourceProtocol.swift"; sourceTree = "<group>"; };
-		AA0000000004 /* DDYSSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/DDYSSource.swift"; sourceTree = "<group>"; };
 		AA0000000005 /* DetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ViewModels/DetailViewModel.swift"; sourceTree = "<group>"; };
 		AA0000000006 /* HomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ViewModels/HomeViewModel.swift"; sourceTree = "<group>"; };
 		AA0000000007 /* DetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/DetailView.swift"; sourceTree = "<group>"; };
@@ -59,7 +57,6 @@
 				AA0000000001 /* iosmovieApp.swift */,
 				AA0000000002 /* Models.swift */,
 				AA0000000003 /* MovieSourceProtocol.swift */,
-				AA0000000004 /* DDYSSource.swift */,
 				AA0000000005 /* DetailViewModel.swift */,
 				AA0000000006 /* HomeViewModel.swift */,
 				AA0000000007 /* DetailView.swift */,
@@ -141,7 +138,6 @@
 				BB0000000001 /* iosmovieApp.swift in Sources */,
 				BB0000000002 /* Models.swift in Sources */,
 				BB0000000003 /* MovieSourceProtocol.swift in Sources */,
-				BB0000000004 /* DDYSSource.swift in Sources */,
 				BB0000000005 /* DetailViewModel.swift in Sources */,
 				BB0000000006 /* HomeViewModel.swift in Sources */,
 				BB0000000007 /* DetailView.swift in Sources */,
