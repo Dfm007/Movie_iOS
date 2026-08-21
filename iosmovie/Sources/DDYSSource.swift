@@ -20,17 +20,22 @@ final class DDYSSource: MovieSourceProtocol {
         let (data, _) = try await session.data(from: url)
         let resp = try JSONDecoder().decode(HotMoviesResponse.self, from: data)
         return resp.data.map { item in
-            MovieItem(id: String(item.id ?? 0), title: item.title, type: item.type ?? "", year: String(item.year ?? 0), rating: item.rating ?? "", detailURL: item.url ?? "", posterURL: "https://img.ddys.io/movies/\(item.slug ?? "").webp")
+            MovieItem(id: String(item.id ?? 0), title: item.title, type: item.type ?? "", year: String(item.year ?? 0), rating: item.rating ?? "", detailURL: item.url ?? "", posterURL: Self.posterURL(from: item.url))
         }
     }
 
-    func searchMovies(keyword: String) async throws -> [MovieItem] {
+
+    private static func posterURL(from path: String?) -> String? {
+        guard let path = path else { return nil }
+        let slug = path.replacingOccurrences(of: "/movie/", with: "")
+        return "https://img.ddys.io/movies/\(slug).webp"
+    }    func searchMovies(keyword: String) async throws -> [MovieItem] {
         guard let encoded = keyword.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
               let url = URL(string: baseURL + "/api/search-suggest?q=" + encoded) else { throw URLError(.badURL) }
         let (data, _) = try await session.data(from: url)
         let resp = try JSONDecoder().decode(SearchResponse.self, from: data)
         return resp.data.map { item in
-            MovieItem(id: item.slug ?? "", title: item.title, type: item.type ?? "", year: String(item.year ?? 0), rating: item.rating ?? "", detailURL: item.url ?? "", posterURL: "https://img.ddys.io/movies/\(item.slug ?? "").webp")
+            MovieItem(id: item.slug ?? "", title: item.title, type: item.type ?? "", year: String(item.year ?? 0), rating: item.rating ?? "", detailURL: item.url ?? "", posterURL: Self.posterURL(from: item.url))
         }
     }
 
