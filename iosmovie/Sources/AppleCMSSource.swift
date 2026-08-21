@@ -194,6 +194,26 @@ private struct CMSMovieItem: Codable {
     let vod_pic: String?
     let vod_play_url: String?
     let vod_play_from: String?
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        vod_name = try container.decode(String.self, forKey: .vod_name)
+        type_name = try container.decodeIfPresent(String.self, forKey: .type_name)
+        vod_year = try container.decodeIfPresent(String.self, forKey: .vod_year)
+        vod_score = try container.decodeIfPresent(String.self, forKey: .vod_score)
+        vod_pic = try container.decodeIfPresent(String.self, forKey: .vod_pic)
+        vod_play_url = try container.decodeIfPresent(String.self, forKey: .vod_play_url)
+        vod_play_from = try container.decodeIfPresent(String.self, forKey: .vod_play_from)
+        if let str = try? container.decode(String.self, forKey: .vod_id) {
+            vod_id = str
+        } else {
+            vod_id = String(try container.decode(Int.self, forKey: .vod_id))
+        }
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case vod_id, vod_name, type_name, vod_year, vod_score, vod_pic, vod_play_url, vod_play_from
+    }
 }
 
 private struct CMSCategoryResponse: Codable {
