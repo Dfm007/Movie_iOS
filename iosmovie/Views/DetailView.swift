@@ -1,4 +1,4 @@
-﻿import SwiftUI
+import SwiftUI
 import AVKit
 
 struct DetailView: View {
@@ -28,29 +28,20 @@ struct DetailView: View {
                             Button(action: {
                                 playingSource = source
                             }) {
-                                HStack {
-                                    Text(source.name)
-                                    Spacer()
-                                    Text(source.format.uppercased())
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
+                                sourceRow(source)
                             }
                         } else {
-                            Section(header: Text(source.name)) {
+                            DisclosureGroup {
                                 ForEach(source.episodes) { episode in
                                     Button(action: {
                                         playingSource = episode
                                     }) {
-                                        HStack {
-                                            Text(episode.name)
-                                            Spacer()
-                                            Text(episode.format.uppercased())
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
-                                        }
+                                        sourceRow(episode)
                                     }
                                 }
+                            } label: {
+                                Text(source.name)
+                                    .font(.headline)
                             }
                         }
                     }
@@ -63,6 +54,16 @@ struct DetailView: View {
         }
         .fullScreenCover(item: $playingSource) { source in
             PlayerView(source: source)
+        }
+    }
+
+    private func sourceRow(_ source: PlaySource) -> some View {
+        HStack {
+            Text(source.name)
+            Spacer()
+            Text(source.format.uppercased())
+                .font(.caption)
+                .foregroundColor(.secondary)
         }
     }
 }
