@@ -26,6 +26,8 @@ struct DetailView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         headerView
 
+                        infoSection
+
                         Picker("采集站", selection: $viewModel.selectedSite) {
                             ForEach(viewModel.sites) { site in
                                 Text(site.name).tag(site)
@@ -102,6 +104,38 @@ struct DetailView: View {
             )
     }
 
+
+    private var infoSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if !viewModel.remarks.isEmpty {
+                Text(viewModel.remarks)
+                    .font(.subheadline)
+                    .foregroundColor(.orange)
+            }
+            if !viewModel.year.isEmpty || !viewModel.area.isEmpty || !viewModel.className.isEmpty {
+                Text([viewModel.year, viewModel.area, viewModel.className].filter { !$0.isEmpty }.joined(separator: " / "))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            if !viewModel.director.isEmpty {
+                Text("导演：\(viewModel.director)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            if !viewModel.actors.isEmpty {
+                Text("主演：\(viewModel.actors)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            if !viewModel.intro.isEmpty {
+                Text(viewModel.intro)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(5)
+            }
+        }
+        .padding(.horizontal)
+    }
     private var episodeSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             ForEach(viewModel.sources) { source in

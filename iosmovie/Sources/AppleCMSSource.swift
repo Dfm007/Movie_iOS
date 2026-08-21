@@ -40,7 +40,19 @@ final class AppleCMSSource: MovieSourceProtocol {
         let title = item.vod_name
         let sources = parsePlaySources(from: item.vod_play_url, playFrom: item.vod_play_from)
 
-        return MovieDetail(movieId: movieId, title: title, posterURL: item.vod_pic, sources: sources)
+        return MovieDetail(
+            movieId: movieId,
+            title: title,
+            posterURL: item.vod_pic,
+            year: item.vod_year ?? "",
+            area: item.vod_area ?? "",
+            className: item.vod_class ?? "",
+            actors: item.vod_actor ?? "",
+            director: item.vod_director ?? "",
+            remarks: item.vod_remarks ?? "",
+            intro: item.vod_content ?? "",
+            sources: sources
+        )
     }
 
     func fetchCategories() async throws -> [MovieCategory] {
@@ -196,6 +208,13 @@ private struct CMSMovieItem: Codable {
     let vod_pic: String?
     let vod_play_url: String?
     let vod_play_from: String?
+    let vod_year: String?
+    let vod_area: String?
+    let vod_class: String?
+    let vod_actor: String?
+    let vod_director: String?
+    let vod_remarks: String?
+    let vod_content: String?
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -206,6 +225,13 @@ private struct CMSMovieItem: Codable {
         vod_pic = try container.decodeIfPresent(String.self, forKey: .vod_pic)
         vod_play_url = try container.decodeIfPresent(String.self, forKey: .vod_play_url)
         vod_play_from = try container.decodeIfPresent(String.self, forKey: .vod_play_from)
+        vod_year = try container.decodeIfPresent(String.self, forKey: .vod_year)
+        vod_area = try container.decodeIfPresent(String.self, forKey: .vod_area)
+        vod_class = try container.decodeIfPresent(String.self, forKey: .vod_class)
+        vod_actor = try container.decodeIfPresent(String.self, forKey: .vod_actor)
+        vod_director = try container.decodeIfPresent(String.self, forKey: .vod_director)
+        vod_remarks = try container.decodeIfPresent(String.self, forKey: .vod_remarks)
+        vod_content = try container.decodeIfPresent(String.self, forKey: .vod_content)
         if let str = try? container.decode(String.self, forKey: .vod_id) {
             vod_id = str
         } else {
@@ -214,7 +240,7 @@ private struct CMSMovieItem: Codable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case vod_id, vod_name, type_name, vod_year, vod_score, vod_pic, vod_play_url, vod_play_from
+        case vod_id, vod_name, type_name, vod_year, vod_score, vod_pic, vod_play_url, vod_play_from, vod_area, vod_class, vod_actor, vod_director, vod_remarks, vod_content
     }
 }
 
