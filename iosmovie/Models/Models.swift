@@ -7,6 +7,7 @@ struct MovieItem: Identifiable, Codable, Hashable {
     let year: String
     let rating: String
     let detailURL: String
+    var posterURL: String?
 }
 
 struct PlaySource: Identifiable, Hashable {

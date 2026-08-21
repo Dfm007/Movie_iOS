@@ -3,6 +3,12 @@
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
 
+    private let columns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
+
     var body: some View {
         NavigationView {
             Group {
@@ -20,20 +26,35 @@ struct HomeView: View {
                         }
                     }
                 } else {
-                    List(viewModel.movies) { movie in
-                        NavigationLink(destination: DetailView(detailURL: movie.detailURL)) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(movie.title)
-                                    .font(.body)
-                                HStack {
-                                    Text(movie.type)
-                                    Text(movie.year)
-                                    Text(movie.rating)
+                    ScrollView {
+                        LazyVGrid(columns: columns, spacing: 16) {
+                            ForEach(viewModel.movies) { movie in
+                                NavigationLink(destination: DetailView(detailURL: movie.detailURL)) {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        posterPlaceholder(for: movie)
+                                        Text(movie.title)
+                                            .font(.caption)
+                                            .fontWeight(.medium)
+                                            .lineLimit(2)
+                                            .multilineTextAlignment(.leading)
+                                        HStack(spacing: 4) {
+                                            if !movie.rating.isEmpty && movie.rating != "0.0" {
+                                                Text(movie.rating)
+                                                    .font(.system(size: 11))
+                                                    .foregroundColor(.orange)
+                                                    .fontWeight(.semibold)
+                                            }
+                                            Text(movie.type)
+                                                .font(.system(size: 11))
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
                                 }
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                                .buttonStyle(PlainButtonStyle())
                             }
                         }
+                        .padding(.horizontal, 12)
+                        .padding(.top, 8)
                     }
                 }
             }
@@ -46,5 +67,30 @@ struct HomeView: View {
                 await viewModel.loadHome()
             }
         }
+    }
+
+    private func posterPlaceholder(for movie: MovieItem) -> some View {
+        RoundedRectangle(cornerRadius: 8)
+            .fill(
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color(red: 0.15, green: 0.18, blue: 0.28),
+                        Color(red: 0.30, green: 0.24, blue: 0.42)
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .aspectRatio(2/3, contentMode: .fit)
+            .overlay(
+                VStack(spacing: 4) {
+                    Image(systemName: "film")
+                        .font(.system(size: 24))
+                        .foregroundColor(.white.opacity(0.7))
+                    Text(movie.type)
+                        .font(.system(size: 10))
+                        .foregroundColor(.white.opacity(0.6))
+                }
+            )
     }
 }
