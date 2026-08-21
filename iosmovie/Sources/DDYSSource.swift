@@ -50,7 +50,9 @@ final class DDYSSource: MovieSourceProtocol {
 
     func fetchMoviesByCategory(id: Int) async throws -> [MovieItem] {
         return try await fetchHomeMovies()
-    }    func fetchMovieDetail(path: String) async throws -> MovieDetail {
+    }
+
+    func fetchMovieDetail(path: String) async throws -> MovieDetail {
         let fullPath = path.hasPrefix("http") ? path : baseURL + path
         guard let url = URL(string: fullPath) else { throw URLError(.badURL) }
         var request = URLRequest(url: url)

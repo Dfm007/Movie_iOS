@@ -9,12 +9,149 @@ Build settings from command line:
     PROVISIONING_PROFILE_SPECIFIER = 
     SDKROOT = iphoneos18.5
 
-2026-08-21 22:25:10.605 xcodebuild[69834:165208] Error Domain=NSCocoaErrorDomain Code=3840 "JSON text did not start with array or object and option to allow fragments not set. around line 1, column 0." UserInfo={NSDebugDescription=JSON text did not start with array or object and option to allow fragments not set. around line 1, column 0., NSJSONSerializationErrorIndex=0}
-2026-08-21 22:25:10.627 xcodebuild[69834:165208] Writing error result bundle to /var/folders/_5/zjnzxgh147qcg3bb5cg2wvqw0000gn/T/ResultBundle_2026-21-08_22-25-0010.xcresult
-xcodebuild: error: Unable to read project 'iosmovie.xcodeproj'.
-	Reason: The project ‘iosmovie’ is damaged and cannot be opened due to a parse error. Examine the project file for invalid edits or unresolved source control conflicts.
+--- xcodebuild: WARNING: Using the first of multiple matching destinations:
+{ platform:iOS, id:dvtdevice-DVTiPhonePlaceholder-iphoneos:placeholder, name:Any iOS Device }
+{ platform:macOS, arch:arm64, variant:Designed for [iPad,iPhone], id:4daff6b00a22b1e9855f8ac81f5a513bdd2de421, name:My Mac }
+{ platform:iOS Simulator, id:dvtdevice-DVTiOSDeviceSimulatorPlaceholder-iphonesimulator:placeholder, name:Any iOS Simulator Device }
+note: Using codesigning identity override: 
+ComputePackagePrebuildTargetDependencyGraph
 
-Path: /Users/runner/work/iosmovie/iosmovie/iosmovie.xcodeproj
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (1 target)
+    Target 'iosmovie' in project 'iosmovie' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+Build description signature: 24f10600ab7001dcb4274b87582ddc33
+Build description path: /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/XCBuildData/24f10600ab7001dcb4274b87582ddc33.xcbuilddata
+ClangStatCache /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.5.sdk /Users/runner/work/iosmovie/iosmovie/build/SDKStatCaches.noindex/iphoneos18.5-22F76-a529daf784b3616c7c04a36aeb7f5c05.sdkstatcache
+    cd /Users/runner/work/iosmovie/iosmovie/iosmovie.xcodeproj
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.5.sdk -o /Users/runner/work/iosmovie/iosmovie/build/SDKStatCaches.noindex/iphoneos18.5-22F76-a529daf784b3616c7c04a36aeb7f5c05.sdkstatcache
+
+CreateBuildDirectory /Users/runner/work/iosmovie/iosmovie/build/Build/Products
+    cd /Users/runner/work/iosmovie/iosmovie/iosmovie.xcodeproj
+    builtin-create-build-directory /Users/runner/work/iosmovie/iosmovie/build/Build/Products
+
+CreateBuildDirectory /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex
+    cd /Users/runner/work/iosmovie/iosmovie/iosmovie.xcodeproj
+    builtin-create-build-directory /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex
+
+CreateBuildDirectory /Users/runner/work/iosmovie/iosmovie/build/Build/Products/Release-iphoneos
+    cd /Users/runner/work/iosmovie/iosmovie/iosmovie.xcodeproj
+    builtin-create-build-directory /Users/runner/work/iosmovie/iosmovie/build/Build/Products/Release-iphoneos
+
+WriteAuxiliaryFile /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie-623a88bfb0ff28b92c2d9588001fe11d-VFS-iphoneos/all-product-headers.yaml
+    cd /Users/runner/work/iosmovie/iosmovie/iosmovie.xcodeproj
+    write-file /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie-623a88bfb0ff28b92c2d9588001fe11d-VFS-iphoneos/all-product-headers.yaml
+
+CreateBuildDirectory /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/EagerLinkingTBDs/Release-iphoneos
+    cd /Users/runner/work/iosmovie/iosmovie/iosmovie.xcodeproj
+    builtin-create-build-directory /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/EagerLinkingTBDs/Release-iphoneos
+
+WriteAuxiliaryFile /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/iosmovie.hmap (in target 'iosmovie' from project 'iosmovie')
+    cd /Users/runner/work/iosmovie/iosmovie
+    write-file /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/iosmovie.hmap
+
+WriteAuxiliaryFile /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/iosmovie.DependencyStaticMetadataFileList (in target 'iosmovie' from project 'iosmovie')
+    cd /Users/runner/work/iosmovie/iosmovie
+    write-file /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/iosmovie.DependencyStaticMetadataFileList
+
+WriteAuxiliaryFile /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/iosmovie.DependencyMetadataFileList (in target 'iosmovie' from project 'iosmovie')
+    cd /Users/runner/work/iosmovie/iosmovie
+    write-file /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/iosmovie.DependencyMetadataFileList
+
+WriteAuxiliaryFile /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/iosmovie-project-headers.hmap (in target 'iosmovie' from project 'iosmovie')
+    cd /Users/runner/work/iosmovie/iosmovie
+    write-file /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/iosmovie-project-headers.hmap
+
+WriteAuxiliaryFile /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/iosmovie-own-target-headers.hmap (in target 'iosmovie' from project 'iosmovie')
+    cd /Users/runner/work/iosmovie/iosmovie
+    write-file /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/iosmovie-own-target-headers.hmap
+
+WriteAuxiliaryFile /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/iosmovie-generated-files.hmap (in target 'iosmovie' from project 'iosmovie')
+    cd /Users/runner/work/iosmovie/iosmovie
+    write-file /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/iosmovie-generated-files.hmap
+
+WriteAuxiliaryFile /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/iosmovie-all-target-headers.hmap (in target 'iosmovie' from project 'iosmovie')
+    cd /Users/runner/work/iosmovie/iosmovie
+    write-file /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/iosmovie-all-target-headers.hmap
+
+WriteAuxiliaryFile /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/iosmovie-all-non-framework-target-headers.hmap (in target 'iosmovie' from project 'iosmovie')
+    cd /Users/runner/work/iosmovie/iosmovie
+    write-file /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/iosmovie-all-non-framework-target-headers.hmap
+
+WriteAuxiliaryFile /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/iosmovie_const_extract_protocols.json (in target 'iosmovie' from project 'iosmovie')
+    cd /Users/runner/work/iosmovie/iosmovie
+    write-file /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/iosmovie_const_extract_protocols.json
+
+WriteAuxiliaryFile /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/iosmovie.SwiftFileList (in target 'iosmovie' from project 'iosmovie')
+    cd /Users/runner/work/iosmovie/iosmovie
+    write-file /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/iosmovie.SwiftFileList
+
+WriteAuxiliaryFile /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/iosmovie.SwiftConstValuesFileList (in target 'iosmovie' from project 'iosmovie')
+    cd /Users/runner/work/iosmovie/iosmovie
+    write-file /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/iosmovie.SwiftConstValuesFileList
+
+WriteAuxiliaryFile /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/iosmovie.LinkFileList (in target 'iosmovie' from project 'iosmovie')
+    cd /Users/runner/work/iosmovie/iosmovie
+    write-file /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/iosmovie.LinkFileList
+
+WriteAuxiliaryFile /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/iosmovie-OutputFileMap.json (in target 'iosmovie' from project 'iosmovie')
+    cd /Users/runner/work/iosmovie/iosmovie
+    write-file /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/iosmovie-OutputFileMap.json
+
+MkDir /Users/runner/work/iosmovie/iosmovie/build/Build/Products/Release-iphoneos/iosmovie.app (in target 'iosmovie' from project 'iosmovie')
+    cd /Users/runner/work/iosmovie/iosmovie
+    /bin/mkdir -p /Users/runner/work/iosmovie/iosmovie/build/Build/Products/Release-iphoneos/iosmovie.app
+
+ProcessInfoPlistFile /Users/runner/work/iosmovie/iosmovie/build/Build/Products/Release-iphoneos/iosmovie.app/Info.plist /Users/runner/work/iosmovie/iosmovie/iosmovie/Info.plist (in target 'iosmovie' from project 'iosmovie')
+    cd /Users/runner/work/iosmovie/iosmovie
+    builtin-infoPlistUtility /Users/runner/work/iosmovie/iosmovie/iosmovie/Info.plist -producttype com.apple.product-type.application -genpkginfo /Users/runner/work/iosmovie/iosmovie/build/Build/Products/Release-iphoneos/iosmovie.app/PkgInfo -expandbuildsettings -format binary -platform iphoneos -requiredArchitecture arm64 -o /Users/runner/work/iosmovie/iosmovie/build/Build/Products/Release-iphoneos/iosmovie.app/Info.plist
+
+SwiftDriver iosmovie normal arm64 com.apple.xcode.tools.swift.compiler (in target 'iosmovie' from project 'iosmovie')
+    cd /Users/runner/work/iosmovie/iosmovie
+    builtin-SwiftDriver -- /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name iosmovie -O -whole-module-optimization -enforce-exclusivity\=checked @/Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/iosmovie.SwiftFileList -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.5.sdk -target arm64-apple-ios16.0 -g -module-cache-path /Users/runner/work/iosmovie/iosmovie/build/ModuleCache.noindex -Xfrontend -serialize-debugging-options -swift-version 5 -I /Users/runner/work/iosmovie/iosmovie/build/Build/Products/Release-iphoneos -F /Users/runner/work/iosmovie/iosmovie/build/Build/Products/Release-iphoneos -c -num-threads 3 -Xcc -ivfsstatcache -Xcc /Users/runner/work/iosmovie/iosmovie/build/SDKStatCaches.noindex/iphoneos18.5-22F76-a529daf784b3616c7c04a36aeb7f5c05.sdkstatcache -output-file-map /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/iosmovie-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/iosmovie.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/runner/work/iosmovie/iosmovie/build/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/iosmovie_const_extract_protocols.json -Xcc -iquote -Xcc /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/iosmovie-generated-files.hmap -Xcc -I/Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/iosmovie-own-target-headers.hmap -Xcc -I/Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/iosmovie-all-target-headers.hmap -Xcc -iquote -Xcc /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/iosmovie-project-headers.hmap -Xcc -I/Users/runner/work/iosmovie/iosmovie/build/Build/Products/Release-iphoneos/include -Xcc -I/Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/DerivedSources-normal/arm64 -Xcc -I/Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/DerivedSources/arm64 -Xcc -I/Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/DerivedSources -emit-objc-header -emit-objc-header-path /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/iosmovie-Swift.h -working-directory /Users/runner/work/iosmovie/iosmovie -no-emit-module-separately-wmo
+
+SwiftCompile normal arm64 Compiling\ iosmovieApp.swift,\ Models.swift,\ MovieSourceProtocol.swift,\ DDYSSource.swift,\ DetailViewModel.swift,\ HomeViewModel.swift,\ DetailView.swift,\ HomeView.swift,\ AppleCMSSource.swift,\ CacheManager.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/iosmovieApp.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/Models/Models.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/Protocols/MovieSourceProtocol.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/Sources/DDYSSource.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/ViewModels/DetailViewModel.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/ViewModels/HomeViewModel.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/Views/DetailView.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/Views/HomeView.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/Sources/AppleCMSSource.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/Services/CacheManager.swift (in target 'iosmovie' from project 'iosmovie')
+
+CompileSwift normal arm64 (in target 'iosmovie' from project 'iosmovie')
+    cd /Users/runner/work/iosmovie/iosmovie
+    
+/Users/runner/work/iosmovie/iosmovie/iosmovie/Sources/DDYSSource.swift:53:6: error: consecutive declarations on a line must be separated by ';'
+    }    func fetchMovieDetail(path: String) async throws -> MovieDetail {
+     ^
+     ;
+
+Failed frontend command:
+/Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift-frontend -frontend -c /Users/runner/work/iosmovie/iosmovie/iosmovie/iosmovieApp.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/Models/Models.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/Protocols/MovieSourceProtocol.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/Sources/DDYSSource.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/ViewModels/DetailViewModel.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/ViewModels/HomeViewModel.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/Views/DetailView.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/Views/HomeView.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/Sources/AppleCMSSource.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/Services/CacheManager.swift -supplementary-output-file-map /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/supplementaryOutputs-1 -target arm64-apple-ios16.0 -Xllvm -aarch64-use-tbi -enable-objc-interop -stack-check -sdk /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.5.sdk -I /Users/runner/work/iosmovie/iosmovie/build/Build/Products/Release-iphoneos -F /Users/runner/work/iosmovie/iosmovie/build/Build/Products/Release-iphoneos -no-color-diagnostics -g -debug-info-format\=dwarf -dwarf-version\=4 -module-cache-path /Users/runner/work/iosmovie/iosmovie/build/ModuleCache.noindex -swift-version 5 -enforce-exclusivity\=checked -O -serialize-debugging-options -const-gather-protocols-file /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/iosmovie_const_extract_protocols.json -enable-experimental-feature DebugDescriptionMacro -enable-bare-slash-regex -empty-abi-descriptor -validate-clang-modules-once -clang-build-session-file /Users/runner/work/iosmovie/iosmovie/build/ModuleCache.noindex/Session.modulevalidation -Xcc -working-directory -Xcc /Users/runner/work/iosmovie/iosmovie -resource-dir /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift -file-compilation-dir /Users/runner/work/iosmovie/iosmovie -Xcc -ivfsstatcache -Xcc /Users/runner/work/iosmovie/iosmovie/build/SDKStatCaches.noindex/iphoneos18.5-22F76-a529daf784b3616c7c04a36aeb7f5c05.sdkstatcache -Xcc -I/Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/swift-overrides.hmap -Xcc -iquote -Xcc /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/iosmovie-generated-files.hmap -Xcc -I/Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/iosmovie-own-target-headers.hmap -Xcc -I/Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/iosmovie-all-target-headers.hmap -Xcc -iquote -Xcc /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/iosmovie-project-headers.hmap -Xcc -I/Users/runner/work/iosmovie/iosmovie/build/Build/Products/Release-iphoneos/include -Xcc -I/Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/DerivedSources-normal/arm64 -Xcc -I/Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/DerivedSources/arm64 -Xcc -I/Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/DerivedSources -module-name iosmovie -frontend-parseable-output -disable-clang-spi -target-sdk-version 18.5 -target-sdk-name iphoneos18.5 -external-plugin-path /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins\#/Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server -external-plugin-path /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/local/lib/swift/host/plugins\#/Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server -in-process-plugin-server-path /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/libSwiftInProcPluginServer.dylib -plugin-path /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins -plugin-path /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/local/lib/swift/host/plugins -enable-default-cmo -num-threads 3 -o /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/iosmovieApp.o -o /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/Models.o -o /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/MovieSourceProtocol.o -o /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/DDYSSource.o -o /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/DetailViewModel.o -o /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/HomeViewModel.o -o /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/DetailView.o -o /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/HomeView.o -o /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/AppleCMSSource.o -o /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/CacheManager.o -index-unit-output-path /iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/iosmovieApp.o -index-unit-output-path /iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/Models.o -index-unit-output-path /iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/MovieSourceProtocol.o -index-unit-output-path /iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/DDYSSource.o -index-unit-output-path /iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/DetailViewModel.o -index-unit-output-path /iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/HomeViewModel.o -index-unit-output-path /iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/DetailView.o -index-unit-output-path /iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/HomeView.o -index-unit-output-path /iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/AppleCMSSource.o -index-unit-output-path /iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/CacheManager.o
+** BUILD FAILED **
+SwiftDriver\ Compilation iosmovie normal arm64 com.apple.xcode.tools.swift.compiler (in target 'iosmovie' from project 'iosmovie')
+    cd /Users/runner/work/iosmovie/iosmovie
+
+    builtin-Swift-Compilation -- /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name iosmovie -O -whole-module-optimization -enforce-exclusivity\=checked @/Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/iosmovie.SwiftFileList -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.5.sdk -target arm64-apple-ios16.0 -g -module-cache-path /Users/runner/work/iosmovie/iosmovie/build/ModuleCache.noindex -Xfrontend -serialize-debugging-options -swift-version 5 -I /Users/runner/work/iosmovie/iosmovie/build/Build/Products/Release-iphoneos -F /Users/runner/work/iosmovie/iosmovie/build/Build/Products/Release-iphoneos -c -num-threads 3 -Xcc -ivfsstatcache -Xcc /Users/runner/work/iosmovie/iosmovie/build/SDKStatCaches.noindex/iphoneos18.5-22F76-a529daf784b3616c7c04a36aeb7f5c05.sdkstatcache -output-file-map /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/iosmovie-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/iosmovie.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/runner/work/iosmovie/iosmovie/build/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/iosmovie_const_extract_protocols.json -Xcc -iquote -Xcc /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/iosmovie-generated-files.hmap -Xcc -I/Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/iosmovie-own-target-headers.hmap -Xcc -I/Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/iosmovie-all-target-headers.hmap -Xcc -iquote -Xcc /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/iosmovie-project-headers.hmap -Xcc -I/Users/runner/work/iosmovie/iosmovie/build/Build/Products/Release-iphoneos/include -Xcc -I/Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/DerivedSources-normal/arm64 -Xcc -I/Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/DerivedSources/arm64 -Xcc -I/Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/DerivedSources -emit-objc-header -emit-objc-header-path /Users/runner/work/iosmovie/iosmovie/build/Build/Intermediates.noindex/iosmovie.build/Release-iphoneos/iosmovie.build/Objects-normal/arm64/iosmovie-Swift.h -working-directory /Users/runner/work/iosmovie/iosmovie -no-emit-module-separately-wmo
 
 
-Error: Process completed with exit code 74.
+The following build commands failed:
+note: Disabling previews because SWIFT_VERSION is set and SWIFT_OPTIMIZATION_LEVEL=-O, expected -Onone (in target 'iosmovie' from project 'iosmovie')
+	CompileSwift normal arm64 (in target 'iosmovie' from project 'iosmovie')
+	SwiftCompile normal arm64 Compiling\ iosmovieApp.swift,\ Models.swift,\ MovieSourceProtocol.swift,\ DDYSSource.swift,\ DetailViewModel.swift,\ HomeViewModel.swift,\ DetailView.swift,\ HomeView.swift,\ AppleCMSSource.swift,\ CacheManager.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/iosmovieApp.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/Models/Models.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/Protocols/MovieSourceProtocol.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/Sources/DDYSSource.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/ViewModels/DetailViewModel.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/ViewModels/HomeViewModel.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/Views/DetailView.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/Views/HomeView.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/Sources/AppleCMSSource.swift /Users/runner/work/iosmovie/iosmovie/iosmovie/Services/CacheManager.swift (in target 'iosmovie' from project 'iosmovie')
+	Building project iosmovie with scheme iosmovie and configuration Release
+(3 failures)
+Error: Process completed with exit code 65.
