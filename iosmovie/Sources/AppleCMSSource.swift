@@ -1,0 +1,141 @@
+﻿import Foundation
+
+final class AppleCMSSource: MovieSourceProtocol {
+    let sourceName = "苹果CMS"
+    let baseURL = "https://cj.lziapi.com/api.php/provide/vod/from/lzm3u8"
+
+    private let session: URLSession
+
+    init() {
+        let config = URLSessionConfiguration.default
+        config.httpAdditionalHeaders = [
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "application/json, text/plain, */*"
+        ]
+        self.session = URLSession(configuration: config)
+    }
+
+    func fetchHomeMovies() async throws -> [MovieItem] {
+        try await fetchMovies(path: "\(baseURL)?ac=list")
+    }
+
+    func searchMovies(keyword: String) async throws -> [MovieItem] {
+        guard let encoded = keyword.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+            throw URLError(.badURL)
+        }
+        return try await fetchMovies(path: "\(baseURL)?ac=list&wd=\(encoded)")
+    }
+
+    func fetchMovieDetail(path: String) async throws -> MovieDetail {
+        let detailPath = path.hasPrefix("http") ? path : "\(baseURL)?ac=detail&ids=\(path)"
+        guard let url = URL(string: detailPath) else { throw URLError(.badURL) }
+        let (data, _) = try await session.data(from: url)
+        let resp = try JSONDecoder().decode(CMSSearchResponse.self, from: data)
+
+        guard let item = resp.list.first else { throw URLError(.cannotParseResponse) }
+
+        let movieId = String(item.vod_id)
+        let title = item.vod_name
+        let sources = parsePlaySources(from: item.vod_play_url, playFrom: item.vod_play_from)
+
+        return MovieDetail(movieId: movieId, title: title, sources: sources)
+    }
+
+    func fetchCategories() async throws -> [MovieCategory] {
+        let url = URL(string: "\(baseURL)?ac=list")!
+        let (data, _) = try await session.data(from: url)
+        let resp = try JSONDecoder().decode(CMSCategoryResponse.self, from: data)
+        return resp.class
+    }
+
+    func fetchMoviesByCategory(id: Int) async throws -> [MovieItem] {
+        try await fetchMovies(path: "\(baseURL)?ac=list&t=\(id)")
+    }
+
+    private func fetchMovies(path: String) async throws -> [MovieItem] {
+        guard let url = URL(string: path) else { throw URLError(.badURL) }
+        let (data, _) = try await session.data(from: url)
+        let resp = try JSONDecoder().decode(CMSSearchResponse.self, from: data)
+        return resp.list.map { item in
+            MovieItem(
+                id: String(item.vod_id),
+                title: item.vod_name,
+                type: item.type_name ?? "",
+                year: item.vod_year ?? "",
+                rating: item.vod_score ?? "",
+                detailURL: String(item.vod_id),
+                posterURL: item.vod_pic
+            )
+        }
+    }
+
+    private func parsePlaySources(from playURL: String?, playFrom: String?) -> [PlaySource] {
+        guard let playURL = playURL, !playURL.isEmpty else { return [] }
+
+        let sourceNames = playFrom?.components(separatedBy: "$$$") ?? []
+        let sourceGroups = playURL.components(separatedBy: "$$$")
+
+        var results: [PlaySource] = []
+
+        for (index, group) in sourceGroups.enumerated() {
+            let sourceName = index < sourceNames.count ? sourceNames[index] : "源 \(index + 1)"
+            let episodeParts = group.components(separatedBy: "#")
+
+            if episodeParts.count > 1 {
+                var episodes: [PlaySource] = []
+                for (epIndex, part) in episodeParts.enumerated() {
+                    let segments = part.components(separatedBy: "$")
+                    if segments.count >= 2 {
+                        episodes.append(
+                            PlaySource(
+                                id: "\(index)-ep\(epIndex + 1)",
+                                name: segments[0],
+                                url: segments[1],
+                                format: "m3u8"
+                            )
+                        )
+                    }
+                }
+                results.append(
+                    PlaySource(
+                        id: "\(index)",
+                        name: sourceName,
+                        url: "",
+                        format: "m3u8",
+                        episodes: episodes
+                    )
+                )
+            } else if let singleURL = group.components(separatedBy: "$").last, !singleURL.isEmpty {
+                results.append(
+                    PlaySource(
+                        id: "\(index)",
+                        name: sourceName,
+                        url: singleURL,
+                        format: "m3u8"
+                    )
+                )
+            }
+        }
+
+        return results
+    }
+}
+
+private struct CMSSearchResponse: Codable {
+    let list: [CMSMovieItem]
+}
+
+private struct CMSMovieItem: Codable {
+    let vod_id: Int
+    let vod_name: String
+    let type_name: String?
+    let vod_year: String?
+    let vod_score: String?
+    let vod_pic: String?
+    let vod_play_url: String?
+    let vod_play_from: String?
+}
+
+private struct CMSCategoryResponse: Codable {
+    let `class`: [MovieCategory]
+}

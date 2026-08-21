@@ -1,4 +1,4 @@
-﻿import Foundation
+import Foundation
 
 @MainActor
 final class HomeViewModel: ObservableObject {
@@ -9,17 +9,27 @@ final class HomeViewModel: ObservableObject {
 
     private let source: MovieSourceProtocol
 
-    init(source: MovieSourceProtocol = DDYSSource()) {
+    init(source: MovieSourceProtocol = AppleCMSSource()) {
         self.source = source
     }
 
+    private let homeCacheKey = "home_movies"
+
     func loadHome() async {
-        isLoading = true
+        if let cached = CacheManager.shared.loadMovies(forKey: homeCacheKey), !cached.isEmpty {
+            movies = cached
+        } else {
+            isLoading = true
+        }
         errorMessage = nil
         do {
-            movies = try await source.fetchHomeMovies()
+            let fresh = try await source.fetchHomeMovies()
+            movies = fresh
+            CacheManager.shared.saveMovies(fresh, forKey: homeCacheKey)
         } catch {
-            errorMessage = error.localizedDescription
+            if movies.isEmpty {
+                errorMessage = error.localizedDescription
+            }
         }
         isLoading = false
     }

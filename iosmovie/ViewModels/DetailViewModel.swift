@@ -9,7 +9,7 @@ final class DetailViewModel: ObservableObject {
 
     private let source: MovieSourceProtocol
 
-    init(source: MovieSourceProtocol = DDYSSource()) {
+    init(source: MovieSourceProtocol = AppleCMSSource()) {
         self.source = source
     }
 

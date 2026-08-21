@@ -7,4 +7,6 @@ protocol MovieSourceProtocol {
     func fetchHomeMovies() async throws -> [MovieItem]
     func searchMovies(keyword: String) async throws -> [MovieItem]
     func fetchMovieDetail(path: String) async throws -> MovieDetail
+    func fetchCategories() async throws -> [MovieCategory]
+    func fetchMoviesByCategory(id: Int) async throws -> [MovieItem]
 }

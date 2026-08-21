@@ -14,6 +14,9 @@
 		BB0000000006 /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000006 /* HomeViewModel.swift */; };
 		BB0000000007 /* DetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000007 /* DetailView.swift */; };
 		BB0000000008 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000008 /* HomeView.swift */; };
+		BB0000000009 /* AppleCMSSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000009 /* AppleCMSSource.swift */; };
+		B1000000009 /* CacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000009 /* CacheManager.swift */; };
+		B1000000010 /* MovieCategory in Sources */ = {isa = PBXBuildFile; fileRef = A1000000010 /* MovieCategory */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,6 +30,9 @@
 		AA0000000008 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/HomeView.swift"; sourceTree = "<group>"; };
 		CC0000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		CC0000000002 /* iosmovie.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iosmovie.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA0000000009 /* AppleCMSSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppleCMSSource.swift"; sourceTree = "<group>"; };
+		A1000000009 /* CacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheManager.swift; sourceTree = "<group>"; };
+		A1000000010 /* MovieCategory */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovieCategory.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -58,6 +64,7 @@
 				AA0000000006 /* HomeViewModel.swift */,
 				AA0000000007 /* DetailView.swift */,
 				AA0000000008 /* HomeView.swift */,
+				AA0000000009 /* AppleCMSSource.swift */,
 				CC0000000001 /* Info.plist */,
 			);
 			path = iosmovie;
@@ -71,6 +78,8 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+				A1000000009 /* CacheManager.swift */,
+				A1000000010 /* MovieCategory */,
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -137,9 +146,12 @@
 				BB0000000006 /* HomeViewModel.swift in Sources */,
 				BB0000000007 /* DetailView.swift in Sources */,
 				BB0000000008 /* HomeView.swift in Sources */,
+				BB0000000009 /* AppleCMSSource.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+				B1000000009 /* CacheManager.swift in Sources */,
+				B1000000010 /* MovieCategory in Sources */,
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */

@@ -1,4 +1,7 @@
-import Foundation
+﻿const fs = require('fs');
+const p = 'C:/Users/DUAN/Desktop/iosmovie/iosmovie/Sources/DDYSSource.swift';
+
+const content = String.raw`import Foundation
 
 final class DDYSSource: MovieSourceProtocol {
     let sourceName = "低端影视"
@@ -20,15 +23,8 @@ final class DDYSSource: MovieSourceProtocol {
         let (data, _) = try await session.data(from: url)
         let resp = try JSONDecoder().decode(HotMoviesResponse.self, from: data)
         return resp.data.map { item in
-            MovieItem(id: String(item.id ?? 0), title: item.title, type: item.type ?? "", year: String(item.year ?? 0), rating: item.rating ?? "", detailURL: item.url ?? "", posterURL: Self.posterURL(from: item.url))
+            MovieItem(id: String(item.id ?? 0), title: item.title, type: item.type ?? "", year: String(item.year ?? 0), rating: item.rating ?? "", detailURL: item.url ?? "")
         }
-    }
-
-
-    private static func posterURL(from path: String?) -> String? {
-        guard let path = path else { return nil }
-        let slug = path.replacingOccurrences(of: "/movie/", with: "")
-        return "https://img.ddys.io/movies/\(slug).webp"
     }
 
     func searchMovies(keyword: String) async throws -> [MovieItem] {
@@ -37,20 +33,11 @@ final class DDYSSource: MovieSourceProtocol {
         let (data, _) = try await session.data(from: url)
         let resp = try JSONDecoder().decode(SearchResponse.self, from: data)
         return resp.data.map { item in
-            MovieItem(id: item.slug ?? "", title: item.title, type: item.type ?? "", year: String(item.year ?? 0), rating: item.rating ?? "", detailURL: item.url ?? "", posterURL: Self.posterURL(from: item.url))
+            MovieItem(id: item.slug ?? "", title: item.title, type: item.type ?? "", year: String(item.year ?? 0), rating: item.rating ?? "", detailURL: item.url ?? "")
         }
     }
 
-
-    func fetchCategories() async throws -> [MovieCategory] {
-        return [
-            MovieCategory(id: 1, pid: 0, name: "电影片")
-        ]
-    }
-
-    func fetchMoviesByCategory(id: Int) async throws -> [MovieItem] {
-        return try await fetchHomeMovies()
-    }    func fetchMovieDetail(path: String) async throws -> MovieDetail {
+    func fetchMovieDetail(path: String) async throws -> MovieDetail {
         let fullPath = path.hasPrefix("http") ? path : baseURL + path
         guard let url = URL(string: fullPath) else { throw URLError(.badURL) }
         var request = URLRequest(url: url)
@@ -165,3 +152,7 @@ private struct SearchItem: Codable {
     let rating: String?
     let url: String?
 }
+`;
+
+fs.writeFileSync(p, content, 'utf8');
+console.log('written');
