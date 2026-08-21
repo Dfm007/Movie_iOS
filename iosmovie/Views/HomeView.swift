@@ -1,4 +1,4 @@
-import SwiftUI
+﻿import SwiftUI
 
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
@@ -38,6 +38,10 @@ struct HomeView: View {
                 }
             }
             .navigationTitle("影视王")
+            .searchable(text: $viewModel.searchText, prompt: "搜索影视")
+            .onSubmit(of: .search) {
+                Task { await viewModel.search() }
+            }
             .task {
                 await viewModel.loadHome()
             }
