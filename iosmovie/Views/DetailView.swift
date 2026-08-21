@@ -366,7 +366,7 @@ struct PlayerView: View {
         Menu {
             ForEach([0.5, 0.75, 1.0, 1.25, 1.5, 2.0], id: \.self) { rate in
                 Button("\(rate)x") {
-                    setRate(rate)
+                    setRate(Float(rate))
                 }
             }
         } label: {
@@ -569,3 +569,4 @@ struct PlayerView: View {
         return String(format: "%02d:%02d", m, s)
     }
 }
+

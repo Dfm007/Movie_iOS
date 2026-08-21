@@ -16,6 +16,7 @@
 		BB0000000009 /* AppleCMSSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000009 /* AppleCMSSource.swift */; };
 		B1000000009 /* CacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000009 /* CacheManager.swift */; };
 		B1000000010 /* CMSSite.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000010 /* CMSSite.swift */; };
+		B1000000011 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000011 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -31,6 +32,7 @@
 		AA0000000009 /* AppleCMSSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/AppleCMSSource.swift"; sourceTree = "<group>"; };
 		A1000000009 /* CacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/CacheManager.swift"; sourceTree = "<group>"; };
 		A1000000010 /* CMSSite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Models/CMSSite.swift"; sourceTree = "<group>"; };
+		A1000000011 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -55,6 +57,7 @@
 			isa = PBXGroup;
 			children = (
 				AA0000000001 /* iosmovieApp.swift */,
+				A1000000011 /* AppDelegate.swift */,
 				AA0000000002 /* Models.swift */,
 				AA0000000003 /* MovieSourceProtocol.swift */,
 				AA0000000005 /* DetailViewModel.swift */,
@@ -136,6 +139,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				BB0000000001 /* iosmovieApp.swift in Sources */,
+				B1000000011 /* AppDelegate.swift in Sources */,
 				BB0000000002 /* Models.swift in Sources */,
 				BB0000000003 /* MovieSourceProtocol.swift in Sources */,
 				BB0000000005 /* DetailViewModel.swift in Sources */,
