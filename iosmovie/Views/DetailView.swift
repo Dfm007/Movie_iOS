@@ -192,6 +192,7 @@ struct PlayerView: View {
     @State private var currentSource: PlaySource
     @State private var player: AVPlayer?
     @State private var errorMessage: String?
+    @State private var isFullscreen = false
 
     private let episodeColumns = [
         GridItem(.flexible(), spacing: 8),
@@ -212,8 +213,11 @@ struct PlayerView: View {
             ZStack(alignment: .topLeading) {
                 playerArea
                 backButton
+                fullscreenButton
             }
-            episodePanel
+            if !isFullscreen {
+                episodePanel
+            }
         }
         .background(Color.black.ignoresSafeArea())
         .onAppear {
@@ -238,6 +242,22 @@ struct PlayerView: View {
         }
         .padding(.leading, 12)
         .padding(.top, 8)
+    }
+
+    private var fullscreenButton: some View {
+        Button(action: {
+            toggleFullscreen()
+        }) {
+            Image(systemName: isFullscreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(.white)
+                .padding(10)
+                .background(Color.black.opacity(0.5))
+                .clipShape(Circle())
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+        .padding(.trailing, 12)
+        .padding(.bottom, 12)
     }
 
     private var playerArea: some View {
@@ -303,6 +323,17 @@ struct PlayerView: View {
         allSources.flatMap { source in
             source.episodes.isEmpty ? [source] : source.episodes
         }
+    }
+
+    private func toggleFullscreen() {
+        if isFullscreen {
+            UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
+            UINavigationController.attemptRotationToDeviceOrientation()
+        } else {
+            UIDevice.current.setValue(UIInterfaceOrientation.landscapeRight.rawValue, forKey: "orientation")
+            UINavigationController.attemptRotationToDeviceOrientation()
+        }
+        isFullscreen.toggle()
     }
 
     private func switchTo(_ newSource: PlaySource) {
