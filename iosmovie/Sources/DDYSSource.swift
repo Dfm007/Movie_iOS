@@ -96,7 +96,7 @@ final class DDYSSource: MovieSourceProtocol {
 
     private func extractPlaySources(from html: String) -> [PlaySource] {
         var sources: [PlaySource] = []
-        let pattern = #"switchSource\(\s*(\d+)\s*,\s*'([^']+)'\s*,\s*'([^']+)'"#
+        let pattern = #"switchSource(s*(d+)s*,s*'([^']+)'s*,s*'([^']+)'"#
         guard let regex = try? NSRegularExpression(pattern: pattern) else { return sources }
         let nsRange = NSRange(html.startIndex..<html.endIndex, in: html)
         let matches = regex.matches(in: html, range: nsRange)
@@ -109,13 +109,13 @@ final class DDYSSource: MovieSourceProtocol {
             let rawURL = String(html[urlRange])
             let format = String(html[formatRange])
             let cleanURL = rawURL.replacingOccurrences(of: "\\/", with: "/")
-            let parsed = parseEpisodeSources(id: id, rawURL: cleanURL, format: format)
+            let parsed = parseSource(id: id, rawURL: cleanURL, format: format)
             sources.append(contentsOf: parsed)
         }
 
         if sources.isEmpty {
             if let firstSourceURL = extractFirstSourceURL(from: html) {
-                let parsed = parseEpisodeSources(id: "1", rawURL: firstSourceURL, format: "m3u8")
+                let parsed = parseSource(id: "1", rawURL: firstSourceURL, format: "m3u8")
                 sources.append(contentsOf: parsed)
             }
         }
@@ -123,28 +123,29 @@ final class DDYSSource: MovieSourceProtocol {
         return sources
     }
 
-    private func parseEpisodeSources(id: String, rawURL: String, format: String) -> [PlaySource] {
+    private func parseSource(id: String, rawURL: String, format: String) -> [PlaySource] {
         if rawURL.contains("#") && rawURL.contains("$") {
             let parts = rawURL.components(separatedBy: "#")
-            var results: [PlaySource] = []
+            var episodes: [PlaySource] = []
             for (index, part) in parts.enumerated() {
                 let segments = part.components(separatedBy: "$")
                 if segments.count >= 2 {
                     let name = segments[0]
                     let url = segments[1]
-                    results.append(PlaySource(id: "(id)-(index + 1)", name: name, url: url, format: format))
+                    episodes.append(PlaySource(id: "\(id)-ep\(index + 1)", name: name, url: url, format: format))
                 }
             }
-            return results
+            let container = PlaySource(id: id, name: "源 \(id)", url: "", format: format, episodes: episodes)
+            return [container]
         } else {
-            return [PlaySource(id: id, name: "源 (id)", url: rawURL, format: format)]
+            return [PlaySource(id: id, name: "源 \(id)", url: rawURL, format: format)]
         }
     }
 
     private func extractFirstSourceURL(from html: String) -> String? {
         guard let range = html.range(of: "firstSource") else { return nil }
-        let snippet = String(html[range.lowerBound...].prefix(600))
-        let pattern = #"url\s*[:=]\s*"([^"]+)""#
+        let snippet = String(html[range.lowerBound...].prefix(1500))
+        let pattern = #"urls*[:=]s*"([^"]+)""#
         guard let regex = try? NSRegularExpression(pattern: pattern),
               let match = regex.firstMatch(in: snippet, range: NSRange(snippet.startIndex..<snippet.endIndex, in: snippet)),
               let urlRange = Range(match.range(at: 1), in: snippet) else { return nil }
