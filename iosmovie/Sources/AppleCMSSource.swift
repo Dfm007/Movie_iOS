@@ -195,11 +195,11 @@ actor AsyncSemaphore {
         count += 1
     }
 }
-private struct CMSSearchResponse: Codable {
+private struct CMSSearchResponse: Decodable {
     let list: [CMSMovieItem]
 }
 
-private struct CMSMovieItem: Codable {
+private struct CMSMovieItem: Decodable {
     let vod_id: String
     let vod_name: String
     let type_name: String?
@@ -208,7 +208,6 @@ private struct CMSMovieItem: Codable {
     let vod_pic: String?
     let vod_play_url: String?
     let vod_play_from: String?
-    let vod_year: String?
     let vod_area: String?
     let vod_class: String?
     let vod_actor: String?
@@ -225,7 +224,6 @@ private struct CMSMovieItem: Codable {
         vod_pic = try container.decodeIfPresent(String.self, forKey: .vod_pic)
         vod_play_url = try container.decodeIfPresent(String.self, forKey: .vod_play_url)
         vod_play_from = try container.decodeIfPresent(String.self, forKey: .vod_play_from)
-        vod_year = try container.decodeIfPresent(String.self, forKey: .vod_year)
         vod_area = try container.decodeIfPresent(String.self, forKey: .vod_area)
         vod_class = try container.decodeIfPresent(String.self, forKey: .vod_class)
         vod_actor = try container.decodeIfPresent(String.self, forKey: .vod_actor)
