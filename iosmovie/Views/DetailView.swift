@@ -1,4 +1,4 @@
-import SwiftUI
+﻿import SwiftUI
 import AVKit
 
 struct DetailView: View {
@@ -24,17 +24,7 @@ struct DetailView: View {
                 List {
                     ForEach(viewModel.detail?.sources ?? []) { source in
                         Button(action: {
-                            if let url = URL(string: source.url) {
-                                let player = AVPlayer(url: url)
-                                let playerVC = AVPlayerViewController()
-                                playerVC.player = player
-                                if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                                   let rootVC = scene.windows.first?.rootViewController {
-                                    rootVC.present(playerVC, animated: true) {
-                                        player.play()
-                                    }
-                                }
-                            }
+                            playSource(source)
                         }) {
                             HStack {
                                 Text(source.name)
@@ -51,6 +41,19 @@ struct DetailView: View {
         .navigationTitle(viewModel.detail?.title ?? "")
         .task {
             await viewModel.loadDetail(path: detailURL)
+        }
+    }
+
+    private func playSource(_ source: PlaySource) {
+        guard let url = URL(string: source.url) else { return }
+        let player = AVPlayer(url: url)
+        let playerVC = AVPlayerViewController()
+        playerVC.player = player
+        if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootVC = scene.windows.first?.rootViewController {
+            rootVC.present(playerVC, animated: true) {
+                player.play()
+            }
         }
     }
 }
