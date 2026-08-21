@@ -1,0 +1,231 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		BB0000000001 /* iosmovieApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000001 /* iosmovieApp.swift */; };
+		BB0000000002 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000002 /* Models.swift */; };
+		BB0000000003 /* MovieSourceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000003 /* MovieSourceProtocol.swift */; };
+		BB0000000004 /* DDYSSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000004 /* DDYSSource.swift */; };
+		BB0000000005 /* DetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000005 /* DetailViewModel.swift */; };
+		BB0000000006 /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000006 /* HomeViewModel.swift */; };
+		BB0000000007 /* DetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000007 /* DetailView.swift */; };
+		BB0000000008 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000008 /* HomeView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		AA0000000001 /* iosmovieApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "iosmovieApp.swift"; sourceTree = "<group>"; };
+		AA0000000002 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Models.swift"; sourceTree = "<group>"; };
+		AA0000000003 /* MovieSourceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MovieSourceProtocol.swift"; sourceTree = "<group>"; };
+		AA0000000004 /* DDYSSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DDYSSource.swift"; sourceTree = "<group>"; };
+		AA0000000005 /* DetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DetailViewModel.swift"; sourceTree = "<group>"; };
+		AA0000000006 /* HomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeViewModel.swift"; sourceTree = "<group>"; };
+		AA0000000007 /* DetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DetailView.swift"; sourceTree = "<group>"; };
+		AA0000000008 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeView.swift"; sourceTree = "<group>"; };
+		CC0000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		CC0000000002 /* iosmovie.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iosmovie.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		DD0000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		EE0000000001 = {
+			isa = PBXGroup;
+			children = (
+				EE0000000002 /* iosmovie */,
+				EE0000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		EE0000000002 /* iosmovie */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000001 /* iosmovieApp.swift */,
+				AA0000000002 /* Models.swift */,
+				AA0000000003 /* MovieSourceProtocol.swift */,
+				AA0000000004 /* DDYSSource.swift */,
+				AA0000000005 /* DetailViewModel.swift */,
+				AA0000000006 /* HomeViewModel.swift */,
+				AA0000000007 /* DetailView.swift */,
+				AA0000000008 /* HomeView.swift */,
+				CC0000000001 /* Info.plist */,
+			);
+			path = iosmovie;
+			sourceTree = "<group>";
+		};
+		EE0000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				CC0000000002 /* iosmovie.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		FF0000000001 /* iosmovie */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = GG0000000002 /* Build configuration list for PBXNativeTarget "iosmovie" */;
+			buildPhases = (
+				HH0000000001 /* Sources */,
+				DD0000000001 /* Frameworks */,
+				II0000000001 /* Resources */,
+			);
+			buildRules = ();
+			dependencies = ();
+			name = iosmovie;
+			productName = iosmovie;
+			productReference = CC0000000002 /* iosmovie.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		JJ0000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					FF0000000001 = { CreatedOnToolsVersion = 15.0; };
+				};
+			};
+			buildConfigurationList = GG0000000001 /* Build configuration list for PBXProject "iosmovie" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = zh_CN;
+			hasScannedForEncodings = 0;
+			knownRegions = (zh_CN, en, Base);
+			mainGroup = EE0000000001;
+			productRefGroup = EE0000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (FF0000000001 /* iosmovie */);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		II0000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		HH0000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BB0000000001 /* iosmovieApp.swift in Sources */,
+				BB0000000002 /* Models.swift in Sources */,
+				BB0000000003 /* MovieSourceProtocol.swift in Sources */,
+				BB0000000004 /* DDYSSource.swift in Sources */,
+				BB0000000005 /* DetailViewModel.swift in Sources */,
+				BB0000000006 /* HomeViewModel.swift in Sources */,
+				BB0000000007 /* DetailView.swift in Sources */,
+				BB0000000008 /* HomeView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		KK0000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		KK0000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		KK0000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = iosmovie/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks");
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.iosmovie.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		KK0000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = iosmovie/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks");
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.iosmovie.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		GG0000000001 /* Build configuration list for PBXProject "iosmovie" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (KK0000000001 /* Debug */, KK0000000002 /* Release */);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		GG0000000002 /* Build configuration list for PBXNativeTarget "iosmovie" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (KK0000000003 /* Debug */, KK0000000004 /* Release */);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = JJ0000000001 /* Project object */;
+}
