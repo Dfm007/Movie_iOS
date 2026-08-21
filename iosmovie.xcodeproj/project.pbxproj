@@ -18,13 +18,13 @@
 
 /* Begin PBXFileReference section */
 		AA0000000001 /* iosmovieApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "iosmovieApp.swift"; sourceTree = "<group>"; };
-		AA0000000002 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Models.swift"; sourceTree = "<group>"; };
-		AA0000000003 /* MovieSourceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MovieSourceProtocol.swift"; sourceTree = "<group>"; };
-		AA0000000004 /* DDYSSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DDYSSource.swift"; sourceTree = "<group>"; };
-		AA0000000005 /* DetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DetailViewModel.swift"; sourceTree = "<group>"; };
-		AA0000000006 /* HomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeViewModel.swift"; sourceTree = "<group>"; };
-		AA0000000007 /* DetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DetailView.swift"; sourceTree = "<group>"; };
-		AA0000000008 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeView.swift"; sourceTree = "<group>"; };
+		AA0000000002 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Models/Models.swift"; sourceTree = "<group>"; };
+		AA0000000003 /* MovieSourceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Protocols/MovieSourceProtocol.swift"; sourceTree = "<group>"; };
+		AA0000000004 /* DDYSSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/DDYSSource.swift"; sourceTree = "<group>"; };
+		AA0000000005 /* DetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ViewModels/DetailViewModel.swift"; sourceTree = "<group>"; };
+		AA0000000006 /* HomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ViewModels/HomeViewModel.swift"; sourceTree = "<group>"; };
+		AA0000000007 /* DetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/DetailView.swift"; sourceTree = "<group>"; };
+		AA0000000008 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/HomeView.swift"; sourceTree = "<group>"; };
 		CC0000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		CC0000000002 /* iosmovie.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iosmovie.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
