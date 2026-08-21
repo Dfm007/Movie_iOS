@@ -1,4 +1,4 @@
-﻿import SwiftUI
+import SwiftUI
 import AVKit
 
 struct DetailView: View {
@@ -498,14 +498,6 @@ struct PlayerView: View {
     }
 
     private func toggleFullscreen() {
-        if isFullscreen {
-            AppDelegate.orientationLock = .portrait
-            UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
-        } else {
-            AppDelegate.orientationLock = .landscape
-            UIDevice.current.setValue(UIInterfaceOrientation.landscapeRight.rawValue, forKey: "orientation")
-        }
-        UINavigationController.attemptRotationToDeviceOrientation()
         isFullscreen.toggle()
         showControls = true
     }
