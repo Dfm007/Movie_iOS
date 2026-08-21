@@ -67,8 +67,6 @@ final class AppleCMSSource: MovieSourceProtocol {
                 posterURL: item.vod_pic
             )
         }
-            )
-        }
         return await fillPosters(for: movies)
     }
 
