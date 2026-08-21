@@ -53,10 +53,28 @@ struct PlayerView: View {
     let source: PlaySource
     @Environment(\.dismiss) private var dismiss
     @State private var player: AVPlayer?
+    @State private var errorMessage: String?
 
     var body: some View {
         Group {
-            if let player = player {
+            if let error = errorMessage {
+                VStack(spacing: 16) {
+                    Text("播放失败")
+                        .font(.headline)
+                    Text(error)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                    Text("URL: \(source.url)")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                    Button("关闭") {
+                        dismiss()
+                    }
+                }
+            } else if let player = player {
                 VideoPlayer(player: player)
             } else {
                 ProgressView("加载播放器...")
@@ -74,14 +92,32 @@ struct PlayerView: View {
             }
         }
         .onAppear {
-            if let url = URL(string: source.url) {
-                let p = AVPlayer(url: url)
-                player = p
-                p.play()
-            }
+            loadPlayer()
         }
         .onDisappear {
             player?.pause()
+        }
+    }
+
+    private func loadPlayer() {
+        guard let url = URL(string: source.url) else {
+            errorMessage = "无效的播放地址"
+            return
+        }
+        let asset = AVURLAsset(url: url)
+        let p = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+        player = p
+        p.play()
+
+        Task {
+            do {
+                let status = try await asset.load(.isPlayable)
+                if !status {
+                    errorMessage = "视频不可播放"
+                }
+            } catch {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 }
