@@ -1,4 +1,4 @@
-﻿import Foundation
+import Foundation
 
 final class DDYSSource: MovieSourceProtocol {
     let sourceName = "低端影视"
@@ -73,10 +73,18 @@ final class DDYSSource: MovieSourceProtocol {
     private func extractMovieId(from html: String) -> String? {
         guard let range = html.range(of: "const movieId = ") else { return nil }
         let start = range.upperBound
-        let end = html.index(start, offsetBy: 6, limitedBy: html.endIndex) ?? start
-        let snippet = html[start..<end]
-        let digits = snippet.filter { $0.isNumber }
-        return digits.isEmpty ? nil : String(digits)
+        var digits = ""
+        var index = start
+        while index < html.endIndex, digits.count < 10 {
+            let char = html[index]
+            if char.isNumber {
+                digits.append(char)
+            } else if !digits.isEmpty {
+                break
+            }
+            index = html.index(after: index)
+        }
+        return digits.isEmpty ? nil : digits
     }
 
     private func extractTitle(from html: String) -> String? {

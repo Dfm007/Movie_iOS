@@ -11,4 +11,46 @@ struct DetailView: View {
                 ProgressView("åŠ è½½ä¸­...")
             } else if let error = viewModel.errorMessage {
                 VStack(spacing: 12) {
-                    Text("åŠ è½½å¤±èˆ¤(€€€€€€€€€€€€€€€€€€€€€€€€¹™½¹Ð ¹¡•…‘±¥¹”¤(€€€€€€€€€€€€€€€€€€€Q•áÐ¡•ÉÉ½È¤(€€€€€€€€€€€€€€€€€€€€€€€€¹™½¹Ð ¹…ÁÑ¥½¸¤(€€€€€€€€€€€€€€€€€€€€€€€€¹™½É•É½Õ¹‘½±½È ¸¹•½¹‘…Éä¤(€€€€€€€€€€€€€€€€€€€	ÕÑÑ½¸ ‹¦7¢¾Tˆ¤ì(€€€€€€€€€€€€€€€€€€€€€€€Q…Í¬ì…Ý…¥ÐÙ¥•Ý5½‘•°¹±½…‘•Ñ…¥°¡Á…Ñ è‘•Ñ…¥±UI0¤ô(€€€€€€€€€€€€€€€€€€€ô(€€€€€€€€€€€€€€€ô(€€€€€€€€€€€ô•±Í”ì(€€€€€€€€€€€€€€€1¥ÍÐ¡Ù¥•Ý5½‘•°¹Í½ÕÉ•Ì¤ìÍ½ÕÉ”¥¸(€€€€€€€€€€€€€€€€€€€9…Ù¥…Ñ¥½¹1¥¹¬¡‘•ÍÑ¥¹…Ñ¥½¸èA±…å•ÉY¥•Ü¡ÕÉ°èÍ½ÕÉ”¹ÕÉ°¤¤ì(€€€€€€€€€€€€€€€€€€€€€€€YMÑ…¬¡…±¥¹µ•¹Ðè€¹±•…‘¥¹œ°ÍÁ…¥¹œè€Ð¤ì(€€€€€€€€€€€€€€€€€€€€€€€€€€€Q•áÐ¡Í½ÕÉ”¹¹…µ”¤(€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€¹™½¹Ð ¹‰½‘ä¤(€€€€€€€€€€€€€€€€€€€€€€€€€€€Q•áÐ¡Í½ÕÉ”¹™½Éµ…Ð¹ÕÁÁ•É…Í• ¤¤(€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€¹™½¹Ð ¹…ÁÑ¥½¸¤(€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€¹™½É•É½Õ¹‘½±½È ¸¹•½¹‘…Éä¤(€€€€€€€€€€€€€€€€€€€€€€€ô(€€€€€€€€€€€€€€€€€€€ô(€€€€€€€€€€€€€€€ô(€€€€€€€€€€€€€€€€¹¹…Ù¥…Ñ¥½¹Q¥Ñ±”¡Ù¥•Ý5½‘•°¹µ½Ù¥•Q¥Ñ±”¤(€€€€€€€€€€€ô(€€€€€€€ô(€€€€€€€€¹Ñ…Í¬ì(€€€€€€€€€€€…Ý…¥ÐÙ¥•Ý5½‘•°¹±½…‘•Ñ…¥°¡Á…Ñ è‘•Ñ…¥±UI0¤(€€€€€€€ô(€€€ô)ô()ÍÑÉÕÐA±…å•ÉY¥•ÜèY¥•Üì(€€€±•ÐÕÉ°èMÑÉ¥¹œ((€€€Ù…È‰½‘äèÍ½µ”Y¥•Üì(€€€€€€€¥˜±•ÐÁ±…åUI0€ôUI0¡ÍÑÉ¥¹œèÕÉ°¤ì(€€€€€€€€€€€Y¥‘•½A±…å•È¡Á±…å•ÈèYA±…å•È¡ÕÉ°èÁ±…åUI0¤¤(€€€€€€€€€€€€€€€€¹¥¹½É•ÍM…™•É•„ ¤(€€€€€€€ô•±Í”ì(€€€€€€€€€€€Q•áÐ ‹šJ·šRû–rÃ–vš^ƒšV ˆ¤(€€€€€€€ô(€€€ô}
+                    Text("åŠ è½½å¤±è´¥")
+                        .font(.headline)
+                    Text(error)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Button("é‡è¯•") {
+                        Task { await viewModel.loadDetail(path: detailURL) }
+                    }
+                }
+            } else {
+                List {
+                    ForEach(viewModel.detail?.sources ?? []) { source in
+                        Button(action: {
+                            if let url = URL(string: source.url) {
+                                let player = AVPlayer(url: url)
+                                let playerVC = AVPlayerViewController()
+                                playerVC.player = player
+                                if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                                   let rootVC = scene.windows.first?.rootViewController {
+                                    rootVC.present(playerVC, animated: true) {
+                                        player.play()
+                                    }
+                                }
+                            }
+                        }) {
+                            HStack {
+                                Text(source.name)
+                                Spacer()
+                                Text(source.format.uppercased())
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .navigationTitle(viewModel.detail?.title ?? "")
+        .task {
+            await viewModel.loadDetail(path: detailURL)
+        }
+    }
+}

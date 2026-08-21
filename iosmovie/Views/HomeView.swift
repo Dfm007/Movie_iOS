@@ -1,4 +1,4 @@
-﻿import SwiftUI
+import SwiftUI
 
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
@@ -44,4 +44,3 @@ struct HomeView: View {
         }
     }
 }
-
