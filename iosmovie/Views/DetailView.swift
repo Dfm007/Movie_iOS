@@ -1,4 +1,4 @@
-import SwiftUI
+﻿import SwiftUI
 import AVKit
 
 struct DetailView: View {
@@ -136,6 +136,22 @@ struct DetailView: View {
         }
         .padding(.horizontal)
     }
+    private let episodeColumns = [
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8)
+    ]
+
+    private let episodeColumns = [
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8)
+    ]
+
     private var episodeSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             ForEach(viewModel.sources) { source in
@@ -155,27 +171,26 @@ struct DetailView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
 
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(source.episodes) { episode in
-                                Button(action: {
-                                    playingSource = episode
-                                }) {
-                                    Text(episode.name)
-                                        .font(.caption)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 8)
-                                        .background(Color.blue.opacity(0.15))
-                                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                                }
+                    LazyVGrid(columns: episodeColumns, spacing: 8) {
+                        ForEach(source.episodes) { episode in
+                            Button(action: {
+                                playingSource = episode
+                            }) {
+                                Text(episode.name)
+                                    .font(.caption)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 8)
+                                    .background(Color.blue.opacity(0.15))
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
                             }
+                            .buttonStyle(PlainButtonStyle())
                         }
                     }
                 }
             }
         }
         .padding(.horizontal)
-    }
+    }    }
 }
 
 struct PlayerView: View {
@@ -250,3 +265,4 @@ struct PlayerView: View {
         }
     }
 }
+
