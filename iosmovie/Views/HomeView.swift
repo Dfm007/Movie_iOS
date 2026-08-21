@@ -1,4 +1,4 @@
-import SwiftUI
+﻿import SwiftUI
 
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
@@ -11,52 +11,9 @@ struct HomeView: View {
 
     var body: some View {
         NavigationView {
-            Group {
-                if viewModel.isLoading {
-                    ProgressView("加载中...")
-                } else if let error = viewModel.errorMessage {
-                    VStack(spacing: 12) {
-                        Text("加载失败")
-                            .font(.headline)
-                        Text(error)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Button("重试") {
-                            Task { await viewModel.loadHome() }
-                        }
-                    }
-                } else {
-                    ScrollView {
-                        LazyVGrid(columns: columns, spacing: 16) {
-                            ForEach(viewModel.movies) { movie in
-                                NavigationLink(destination: DetailView(detailURL: movie.detailURL)) {
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        posterView(for: movie)
-                                        Text(movie.title)
-                                            .font(.caption)
-                                            .fontWeight(.medium)
-                                            .lineLimit(2)
-                                            .multilineTextAlignment(.leading)
-                                        HStack(spacing: 4) {
-                                            if !movie.rating.isEmpty && movie.rating != "0.0" {
-                                                Text(movie.rating)
-                                                    .font(.system(size: 11))
-                                                    .foregroundColor(.orange)
-                                                    .fontWeight(.semibold)
-                                            }
-                                            Text(movie.type)
-                                                .font(.system(size: 11))
-                                                .foregroundColor(.secondary)
-                                        }
-                                    }
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                            }
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.top, 8)
-                    }
-                }
+            VStack(spacing: 0) {
+                categoryBar
+                content
             }
             .navigationTitle("影视王")
             .searchable(text: $viewModel.searchText, prompt: "搜索影视")
@@ -64,7 +21,90 @@ struct HomeView: View {
                 Task { await viewModel.search() }
             }
             .task {
-                await viewModel.loadHome()
+                await viewModel.loadInitial()
+            }
+        }
+    }
+
+    private var categoryBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(viewModel.categories) { category in
+                    Button {
+                        Task { await viewModel.selectCategory(category) }
+                    } label: {
+                        Text(category.name)
+                            .font(.subheadline)
+                            .fontWeight(viewModel.selectedCategoryID == category.id ? .semibold : .regular)
+                            .foregroundColor(viewModel.selectedCategoryID == category.id ? .white : .primary)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 7)
+                            .background(
+                                Capsule().fill(
+                                    viewModel.selectedCategoryID == category.id
+                                    ? Color.blue
+                                    : Color(.systemGray5)
+                                )
+                            )
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+        }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if viewModel.isLoading {
+            Spacer()
+            ProgressView("加载中...")
+            Spacer()
+        } else if let error = viewModel.errorMessage {
+            Spacer()
+            VStack(spacing: 12) {
+                Text("加载失败")
+                    .font(.headline)
+                Text(error)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Button("重试") {
+                    Task { await viewModel.loadInitial() }
+                }
+            }
+            Spacer()
+        } else {
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: 16) {
+                    ForEach(viewModel.movies) { movie in
+                        NavigationLink(destination: DetailView(detailURL: movie.detailURL)) {
+                            VStack(alignment: .leading, spacing: 6) {
+                                posterView(for: movie)
+                                Text(movie.title)
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .lineLimit(2)
+                                    .multilineTextAlignment(.leading)
+                                HStack(spacing: 4) {
+                                    if !movie.rating.isEmpty && movie.rating != "0.0" {
+                                        Text(movie.rating)
+                                            .font(.system(size: 11))
+                                            .foregroundColor(.orange)
+                                            .fontWeight(.semibold)
+                                    }
+                                    Text(movie.type)
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.top, 8)
+                .padding(.bottom, 16)
             }
         }
     }
