@@ -1,0 +1,20 @@
+Command line invocation:
+    /Applications/Xcode_16.4.app/Contents/Developer/usr/bin/xcodebuild -project iosmovie.xcodeproj -scheme iosmovie -sdk iphoneos -configuration Release -derivedDataPath build CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY= PROVISIONING_PROFILE_SPECIFIER= CODE_SIGN_ENTITLEMENTS=
+
+Build settings from command line:
+    CODE_SIGN_ENTITLEMENTS = 
+    CODE_SIGN_IDENTITY = 
+    CODE_SIGNING_ALLOWED = NO
+    CODE_SIGNING_REQUIRED = NO
+    PROVISIONING_PROFILE_SPECIFIER = 
+    SDKROOT = iphoneos18.5
+
+2026-08-21 22:25:10.605 xcodebuild[69834:165208] Error Domain=NSCocoaErrorDomain Code=3840 "JSON text did not start with array or object and option to allow fragments not set. around line 1, column 0." UserInfo={NSDebugDescription=JSON text did not start with array or object and option to allow fragments not set. around line 1, column 0., NSJSONSerializationErrorIndex=0}
+2026-08-21 22:25:10.627 xcodebuild[69834:165208] Writing error result bundle to /var/folders/_5/zjnzxgh147qcg3bb5cg2wvqw0000gn/T/ResultBundle_2026-21-08_22-25-0010.xcresult
+xcodebuild: error: Unable to read project 'iosmovie.xcodeproj'.
+	Reason: The project ‘iosmovie’ is damaged and cannot be opened due to a parse error. Examine the project file for invalid edits or unresolved source control conflicts.
+
+Path: /Users/runner/work/iosmovie/iosmovie/iosmovie.xcodeproj
+
+
+Error: Process completed with exit code 74.
