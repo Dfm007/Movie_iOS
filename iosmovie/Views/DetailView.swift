@@ -6,6 +6,14 @@ struct DetailView: View {
     @StateObject private var viewModel = DetailViewModel()
     @State private var playingSource: PlaySource?
 
+    private let episodeColumns = [
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8)
+    ]
+
     var body: some View {
         Group {
             if viewModel.isLoading {
@@ -104,7 +112,6 @@ struct DetailView: View {
             )
     }
 
-
     private var infoSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             if !viewModel.remarks.isEmpty {
@@ -136,21 +143,6 @@ struct DetailView: View {
         }
         .padding(.horizontal)
     }
-    private let episodeColumns = [
-        GridItem(.flexible(), spacing: 8),
-        GridItem(.flexible(), spacing: 8),
-        GridItem(.flexible(), spacing: 8),
-        GridItem(.flexible(), spacing: 8),
-        GridItem(.flexible(), spacing: 8)
-    ]
-
-    private let episodeColumns = [
-        GridItem(.flexible(), spacing: 8),
-        GridItem(.flexible(), spacing: 8),
-        GridItem(.flexible(), spacing: 8),
-        GridItem(.flexible(), spacing: 8),
-        GridItem(.flexible(), spacing: 8)
-    ]
 
     private var episodeSection: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -190,7 +182,7 @@ struct DetailView: View {
             }
         }
         .padding(.horizontal)
-    }    }
+    }
 }
 
 struct PlayerView: View {
@@ -209,60 +201,32 @@ struct PlayerView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
-                    Text("URL: \(source.url)")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
                     Button("关闭") {
                         dismiss()
                     }
                 }
+                .padding()
             } else if let player = player {
                 VideoPlayer(player: player)
+                    .onDisappear {
+                        player.pause()
+                    }
             } else {
-                ProgressView("加载播放器...")
+                ProgressView("加载中...")
             }
         }
-        .ignoresSafeArea()
-        .overlay(alignment: .topLeading) {
-            Button(action: {
-                dismiss()
-            }) {
-                Image(systemName: "xmark")
-                    .font(.title2)
-                    .foregroundColor(.white)
-                    .padding()
-            }
-        }
-        .onAppear {
-            loadPlayer()
-        }
-        .onDisappear {
-            player?.pause()
+        .task {
+            await setupPlayer()
         }
     }
 
-    private func loadPlayer() {
-        guard let url = URL(string: source.url) else {
-            errorMessage = "无效的播放地址"
+    private func setupPlayer() async {
+        guard let url = URL(string: source.url), !source.url.isEmpty else {
+            errorMessage = "播放地址无效"
             return
         }
-        let asset = AVURLAsset(url: url)
-        let p = AVPlayer(playerItem: AVPlayerItem(asset: asset))
-        player = p
-        p.play()
-
-        Task {
-            do {
-                let status = try await asset.load(.isPlayable)
-                if !status {
-                    errorMessage = "视频不可播放"
-                }
-            } catch {
-                errorMessage = error.localizedDescription
-            }
-        }
+        let item = AVPlayerItem(url: url)
+        player = AVPlayer(playerItem: item)
+        player?.play()
     }
 }
-
