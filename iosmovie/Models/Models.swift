@@ -14,6 +14,7 @@ struct PlaySource: Identifiable, Hashable {
     let name: String
     let url: String
     let format: String
+    var episodes: [PlaySource] = []
 }
 
 struct MovieDetail {

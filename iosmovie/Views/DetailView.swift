@@ -24,15 +24,33 @@ struct DetailView: View {
             } else {
                 List {
                     ForEach(viewModel.sources) { source in
-                        Button(action: {
-                            playingSource = source
-                        }) {
-                            HStack {
-                                Text(source.name)
-                                Spacer()
-                                Text(source.format.uppercased())
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                        if source.episodes.isEmpty {
+                            Button(action: {
+                                playingSource = source
+                            }) {
+                                HStack {
+                                    Text(source.name)
+                                    Spacer()
+                                    Text(source.format.uppercased())
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                        } else {
+                            Section(header: Text(source.name)) {
+                                ForEach(source.episodes) { episode in
+                                    Button(action: {
+                                        playingSource = episode
+                                    }) {
+                                        HStack {
+                                            Text(episode.name)
+                                            Spacer()
+                                            Text(episode.format.uppercased())
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
