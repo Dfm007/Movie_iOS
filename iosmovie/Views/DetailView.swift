@@ -209,10 +209,35 @@ struct PlayerView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            playerArea
+            ZStack(alignment: .topLeading) {
+                playerArea
+                backButton
+            }
             episodePanel
         }
         .background(Color.black.ignoresSafeArea())
+        .onAppear {
+            setupPlayer()
+        }
+        .onDisappear {
+            player?.pause()
+            player = nil
+        }
+    }
+
+    private var backButton: some View {
+        Button(action: {
+            dismiss()
+        }) {
+            Image(systemName: "chevron.left")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(.white)
+                .padding(10)
+                .background(Color.black.opacity(0.5))
+                .clipShape(Circle())
+        }
+        .padding(.leading, 12)
+        .padding(.top, 8)
     }
 
     private var playerArea: some View {
@@ -227,17 +252,16 @@ struct PlayerView: View {
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxWidth: .infinity)
+                .aspectRatio(16/9, contentMode: .fit)
                 .padding()
             } else if let player = player {
                 VideoPlayer(player: player)
                     .aspectRatio(16/9, contentMode: .fit)
-                    .onDisappear {
-                        player.pause()
-                    }
             } else {
                 ProgressView("加载中...")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .frame(maxWidth: .infinity)
+                    .aspectRatio(16/9, contentMode: .fit)
             }
         }
     }
@@ -290,7 +314,10 @@ struct PlayerView: View {
     }
 
     private func setupPlayer() {
-        guard let url = URL(string: currentSource.url), !currentSource.url.isEmpty else {
+        let rawURL = currentSource.url
+        guard !rawURL.isEmpty,
+              let encodedURL = rawURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: encodedURL) else {
             errorMessage = "播放地址无效"
             return
         }
