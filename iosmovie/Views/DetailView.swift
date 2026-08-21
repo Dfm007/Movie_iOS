@@ -185,6 +185,31 @@ struct DetailView: View {
     }
 }
 
+struct PlayerLayerView: UIViewRepresentable {
+    let player: AVPlayer
+
+    func makeUIView(context: Context) -> PlayerContainerView {
+        let view = PlayerContainerView()
+        view.playerLayer.player = player
+        view.playerLayer.videoGravity = .resizeAspect
+        return view
+    }
+
+    func updateUIView(_ uiView: PlayerContainerView, context: Context) {
+        uiView.playerLayer.player = player
+    }
+}
+
+final class PlayerContainerView: UIView {
+    override static var layerClass: AnyClass {
+        AVPlayerLayer.self
+    }
+
+    var playerLayer: AVPlayerLayer {
+        layer as! AVPlayerLayer
+    }
+}
+
 struct PlayerView: View {
     let source: PlaySource
     let allSources: [PlaySource]
@@ -209,17 +234,15 @@ struct PlayerView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            ZStack(alignment: .topLeading) {
-                playerArea
-                backButton
-                fullscreenButton
-            }
-            if !isFullscreen {
-                episodePanel
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            if isFullscreen {
+                fullscreenPlayer
+            } else {
+                portraitLayout
             }
         }
-        .background(Color.black.ignoresSafeArea())
         .onAppear {
             setupPlayer()
         }
@@ -229,19 +252,61 @@ struct PlayerView: View {
         }
     }
 
+    private var portraitLayout: some View {
+        VStack(spacing: 0) {
+            playerContainer
+                .frame(height: 220)
+            episodePanel
+        }
+    }
+
+    private var fullscreenPlayer: some View {
+        playerContainer
+            .ignoresSafeArea()
+            .overlay(alignment: .topLeading) {
+                backButton
+            }
+            .overlay(alignment: .bottomTrailing) {
+                fullscreenButton
+            }
+    }
+
+    private var playerContainer: some View {
+        ZStack {
+            if let error = errorMessage {
+                errorView(error)
+            } else if let player = player {
+                PlayerLayerView(player: player)
+            } else {
+                ProgressView("加载中...")
+                    .foregroundColor(.white)
+            }
+        }
+        .overlay(alignment: .topLeading) {
+            if !isFullscreen {
+                backButton
+            }
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if !isFullscreen {
+                fullscreenButton
+            }
+        }
+    }
+
     private var backButton: some View {
         Button(action: {
             dismiss()
         }) {
             Image(systemName: "chevron.left")
-                .font(.system(size: 20, weight: .semibold))
+                .font(.system(size: 18, weight: .semibold))
                 .foregroundColor(.white)
-                .padding(10)
+                .padding(8)
                 .background(Color.black.opacity(0.5))
                 .clipShape(Circle())
         }
-        .padding(.leading, 12)
-        .padding(.top, 8)
+        .padding(.leading, 10)
+        .padding(.top, 10)
     }
 
     private var fullscreenButton: some View {
@@ -249,41 +314,27 @@ struct PlayerView: View {
             toggleFullscreen()
         }) {
             Image(systemName: isFullscreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
-                .font(.system(size: 20, weight: .semibold))
+                .font(.system(size: 18, weight: .semibold))
                 .foregroundColor(.white)
-                .padding(10)
+                .padding(8)
                 .background(Color.black.opacity(0.5))
                 .clipShape(Circle())
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-        .padding(.trailing, 12)
-        .padding(.bottom, 12)
+        .padding(.trailing, 10)
+        .padding(.bottom, 10)
     }
 
-    private var playerArea: some View {
-        Group {
-            if let error = errorMessage {
-                VStack(spacing: 16) {
-                    Text("播放失败")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                    Text(error)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity)
-                .aspectRatio(16/9, contentMode: .fit)
-                .padding()
-            } else if let player = player {
-                VideoPlayer(player: player)
-                    .aspectRatio(16/9, contentMode: .fit)
-            } else {
-                ProgressView("加载中...")
-                    .frame(maxWidth: .infinity)
-                    .aspectRatio(16/9, contentMode: .fit)
-            }
+    private func errorView(_ error: String) -> some View {
+        VStack(spacing: 12) {
+            Text("播放失败")
+                .font(.headline)
+                .foregroundColor(.white)
+            Text(error)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
         }
+        .padding()
     }
 
     private var episodePanel: some View {
@@ -328,11 +379,10 @@ struct PlayerView: View {
     private func toggleFullscreen() {
         if isFullscreen {
             UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
-            UINavigationController.attemptRotationToDeviceOrientation()
         } else {
             UIDevice.current.setValue(UIInterfaceOrientation.landscapeRight.rawValue, forKey: "orientation")
-            UINavigationController.attemptRotationToDeviceOrientation()
         }
+        UINavigationController.attemptRotationToDeviceOrientation()
         isFullscreen.toggle()
     }
 
