@@ -166,17 +166,6 @@ final class DDYSSource: MovieSourceProtocol {
         }
     }
 
-    private func extractFirstSourceURL(from html: String) -> String? {
-        guard let range = html.range(of: "firstSource") else { return nil }
-        let snippet = String(html[range.lowerBound...].prefix(1500))
-        let pattern = #"urls*[:=]s*\"([^\"]+)\""#
-        guard let regex = try? NSRegularExpression(pattern: pattern),
-              let match = regex.firstMatch(in: snippet, range: NSRange(snippet.startIndex..<snippet.endIndex, in: snippet)),
-              let urlRange = Range(match.range(at: 1), in: snippet) else { return nil }
-        let rawURL = String(snippet[urlRange])
-        return rawURL.replacingOccurrences(of: "\\/", with: "/")
-    }
-}
 
 private struct HotMoviesResponse: Codable { let data: [HotMovieItem] }
 private struct HotMovieItem: Codable {
