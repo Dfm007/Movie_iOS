@@ -34,7 +34,7 @@ final class AppleCMSSource: MovieSourceProtocol {
 
         guard let item = resp.list.first else { throw URLError(.cannotParseResponse) }
 
-        let movieId = String(item.vod_id)
+        let movieId = item.vod_id
         let title = item.vod_name
         let sources = parsePlaySources(from: item.vod_play_url, playFrom: item.vod_play_from)
 
@@ -58,12 +58,12 @@ final class AppleCMSSource: MovieSourceProtocol {
         let resp = try JSONDecoder().decode(CMSSearchResponse.self, from: data)
         let movies = resp.list.map { item in
             MovieItem(
-                id: String(item.vod_id),
+                id: item.vod_id,
                 title: item.vod_name,
                 type: item.type_name ?? "",
                 year: item.vod_year ?? "",
                 rating: item.vod_score ?? "",
-                detailURL: String(item.vod_id),
+                detailURL: item.vod_id,
                 posterURL: item.vod_pic
             )
         }
@@ -186,7 +186,7 @@ private struct CMSSearchResponse: Codable {
 }
 
 private struct CMSMovieItem: Codable {
-    let vod_id: Int
+    let vod_id: String
     let vod_name: String
     let type_name: String?
     let vod_year: String?
