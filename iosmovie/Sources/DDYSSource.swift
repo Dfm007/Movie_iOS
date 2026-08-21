@@ -109,16 +109,36 @@ final class DDYSSource: MovieSourceProtocol {
             let rawURL = String(html[urlRange])
             let format = String(html[formatRange])
             let cleanURL = rawURL.replacingOccurrences(of: "\\/", with: "/")
-            sources.append(PlaySource(id: id, name: "源 \(id)", url: cleanURL, format: format))
+            let parsed = parseEpisodeSources(id: id, rawURL: cleanURL, format: format)
+            sources.append(contentsOf: parsed)
         }
 
         if sources.isEmpty {
             if let firstSourceURL = extractFirstSourceURL(from: html) {
-                sources.append(PlaySource(id: "1", name: "源 1", url: firstSourceURL, format: "m3u8"))
+                let parsed = parseEpisodeSources(id: "1", rawURL: firstSourceURL, format: "m3u8")
+                sources.append(contentsOf: parsed)
             }
         }
 
         return sources
+    }
+
+    private func parseEpisodeSources(id: String, rawURL: String, format: String) -> [PlaySource] {
+        if rawURL.contains("#") && rawURL.contains("$") {
+            let parts = rawURL.components(separatedBy: "#")
+            var results: [PlaySource] = []
+            for (index, part) in parts.enumerated() {
+                let segments = part.components(separatedBy: "$")
+                if segments.count >= 2 {
+                    let name = segments[0]
+                    let url = segments[1]
+                    results.append(PlaySource(id: "(id)-(index + 1)", name: name, url: url, format: format))
+                }
+            }
+            return results
+        } else {
+            return [PlaySource(id: id, name: "源 (id)", url: rawURL, format: format)]
+        }
     }
 
     private func extractFirstSourceURL(from html: String) -> String? {
