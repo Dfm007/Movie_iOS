@@ -5,14 +5,15 @@ import UIKit
 struct PlayerView: View {
     let source: PlaySource
     var allSources: [PlaySource] = []
-    @Environment(\.dismiss) private var dismiss
+    var onClose: () -> Void
     @State private var currentSource: PlaySource
 
     private let episodeColumns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 5)
 
-    init(source: PlaySource, allSources: [PlaySource] = []) {
+    init(source: PlaySource, allSources: [PlaySource] = [], onClose: @escaping () -> Void) {
         self.source = source
         self.allSources = allSources
+        self.onClose = onClose
         _currentSource = State(initialValue: source)
     }
 
@@ -26,7 +27,7 @@ struct PlayerView: View {
         }
         .background(Color.white)
         .overlay(alignment: .topTrailing) {
-            Button(action: { dismiss() }) {
+            Button(action: { onClose() }) {
                 Image(systemName: "xmark")
                     .font(.headline)
                     .foregroundColor(.white)
