@@ -16,7 +16,7 @@
 		BB0000000009 /* AppleCMSSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000009 /* AppleCMSSource.swift */; };
 		B1000000009 /* CacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000009 /* CacheManager.swift */; };
 		B1000000010 /* CMSSite.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000010 /* CMSSite.swift */; };
-		B1000000011 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000011 /* AppDelegate.swift */; };
+		BB0000000012 /* IJKMediaFramework.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA0000000012 /* IJKMediaFramework.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -32,14 +32,16 @@
 		AA0000000009 /* AppleCMSSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/AppleCMSSource.swift"; sourceTree = "<group>"; };
 		A1000000009 /* CacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/CacheManager.swift"; sourceTree = "<group>"; };
 		A1000000010 /* CMSSite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Models/CMSSite.swift"; sourceTree = "<group>"; };
-		A1000000011 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		AA0000000012 /* IJKMediaFramework.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Frameworks/IJKMediaFramework.framework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		DD0000000001 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
-			files = ();
+			files = (
+				BB0000000012 /* IJKMediaFramework.framework in Frameworks */,
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -57,7 +59,7 @@
 			isa = PBXGroup;
 			children = (
 				AA0000000001 /* iosmovieApp.swift */,
-				A1000000011 /* AppDelegate.swift */,
+				AA0000000012 /* IJKMediaFramework.framework */,
 				AA0000000002 /* Models.swift */,
 				AA0000000003 /* MovieSourceProtocol.swift */,
 				AA0000000005 /* DetailViewModel.swift */,
@@ -128,7 +130,9 @@
 		II0000000001 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
-			files = ();
+			files = (
+				BB0000000012 /* IJKMediaFramework.framework in Frameworks */,
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
@@ -139,7 +143,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				BB0000000001 /* iosmovieApp.swift in Sources */,
-				B1000000011 /* AppDelegate.swift in Sources */,
 				BB0000000002 /* Models.swift in Sources */,
 				BB0000000003 /* MovieSourceProtocol.swift in Sources */,
 				BB0000000005 /* DetailViewModel.swift in Sources */,
@@ -158,6 +161,7 @@
 		KK0000000001 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+					FRAMEWORK_SEARCH_PATHS = "/iosmovie/Frameworks";
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -176,6 +180,7 @@
 		KK0000000002 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+					FRAMEWORK_SEARCH_PATHS = "/iosmovie/Frameworks";
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -193,6 +198,7 @@
 		KK0000000003 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+					FRAMEWORK_SEARCH_PATHS = "/iosmovie/Frameworks";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -209,6 +215,7 @@
 		KK0000000004 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+					FRAMEWORK_SEARCH_PATHS = "/iosmovie/Frameworks";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = NO;

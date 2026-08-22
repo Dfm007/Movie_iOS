@@ -1,5 +1,5 @@
 import SwiftUI
-import AVKit
+import IJKMediaFramework
 
 struct DetailView: View {
     let detailURL: String
@@ -185,38 +185,11 @@ struct DetailView: View {
     }
 }
 
-struct PlayerLayerView: UIViewRepresentable {
-    let player: AVPlayer
-
-    func makeUIView(context: Context) -> PlayerContainerView {
-        let view = PlayerContainerView()
-        view.playerLayer.player = player
-        view.playerLayer.videoGravity = .resizeAspect
-        return view
-    }
-
-    func updateUIView(_ uiView: PlayerContainerView, context: Context) {
-        uiView.playerLayer.player = player
-    }
-}
-
-final class PlayerContainerView: UIView {
-    override static var layerClass: AnyClass {
-        AVPlayerLayer.self
-    }
-
-    var playerLayer: AVPlayerLayer {
-        layer as! AVPlayerLayer
-    }
-}
-
 struct PlayerView: View {
     let source: PlaySource
     let allSources: [PlaySource]
     @Environment(\.dismiss) private var dismiss
     @State private var currentSource: PlaySource
-    @State private var player: AVPlayer?
-    @State private var errorMessage: String?
     @State private var isFullscreen = false
     @State private var isLocked = false
     @State private var isPlaying = false
@@ -224,7 +197,6 @@ struct PlayerView: View {
     @State private var duration: Double = 0
     @State private var playbackRate: Float = 1.0
     @State private var showControls = true
-    @State private var timeObserver: Any?
 
     private let episodeColumns = [
         GridItem(.flexible(), spacing: 8),
@@ -278,14 +250,7 @@ struct PlayerView: View {
 
     private var playerContainer: some View {
         ZStack {
-            if let error = errorMessage {
-                errorView(error)
-            } else if let player = player {
-                PlayerLayerView(player: player)
-            } else {
-                ProgressView("加载中...")
-                    .foregroundColor(.white)
-            }
+            IJKPlayerContainerView(url: currentSource.url, isPlaying: $isPlaying, currentTime: $currentTime, duration: $duration, playbackRate: $playbackRate)
 
             if showControls && !isLocked {
                 controlsOverlay
@@ -331,15 +296,7 @@ struct PlayerView: View {
                         seek(to: newValue)
                     }
                 ),
-                in: 0...max(duration, 1),
-                onEditingChanged: { editing in
-                    if editing {
-                        player?.pause()
-                    } else {
-                        player?.play()
-                        isPlaying = true
-                    }
-                }
+                in: 0...max(duration, 1)
             )
             .accentColor(.white)
 
@@ -413,7 +370,8 @@ struct PlayerView: View {
 
     private var fullscreenButton: some View {
         Button(action: {
-            toggleFullscreen()
+            isFullscreen.toggle()
+            showControls = true
         }) {
             Image(systemName: isFullscreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
                 .font(.system(size: 18, weight: .semibold))
@@ -422,19 +380,6 @@ struct PlayerView: View {
                 .background(Color.black.opacity(0.5))
                 .clipShape(Circle())
         }
-    }
-
-    private func errorView(_ error: String) -> some View {
-        VStack(spacing: 12) {
-            Text("播放失败")
-                .font(.headline)
-                .foregroundColor(.white)
-            Text(error)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .padding()
     }
 
     private var episodePanel: some View {
@@ -477,76 +422,31 @@ struct PlayerView: View {
     }
 
     private func togglePlayPause() {
-        guard let player = player else { return }
-        if isPlaying {
-            player.pause()
-        } else {
-            player.play()
-        }
         isPlaying.toggle()
     }
 
     private func setRate(_ rate: Float) {
         playbackRate = rate
-        player?.rate = rate
     }
 
     private func seek(to time: Double) {
-        let cmTime = CMTime(seconds: time, preferredTimescale: 600)
-        player?.seek(to: cmTime)
         currentTime = time
     }
 
-    private func toggleFullscreen() {
-        isFullscreen.toggle()
-        showControls = true
-    }
-
     private func switchTo(_ newSource: PlaySource) {
-        cleanup()
         currentSource = newSource
-        errorMessage = nil
+        isPlaying = false
+        currentTime = 0
+        duration = 0
         setupPlayer()
     }
 
     private func setupPlayer() {
-        let rawURL = currentSource.url
-        guard !rawURL.isEmpty,
-              let encodedURL = rawURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let url = URL(string: encodedURL) else {
-            errorMessage = "播放地址无效"
-            return
-        }
-
-        let item = AVPlayerItem(url: url)
-        let newPlayer = AVPlayer(playerItem: item)
-        newPlayer.rate = playbackRate
-        player = newPlayer
-        newPlayer.play()
         isPlaying = true
-
-        let interval = CMTime(seconds: 0.5, preferredTimescale: 600)
-        timeObserver = newPlayer.addPeriodicTimeObserver(forInterval: interval, queue: .main) { time in
-            currentTime = time.seconds
-            duration = newPlayer.currentItem?.duration.seconds ?? 0
-            if newPlayer.rate == 0 {
-                isPlaying = false
-            } else {
-                isPlaying = true
-            }
-        }
     }
 
     private func cleanup() {
-        if let observer = timeObserver {
-            player?.removeTimeObserver(observer)
-            timeObserver = nil
-        }
-        player?.pause()
-        player = nil
         isPlaying = false
-        currentTime = 0
-        duration = 0
     }
 
     private func timeString(_ seconds: Double) -> String {
@@ -562,3 +462,27 @@ struct PlayerView: View {
     }
 }
 
+struct IJKPlayerContainerView: UIViewRepresentable {
+    let url: String
+    @Binding var isPlaying: Bool
+    @Binding var currentTime: Double
+    @Binding var duration: Double
+    @Binding var playbackRate: Float
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        let player = IJKFFMoviePlayerController(contentURLString: url, with: nil)
+        player?.view.frame = view.bounds
+        player?.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        player?.scalingMode = .aspectFit
+        player?.shouldAutoplay = true
+        if let player = player {
+            view.addSubview(player.view)
+            player.prepareToPlay()
+        }
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+    }
+}
