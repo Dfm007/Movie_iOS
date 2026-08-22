@@ -67,6 +67,9 @@ struct DetailView: View {
             }
             await viewModel.loadDetail(path: detailURL)
         }
+        .fullScreenCover(item: $playingSource) { source in
+            PlayerView(source: source, allSources: viewModel.sources)
+        }
     }
 
     private var headerView: some View {
