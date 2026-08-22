@@ -161,7 +161,7 @@
 		KK0000000001 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-					FRAMEWORK_SEARCH_PATHS = "/iosmovie/Frameworks";
+					FRAMEWORK_SEARCH_PATHS = "$(SRCROOT)/iosmovie/Frameworks";
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -180,7 +180,7 @@
 		KK0000000002 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-					FRAMEWORK_SEARCH_PATHS = "/iosmovie/Frameworks";
+					FRAMEWORK_SEARCH_PATHS = "$(SRCROOT)/iosmovie/Frameworks";
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -198,7 +198,7 @@
 		KK0000000003 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-					FRAMEWORK_SEARCH_PATHS = "/iosmovie/Frameworks";
+					FRAMEWORK_SEARCH_PATHS = "$(SRCROOT)/iosmovie/Frameworks";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -215,7 +215,7 @@
 		KK0000000004 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-					FRAMEWORK_SEARCH_PATHS = "/iosmovie/Frameworks";
+					FRAMEWORK_SEARCH_PATHS = "$(SRCROOT)/iosmovie/Frameworks";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = NO;
