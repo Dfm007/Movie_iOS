@@ -57,7 +57,8 @@ struct DetailView: View {
             await viewModel.loadDetail(path: detailURL)
         }
         .fullScreenCover(item: $playingSource) { source in
-            PlayerView(source: source, allSources: viewModel.sources)
+            PlayerFullScreenView(source: source, allSources: viewModel.sources)
+                .ignoresSafeArea()
         }
     }
 
@@ -593,5 +594,28 @@ struct PlayerView: View {
             return String(format: "%d:%02d:%02d", h, m, s)
         }
         return String(format: "%02d:%02d", m, s)
+    }
+}
+struct PlayerFullScreenView: UIViewControllerRepresentable {
+    let source: PlaySource
+    let allSources: [PlaySource]
+
+    func makeUIViewController(context: Context) -> PlayerFullScreenViewController {
+        let hostingController = PlayerFullScreenViewController(rootView: PlayerView(source: source, allSources: allSources))
+        hostingController.modalPresentationStyle = .fullScreen
+        return hostingController
+    }
+
+    func updateUIViewController(_ uiViewController: PlayerFullScreenViewController, context: Context) {
+    }
+}
+
+final class PlayerFullScreenViewController: UIHostingController<PlayerView> {
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        .landscape
+    }
+
+    override var preferredInterfaceOrientationForPresentation: UIInterfaceOrientation {
+        .landscapeRight
     }
 }
