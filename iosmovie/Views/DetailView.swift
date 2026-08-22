@@ -199,32 +199,86 @@ struct PlayerView: View {
     let source: PlaySource
     let allSources: [PlaySource]
     @Environment(\.dismiss) private var dismiss
+    @State private var currentSource: PlaySource
+
+    init(source: PlaySource, allSources: [PlaySource]) {
+        self.source = source
+        self.allSources = allSources
+        _currentSource = State(initialValue: source)
+    }
+
+    private let episodeColumns = [
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8)
+    ]
 
     var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-
-            if let url = URL(string: source.url) {
-                KSVideoPlayerView(url: url, options: KSOptions(), title: source.name)
-                    .ignoresSafeArea()
-            } else {
-                Text("播放地址无效")
-                    .foregroundColor(.white)
-            }
-
-            VStack {
-                HStack {
-                    Button(action: { dismiss() }) {
-                        Image(systemName: "xmark")
-                            .font(.title2)
-                            .foregroundColor(.white)
-                            .padding()
-                    }
-                    Spacer()
+        VStack(spacing: 0) {
+            ZStack(alignment: .topTrailing) {
+                Color.black
+                if let url = URL(string: currentSource.url) {
+                    KSVideoPlayerView(url: url, options: KSOptions(), title: currentSource.name)
+                        .aspectRatio(16/9, contentMode: .fit)
+                } else {
+                    Text("播放地址无效")
+                        .foregroundColor(.white)
                 }
-                Spacer()
+
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark")
+                        .font(.title2)
+                        .foregroundColor(.white)
+                        .padding()
+                }
             }
+            .frame(maxWidth: .infinity)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(allSources) { group in
+                        if group.episodes.isEmpty {
+                            Button(action: {
+                                currentSource = group
+                            }) {
+                                Text(group.name)
+                                    .font(.subheadline)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 8)
+                                    .background(currentSource.id == group.id ? Color.blue.opacity(0.35) : Color.blue.opacity(0.15))
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                            }
+                        } else {
+                            Text(group.name)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+
+                            LazyVGrid(columns: episodeColumns, spacing: 8) {
+                                ForEach(group.episodes) { episode in
+                                    Button(action: {
+                                        currentSource = episode
+                                    }) {
+                                        Text(episode.name)
+                                            .font(.caption)
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 8)
+                                            .background(currentSource.id == episode.id ? Color.blue.opacity(0.35) : Color.blue.opacity(0.15))
+                                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.vertical)
+            }
+            .background(Color.black.ignoresSafeArea())
         }
+        .background(Color.black.ignoresSafeArea())
     }
 }
-
