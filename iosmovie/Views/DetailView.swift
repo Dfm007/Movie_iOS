@@ -57,8 +57,7 @@ struct DetailView: View {
             await viewModel.loadDetail(path: detailURL)
         }
         .fullScreenCover(item: $playingSource) { source in
-            PlayerFullScreenView(source: source, allSources: viewModel.sources)
-                .ignoresSafeArea()
+            PlayerView(source: source, allSources: viewModel.sources)
         }
     }
 
@@ -224,6 +223,7 @@ struct PlayerView: View {
     @State private var duration: Double = 0
     @State private var playbackRate: Float = 1.0
     @State private var showControls = true
+    @State private var showSystemPlayer = false
     @State private var timeObserver: Any?
     @State private var dragStartTime: Double = 0
 
@@ -266,6 +266,9 @@ struct PlayerView: View {
                     showControls.toggle()
                 }
             }
+        }
+        .sheet(isPresented: $showSystemPlayer) {
+            systemPlayerSheet
         }
     }
 
@@ -425,7 +428,7 @@ struct PlayerView: View {
 
     private var fullscreenButton: some View {
         Button(action: {
-            toggleFullscreen()
+            showSystemPlayer = true
         }) {
             Image(systemName: isFullscreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
                 .font(.system(size: 18, weight: .semibold))
@@ -436,27 +439,13 @@ struct PlayerView: View {
         }
     }
 
-    private func toggleFullscreen() {
-        if #available(iOS 16.0, *) {
-            guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene else {
-                isFullscreen.toggle()
-                showControls = true
-                return
-            }
-            let orientation: UIInterfaceOrientationMask = isFullscreen ? .portrait : .landscape
-            windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: orientation)) { error in
-                isFullscreen.toggle()
-                showControls = true
-            }
+
+
+    private var systemPlayerSheet: some View {
+        if let player = player {
+            SystemPlayerView(player: player)
         } else {
-            if isFullscreen {
-                UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
-            } else {
-                UIDevice.current.setValue(UIInterfaceOrientation.landscapeRight.rawValue, forKey: "orientation")
-            }
-            UINavigationController.attemptRotationToDeviceOrientation()
-            isFullscreen.toggle()
-            showControls = true
+            EmptyView()
         }
     }
 
@@ -596,26 +585,23 @@ struct PlayerView: View {
         return String(format: "%02d:%02d", m, s)
     }
 }
-struct PlayerFullScreenView: UIViewControllerRepresentable {
-    let source: PlaySource
-    let allSources: [PlaySource]
 
-    func makeUIViewController(context: Context) -> PlayerFullScreenViewController {
-        let hostingController = PlayerFullScreenViewController(rootView: PlayerView(source: source, allSources: allSources))
-        hostingController.modalPresentationStyle = .fullScreen
-        return hostingController
-    }
-
-    func updateUIViewController(_ uiViewController: PlayerFullScreenViewController, context: Context) {
-    }
-}
-
-final class PlayerFullScreenViewController: UIHostingController<PlayerView> {
-    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
-        .landscape
-    }
 
     override var preferredInterfaceOrientationForPresentation: UIInterfaceOrientation {
         .landscapeRight
+    }
+}
+struct SystemPlayerView: UIViewControllerRepresentable {
+    let player: AVPlayer
+
+    func makeUIViewController(context: Context) -> AVPlayerViewController {
+        let controller = AVPlayerViewController()
+        controller.player = player
+        controller.modalPresentationStyle = .fullScreen
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {
+        uiViewController.player = player
     }
 }
