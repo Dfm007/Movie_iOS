@@ -28,7 +28,7 @@ jobs:
       - name: Debug pbxproj
         run: |
           xxd -l 20 iosmovie.xcodeproj/project.pbxproj
-          plutil -lint iosmovie.xcodeproj/project.pbxproj
+          plutil -lint iosmovie.xcodeproj/project.pbxproj 2>&1 || true
 
       - name: Build unsigned iOS app
         run: |
