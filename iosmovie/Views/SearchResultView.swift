@@ -128,12 +128,3 @@ struct SearchDetailView: View {
         )
     }
 }
-    let item: SearchResultItem
-
-    var body: some View {
-        DetailView(
-            detailURL: item.sourceDetails.first?.detailURL ?? "",
-            availableSites: item.sourceDetails.map { $0.site }
-        )
-    }
-}

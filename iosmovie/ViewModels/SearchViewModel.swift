@@ -13,7 +13,7 @@ struct SearchResultItem: Identifiable, Hashable {
     let type: String
     let rating: String
     let posterURL: String?
-    let sourceDetails: [SourceDetail]
+    var sourceDetails: [SourceDetail]
 }
 
 @MainActor
@@ -71,7 +71,10 @@ final class SearchViewModel: ObservableObject {
 
             if var existing = dict[key] {
                 if !existing.sourceDetails.contains(where: { $0.site.id == item.site.id }) {
-                    existing.sourceDetails.append(sourceDetail)
+                    var updatedDetails = existing.sourceDetails
+                    updatedDetails.append(sourceDetail)
+                    existing.sourceDetails = updatedDetails
+                    dict[key] = existing
                     dict[key] = existing
                 }
             } else {

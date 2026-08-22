@@ -8,6 +8,14 @@ struct DetailView: View {
     @StateObject private var viewModel = DetailViewModel()
     @State private var playingSource: PlaySource?
 
+    private let episodeColumns = [
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8)
+    ]
+
     init(detailURL: String, availableSites: [CMSSite]? = nil, detailMap: [String: String] = [:]) {
         self.detailURL = detailURL
         self.availableSites = availableSites
