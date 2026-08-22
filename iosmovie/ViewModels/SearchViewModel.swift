@@ -62,24 +62,21 @@ final class SearchViewModel: ObservableObject {
         var dict: [String: SearchResultItem] = [:]
 
         for item in items {
-            let key = "\(item.movie.title)_\(item.movie.year)"
+            let normalizedTitle = normalize(item.movie.title)
             let sourceDetail = SourceDetail(
                 id: "\(item.site.id)_\(item.movie.id)",
                 site: item.site,
                 detailURL: item.movie.id
             )
 
-            if var existing = dict[key] {
+            if var existing = dict[normalizedTitle] {
                 if !existing.sourceDetails.contains(where: { $0.site.id == item.site.id }) {
-                    var updatedDetails = existing.sourceDetails
-                    updatedDetails.append(sourceDetail)
-                    existing.sourceDetails = updatedDetails
-                    dict[key] = existing
-                    dict[key] = existing
+                    existing.sourceDetails.append(sourceDetail)
+                    dict[normalizedTitle] = existing
                 }
             } else {
-                dict[key] = SearchResultItem(
-                    id: key,
+                dict[normalizedTitle] = SearchResultItem(
+                    id: normalizedTitle,
                     title: item.movie.title,
                     year: item.movie.year,
                     type: item.movie.type,
@@ -91,5 +88,19 @@ final class SearchViewModel: ObservableObject {
         }
 
         return dict.values.sorted { $0.title < $1.title }
+    }
+
+    private static func normalize(_ text: String) -> String {
+        var result = text.lowercased()
+        result = result.replacingOccurrences(of: " ", with: "")
+        result = result.replacingOccurrences(of: "　", with: "")
+        result = result.replacingOccurrences(of: "·", with: "")
+        result = result.replacingOccurrences(of: "・", with: "")
+        result = result.replacingOccurrences(of: ".", with: "")
+        result = result.replacingOccurrences(of: "-", with: "")
+        result = result.replacingOccurrences(of: "—", with: "")
+        result = result.replacingOccurrences(of: ":", with: "")
+        result = result.replacingOccurrences(of: "：", with: "")
+        return result
     }
 }
