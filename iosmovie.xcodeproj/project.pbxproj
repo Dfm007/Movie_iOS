@@ -18,6 +18,7 @@
 		B1000000010 /* CMSSite.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000010 /* CMSSite.swift */; };
 		BB0000000011 /* SearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000011 /* SearchViewModel.swift */; };
 		BB0000000012 /* SearchResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000012 /* SearchResultView.swift */; };
+		BB0000000013 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000013 /* SettingsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -35,6 +36,7 @@
 		A1000000010 /* CMSSite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Models/CMSSite.swift"; sourceTree = "<group>"; };
 		AA0000000011 /* SearchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ViewModels/SearchViewModel.swift"; sourceTree = "<group>"; };
 		AA0000000012 /* SearchResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/SearchResultView.swift"; sourceTree = "<group>"; };
+		AA0000000013 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/SettingsView.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -68,6 +70,7 @@
 				AA0000000008 /* HomeView.swift */,
 				AA0000000011 /* SearchViewModel.swift */,
 				AA0000000012 /* SearchResultView.swift */,
+				AA0000000013 /* SettingsView.swift */,
 				AA0000000009 /* AppleCMSSource.swift */,
 				A1000000009 /* CacheManager.swift */,
 				A1000000010 /* CMSSite.swift */,
@@ -152,6 +155,7 @@
 				BB0000000008 /* HomeView.swift in Sources */,
 				BB0000000011 /* SearchViewModel.swift in Sources */,
 				BB0000000012 /* SearchResultView.swift in Sources */,
+				BB0000000013 /* SettingsView.swift in Sources */,
 				BB0000000009 /* AppleCMSSource.swift in Sources */,
 				B1000000009 /* CacheManager.swift in Sources */,
 				B1000000010 /* CMSSite.swift in Sources */,

@@ -18,6 +18,13 @@ struct HomeView: View {
                 content
             }
             .navigationTitle("影视王")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink(destination: SettingsView()) {
+                        Image(systemName: "gear")
+                    }
+                }
+            }
             .searchable(text: $viewModel.searchText, prompt: "搜索影视")
             .onSubmit(of: .search) {
                 let keyword = viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
