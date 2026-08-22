@@ -16,7 +16,6 @@
 		BB0000000009 /* AppleCMSSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000009 /* AppleCMSSource.swift */; };
 		B1000000009 /* CacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000009 /* CacheManager.swift */; };
 		B1000000010 /* CMSSite.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000010 /* CMSSite.swift */; };
-		BB0000000012 /* IJKMediaFramework.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA0000000012 /* IJKMediaFramework.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -32,7 +31,6 @@
 		AA0000000009 /* AppleCMSSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/AppleCMSSource.swift"; sourceTree = "<group>"; };
 		A1000000009 /* CacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/CacheManager.swift"; sourceTree = "<group>"; };
 		A1000000010 /* CMSSite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Models/CMSSite.swift"; sourceTree = "<group>"; };
-		AA0000000012 /* IJKMediaFramework.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Frameworks/IJKMediaFramework.framework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -40,7 +38,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				BB0000000012 /* IJKMediaFramework.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -59,7 +56,6 @@
 			isa = PBXGroup;
 			children = (
 				AA0000000001 /* iosmovieApp.swift */,
-				AA0000000012 /* IJKMediaFramework.framework */,
 				AA0000000002 /* Models.swift */,
 				AA0000000003 /* MovieSourceProtocol.swift */,
 				AA0000000005 /* DetailViewModel.swift */,
@@ -131,7 +127,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				BB0000000012 /* IJKMediaFramework.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -161,7 +156,7 @@
 		KK0000000001 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-					FRAMEWORK_SEARCH_PATHS = "$(SRCROOT)/iosmovie/Frameworks";
+					
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -180,7 +175,7 @@
 		KK0000000002 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-					FRAMEWORK_SEARCH_PATHS = "$(SRCROOT)/iosmovie/Frameworks";
+					
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -198,7 +193,7 @@
 		KK0000000003 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-					FRAMEWORK_SEARCH_PATHS = "$(SRCROOT)/iosmovie/Frameworks";
+					
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -215,7 +210,7 @@
 		KK0000000004 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-					FRAMEWORK_SEARCH_PATHS = "$(SRCROOT)/iosmovie/Frameworks";
+					
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = NO;
