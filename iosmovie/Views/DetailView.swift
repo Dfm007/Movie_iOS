@@ -441,11 +441,10 @@ struct PlayerView: View {
 
 
 
+    @ViewBuilder
     private var systemPlayerSheet: some View {
         if let player = player {
             SystemPlayerView(player: player)
-        } else {
-            EmptyView()
         }
     }
 
@@ -587,10 +586,7 @@ struct PlayerView: View {
 }
 
 
-    override var preferredInterfaceOrientationForPresentation: UIInterfaceOrientation {
-        .landscapeRight
-    }
-}
+
 struct SystemPlayerView: UIViewControllerRepresentable {
     let player: AVPlayer
 
