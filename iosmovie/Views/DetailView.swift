@@ -436,14 +436,27 @@ struct PlayerView: View {
     }
 
     private func toggleFullscreen() {
-        if isFullscreen {
-            UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
+        if #available(iOS 16.0, *) {
+            guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene else {
+                isFullscreen.toggle()
+                showControls = true
+                return
+            }
+            let orientation: UIInterfaceOrientationMask = isFullscreen ? .portrait : .landscape
+            windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: orientation)) { error in
+                isFullscreen.toggle()
+                showControls = true
+            }
         } else {
-            UIDevice.current.setValue(UIInterfaceOrientation.landscapeRight.rawValue, forKey: "orientation")
+            if isFullscreen {
+                UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
+            } else {
+                UIDevice.current.setValue(UIInterfaceOrientation.landscapeRight.rawValue, forKey: "orientation")
+            }
+            UINavigationController.attemptRotationToDeviceOrientation()
+            isFullscreen.toggle()
+            showControls = true
         }
-        UINavigationController.attemptRotationToDeviceOrientation()
-        isFullscreen.toggle()
-        showControls = true
     }
 
     private func errorView(_ error: String) -> some View {
