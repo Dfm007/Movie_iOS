@@ -205,7 +205,10 @@ final class PlayerContainerView: UIView {
     }
 
     var playerLayer: AVPlayerLayer {
-        layer as! AVPlayerLayer
+        guard let playerLayer = layer as? AVPlayerLayer else {
+            fatalError("PlayerContainerView layer must be AVPlayerLayer")
+        }
+        return playerLayer
     }
 }
 
