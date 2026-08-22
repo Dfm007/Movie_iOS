@@ -99,20 +99,22 @@ struct ZFPlayerRepresentable: UIViewControllerRepresentable {
 final class ZFPlayerViewController: UIViewController {
     var playURLString: String = ""
     private var player: ZFPlayerController?
-    private var lastURLString: String = ""
+
+    override var shouldAutorotate: Bool {
+        return true
+    }
+
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        return .all
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .black
-        setupPlayer()
-    }
 
-    private func setupPlayer() {
-        lastURLString = playURLString
         let manager = ZFAVPlayerManager()
         let player = ZFPlayerController(playerManager: manager, containerView: view)
         player.controlView = ZFPlayerControlView()
-        player.allowOrentitaionRotation = false
         self.player = player
 
         if let url = URL(string: playURLString) {
@@ -121,14 +123,9 @@ final class ZFPlayerViewController: UIViewController {
         player.playTheIndex(0)
     }
 
-    func restartIfNeeded() {
-        guard playURLString != lastURLString else { return }
-        player?.stop()
-        setupPlayer()
-    }
-
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         player?.stop()
     }
+}
 }
