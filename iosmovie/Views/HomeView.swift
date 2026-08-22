@@ -2,6 +2,8 @@
 
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
+    @State private var showSearchResult = false
+    @State private var searchKeyword = ""
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
@@ -18,8 +20,20 @@ struct HomeView: View {
             .navigationTitle("影视王")
             .searchable(text: $viewModel.searchText, prompt: "搜索影视")
             .onSubmit(of: .search) {
-                Task { await viewModel.search() }
+                let keyword = viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !keyword.isEmpty {
+                    searchKeyword = keyword
+                    showSearchResult = true
+                }
             }
+            .background(
+                NavigationLink(
+                    destination: SearchResultView(keyword: searchKeyword),
+                    isActive: $showSearchResult
+                ) {
+                    EmptyView()
+                }
+            )
             .task {
                 await viewModel.loadInitial()
             }

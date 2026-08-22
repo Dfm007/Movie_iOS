@@ -3,16 +3,16 @@ import AVKit
 
 struct DetailView: View {
     let detailURL: String
+    var availableSites: [CMSSite]? = nil
+    var detailMap: [String: String] = [:]
     @StateObject private var viewModel = DetailViewModel()
     @State private var playingSource: PlaySource?
 
-    private let episodeColumns = [
-        GridItem(.flexible(), spacing: 8),
-        GridItem(.flexible(), spacing: 8),
-        GridItem(.flexible(), spacing: 8),
-        GridItem(.flexible(), spacing: 8),
-        GridItem(.flexible(), spacing: 8)
-    ]
+    init(detailURL: String, availableSites: [CMSSite]? = nil, detailMap: [String: String] = [:]) {
+        self.detailURL = detailURL
+        self.availableSites = availableSites
+        self.detailMap = detailMap
+    }
 
     var body: some View {
         Group {
@@ -54,10 +54,10 @@ struct DetailView: View {
         }
         .navigationTitle(viewModel.movieTitle)
         .task {
+            if let sites = availableSites {
+                viewModel.configure(availableSites: sites, detailMap: detailMap)
+            }
             await viewModel.loadDetail(path: detailURL)
-        }
-        .fullScreenCover(item: $playingSource) { source in
-            PlayerView(source: source, allSources: viewModel.sources)
         }
     }
 

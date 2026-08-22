@@ -1,4 +1,4 @@
-import Foundation
+﻿import Foundation
 
 @MainActor
 final class DetailViewModel: ObservableObject {
@@ -16,7 +16,15 @@ final class DetailViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var selectedSite: CMSSite = .defaultSite
 
-    let sites: [CMSSite] = CMSSite.all
+    var sites: [CMSSite] = CMSSite.all
+
+    private var siteDetailMap: [String: String] = [:]
+
+    func configure(availableSites: [CMSSite], detailMap: [String: String]) {
+        sites = availableSites.isEmpty ? CMSSite.all : availableSites
+        selectedSite = sites.first ?? .defaultSite
+        siteDetailMap = detailMap
+    }
 
     private func makeSource(for site: CMSSite) -> MovieSourceProtocol {
         AppleCMSSource(site: site)
@@ -29,48 +37,20 @@ final class DetailViewModel: ObservableObject {
         errorMessage = nil
 
         let source = makeSource(for: targetSite)
-
-        if site != nil {
-            await loadDetailBySearch(on: source, site: targetSite)
+        let actualPath: String
+        if !path.isEmpty && (path.hasPrefix("http") || !siteDetailMap.isEmpty) {
+            actualPath = siteDetailMap[targetSite.id] ?? path
         } else {
-            await loadDetailDirect(on: source, path: path)
+            actualPath = path
         }
 
+        await loadDetailDirect(on: source, path: actualPath)
         isLoading = false
     }
 
     private func loadDetailDirect(on source: MovieSourceProtocol, path: String) async {
         do {
             let detail = try await source.fetchMovieDetail(path: path)
-            movieTitle = detail.title
-            posterURL = detail.posterURL
-            year = detail.year
-            area = detail.area
-            className = detail.className
-            actors = detail.actors
-            director = detail.director
-            remarks = detail.remarks
-            intro = detail.intro
-            sources = detail.sources
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
-    private func loadDetailBySearch(on source: MovieSourceProtocol, site: CMSSite) async {
-        guard !movieTitle.isEmpty else {
-            sources = []
-            errorMessage = "无法搜索，缺少影视标题"
-            return
-        }
-        do {
-            let results = try await source.searchMovies(keyword: movieTitle)
-            guard let matched = results.first(where: { $0.title == movieTitle }) ?? results.first else {
-                sources = []
-                errorMessage = "该站无此资源"
-                return
-            }
-            let detail = try await source.fetchMovieDetail(path: matched.id)
             movieTitle = detail.title
             posterURL = detail.posterURL
             year = detail.year
