@@ -19,6 +19,79 @@
 		BB0000000011 /* SearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000011 /* SearchViewModel.swift */; };
 		BB0000000012 /* SearchResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000012 /* SearchResultView.swift */; };
 		BB0000000013 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000013 /* SettingsView.swift */; };
+		ZB0001 /* UIScrollView+ZFPlayer.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0001 /* UIScrollView+ZFPlayer.h */; };
+		ZB0002 /* UIScrollView+ZFPlayer.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0002 /* UIScrollView+ZFPlayer.m */; };
+		ZB0003 /* UIViewController+ZFPlayerRotation.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0003 /* UIViewController+ZFPlayerRotation.m */; };
+		ZB0004 /* ZFFloatView.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0004 /* ZFFloatView.h */; };
+		ZB0005 /* ZFFloatView.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0005 /* ZFFloatView.m */; };
+		ZB0006 /* ZFKVOController.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0006 /* ZFKVOController.h */; };
+		ZB0007 /* ZFKVOController.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0007 /* ZFKVOController.m */; };
+		ZB0008 /* ZFLandscapeRotationManager.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0008 /* ZFLandscapeRotationManager.h */; };
+		ZB0009 /* ZFLandscapeRotationManager.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0009 /* ZFLandscapeRotationManager.m */; };
+		ZB0010 /* ZFLandscapeRotationManager_iOS15.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0010 /* ZFLandscapeRotationManager_iOS15.h */; };
+		ZB0011 /* ZFLandscapeRotationManager_iOS15.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0011 /* ZFLandscapeRotationManager_iOS15.m */; };
+		ZB0012 /* ZFLandscapeRotationManager_iOS16.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0012 /* ZFLandscapeRotationManager_iOS16.h */; };
+		ZB0013 /* ZFLandscapeRotationManager_iOS16.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0013 /* ZFLandscapeRotationManager_iOS16.m */; };
+		ZB0014 /* ZFLandscapeViewController.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0014 /* ZFLandscapeViewController.h */; };
+		ZB0015 /* ZFLandscapeViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0015 /* ZFLandscapeViewController.m */; };
+		ZB0016 /* ZFLandscapeViewController_iOS15.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0016 /* ZFLandscapeViewController_iOS15.h */; };
+		ZB0017 /* ZFLandscapeViewController_iOS15.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0017 /* ZFLandscapeViewController_iOS15.m */; };
+		ZB0018 /* ZFLandscapeWindow.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0018 /* ZFLandscapeWindow.h */; };
+		ZB0019 /* ZFLandscapeWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0019 /* ZFLandscapeWindow.m */; };
+		ZB0020 /* ZFOrientationObserver.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0020 /* ZFOrientationObserver.h */; };
+		ZB0021 /* ZFOrientationObserver.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0021 /* ZFOrientationObserver.m */; };
+		ZB0022 /* ZFPersentInteractiveTransition.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0022 /* ZFPersentInteractiveTransition.h */; };
+		ZB0023 /* ZFPersentInteractiveTransition.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0023 /* ZFPersentInteractiveTransition.m */; };
+		ZB0024 /* ZFPlayer.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0024 /* ZFPlayer.h */; };
+		ZB0025 /* ZFPlayerConst.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0025 /* ZFPlayerConst.h */; };
+		ZB0026 /* ZFPlayerController.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0026 /* ZFPlayerController.h */; };
+		ZB0027 /* ZFPlayerController.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0027 /* ZFPlayerController.m */; };
+		ZB0028 /* ZFPlayerGestureControl.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0028 /* ZFPlayerGestureControl.h */; };
+		ZB0029 /* ZFPlayerGestureControl.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0029 /* ZFPlayerGestureControl.m */; };
+		ZB0030 /* ZFPlayerLogManager.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0030 /* ZFPlayerLogManager.h */; };
+		ZB0031 /* ZFPlayerLogManager.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0031 /* ZFPlayerLogManager.m */; };
+		ZB0032 /* ZFPlayerMediaControl.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0032 /* ZFPlayerMediaControl.h */; };
+		ZB0033 /* ZFPlayerMediaPlayback.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0033 /* ZFPlayerMediaPlayback.h */; };
+		ZB0034 /* ZFPlayerNotification.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0034 /* ZFPlayerNotification.h */; };
+		ZB0035 /* ZFPlayerNotification.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0035 /* ZFPlayerNotification.m */; };
+		ZB0036 /* ZFPlayerView.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0036 /* ZFPlayerView.h */; };
+		ZB0037 /* ZFPlayerView.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0037 /* ZFPlayerView.m */; };
+		ZB0038 /* ZFPortraitViewController.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0038 /* ZFPortraitViewController.h */; };
+		ZB0039 /* ZFPortraitViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0039 /* ZFPortraitViewController.m */; };
+		ZB0040 /* ZFPresentTransition.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0040 /* ZFPresentTransition.h */; };
+		ZB0041 /* ZFPresentTransition.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0041 /* ZFPresentTransition.m */; };
+		ZB0042 /* ZFReachabilityManager.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0042 /* ZFReachabilityManager.h */; };
+		ZB0043 /* ZFReachabilityManager.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0043 /* ZFReachabilityManager.m */; };
+		ZB0044 /* ZFAVPlayerManager.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0044 /* ZFAVPlayerManager.h */; };
+		ZB0045 /* ZFAVPlayerManager.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0045 /* ZFAVPlayerManager.m */; };
+		ZB0046 /* UIImageView+ZFCache.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0046 /* UIImageView+ZFCache.h */; };
+		ZB0047 /* UIImageView+ZFCache.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0047 /* UIImageView+ZFCache.m */; };
+		ZB0048 /* UIView+ZFFrame.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0048 /* UIView+ZFFrame.h */; };
+		ZB0049 /* UIView+ZFFrame.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0049 /* UIView+ZFFrame.m */; };
+		ZB0050 /* ZFLandScapeControlView.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0050 /* ZFLandScapeControlView.h */; };
+		ZB0051 /* ZFLandScapeControlView.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0051 /* ZFLandScapeControlView.m */; };
+		ZB0052 /* ZFLoadingView.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0052 /* ZFLoadingView.h */; };
+		ZB0053 /* ZFLoadingView.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0053 /* ZFLoadingView.m */; };
+		ZB0054 /* ZFNetworkSpeedMonitor.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0054 /* ZFNetworkSpeedMonitor.h */; };
+		ZB0055 /* ZFNetworkSpeedMonitor.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0055 /* ZFNetworkSpeedMonitor.m */; };
+		ZB0056 /* ZFPlayerControlView.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0056 /* ZFPlayerControlView.h */; };
+		ZB0057 /* ZFPlayerControlView.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0057 /* ZFPlayerControlView.m */; };
+		ZB0058 /* ZFPlayerStatusBar.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0058 /* ZFPlayerStatusBar.h */; };
+		ZB0059 /* ZFPlayerStatusBar.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0059 /* ZFPlayerStatusBar.m */; };
+		ZB0060 /* ZFPortraitControlView.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0060 /* ZFPortraitControlView.h */; };
+		ZB0061 /* ZFPortraitControlView.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0061 /* ZFPortraitControlView.m */; };
+		ZB0062 /* ZFSliderView.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0062 /* ZFSliderView.h */; };
+		ZB0063 /* ZFSliderView.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0063 /* ZFSliderView.m */; };
+		ZB0064 /* ZFSmallFloatControlView.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0064 /* ZFSmallFloatControlView.h */; };
+		ZB0065 /* ZFSmallFloatControlView.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0065 /* ZFSmallFloatControlView.m */; };
+		ZB0066 /* ZFSpeedLoadingView.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0066 /* ZFSpeedLoadingView.h */; };
+		ZB0067 /* ZFSpeedLoadingView.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0067 /* ZFSpeedLoadingView.m */; };
+		ZB0068 /* ZFUtilities.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0068 /* ZFUtilities.h */; };
+		ZB0069 /* ZFUtilities.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0069 /* ZFUtilities.m */; };
+		ZB0070 /* ZFVolumeBrightnessView.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0070 /* ZFVolumeBrightnessView.h */; };
+		ZB0071 /* ZFVolumeBrightnessView.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0071 /* ZFVolumeBrightnessView.m */; };
+		ZB9999 /* ZFPlayer.bundle in Resources */ = {isa = PBXBuildFile; fileRef = ZF9999 /* ZFPlayer.bundle */; };
+		ZB9001 /* ZFPlayerSwiftUIView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ZF9001 /* ZFPlayerSwiftUIView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -37,6 +110,80 @@
 		AA0000000011 /* SearchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ViewModels/SearchViewModel.swift"; sourceTree = "<group>"; };
 		AA0000000012 /* SearchResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/SearchResultView.swift"; sourceTree = "<group>"; };
 		AA0000000013 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/SettingsView.swift"; sourceTree = "<group>"; };
+		ZF0001 /* UIScrollView+ZFPlayer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/Core/UIScrollView+ZFPlayer.h"; sourceTree = "<group>"; };
+		ZF0002 /* UIScrollView+ZFPlayer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/Core/UIScrollView+ZFPlayer.m"; sourceTree = "<group>"; };
+		ZF0003 /* UIViewController+ZFPlayerRotation.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/Core/UIViewController+ZFPlayerRotation.m"; sourceTree = "<group>"; };
+		ZF0004 /* ZFFloatView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/Core/ZFFloatView.h"; sourceTree = "<group>"; };
+		ZF0005 /* ZFFloatView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/Core/ZFFloatView.m"; sourceTree = "<group>"; };
+		ZF0006 /* ZFKVOController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/Core/ZFKVOController.h"; sourceTree = "<group>"; };
+		ZF0007 /* ZFKVOController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/Core/ZFKVOController.m"; sourceTree = "<group>"; };
+		ZF0008 /* ZFLandscapeRotationManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/Core/ZFLandscapeRotationManager.h"; sourceTree = "<group>"; };
+		ZF0009 /* ZFLandscapeRotationManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/Core/ZFLandscapeRotationManager.m"; sourceTree = "<group>"; };
+		ZF0010 /* ZFLandscapeRotationManager_iOS15.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/Core/ZFLandscapeRotationManager_iOS15.h"; sourceTree = "<group>"; };
+		ZF0011 /* ZFLandscapeRotationManager_iOS15.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/Core/ZFLandscapeRotationManager_iOS15.m"; sourceTree = "<group>"; };
+		ZF0012 /* ZFLandscapeRotationManager_iOS16.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/Core/ZFLandscapeRotationManager_iOS16.h"; sourceTree = "<group>"; };
+		ZF0013 /* ZFLandscapeRotationManager_iOS16.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/Core/ZFLandscapeRotationManager_iOS16.m"; sourceTree = "<group>"; };
+		ZF0014 /* ZFLandscapeViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/Core/ZFLandscapeViewController.h"; sourceTree = "<group>"; };
+		ZF0015 /* ZFLandscapeViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/Core/ZFLandscapeViewController.m"; sourceTree = "<group>"; };
+		ZF0016 /* ZFLandscapeViewController_iOS15.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/Core/ZFLandscapeViewController_iOS15.h"; sourceTree = "<group>"; };
+		ZF0017 /* ZFLandscapeViewController_iOS15.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/Core/ZFLandscapeViewController_iOS15.m"; sourceTree = "<group>"; };
+		ZF0018 /* ZFLandscapeWindow.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/Core/ZFLandscapeWindow.h"; sourceTree = "<group>"; };
+		ZF0019 /* ZFLandscapeWindow.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/Core/ZFLandscapeWindow.m"; sourceTree = "<group>"; };
+		ZF0020 /* ZFOrientationObserver.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/Core/ZFOrientationObserver.h"; sourceTree = "<group>"; };
+		ZF0021 /* ZFOrientationObserver.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/Core/ZFOrientationObserver.m"; sourceTree = "<group>"; };
+		ZF0022 /* ZFPersentInteractiveTransition.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/Core/ZFPersentInteractiveTransition.h"; sourceTree = "<group>"; };
+		ZF0023 /* ZFPersentInteractiveTransition.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/Core/ZFPersentInteractiveTransition.m"; sourceTree = "<group>"; };
+		ZF0024 /* ZFPlayer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/Core/ZFPlayer.h"; sourceTree = "<group>"; };
+		ZF0025 /* ZFPlayerConst.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/Core/ZFPlayerConst.h"; sourceTree = "<group>"; };
+		ZF0026 /* ZFPlayerController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/Core/ZFPlayerController.h"; sourceTree = "<group>"; };
+		ZF0027 /* ZFPlayerController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/Core/ZFPlayerController.m"; sourceTree = "<group>"; };
+		ZF0028 /* ZFPlayerGestureControl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/Core/ZFPlayerGestureControl.h"; sourceTree = "<group>"; };
+		ZF0029 /* ZFPlayerGestureControl.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/Core/ZFPlayerGestureControl.m"; sourceTree = "<group>"; };
+		ZF0030 /* ZFPlayerLogManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/Core/ZFPlayerLogManager.h"; sourceTree = "<group>"; };
+		ZF0031 /* ZFPlayerLogManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/Core/ZFPlayerLogManager.m"; sourceTree = "<group>"; };
+		ZF0032 /* ZFPlayerMediaControl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/Core/ZFPlayerMediaControl.h"; sourceTree = "<group>"; };
+		ZF0033 /* ZFPlayerMediaPlayback.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/Core/ZFPlayerMediaPlayback.h"; sourceTree = "<group>"; };
+		ZF0034 /* ZFPlayerNotification.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/Core/ZFPlayerNotification.h"; sourceTree = "<group>"; };
+		ZF0035 /* ZFPlayerNotification.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/Core/ZFPlayerNotification.m"; sourceTree = "<group>"; };
+		ZF0036 /* ZFPlayerView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/Core/ZFPlayerView.h"; sourceTree = "<group>"; };
+		ZF0037 /* ZFPlayerView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/Core/ZFPlayerView.m"; sourceTree = "<group>"; };
+		ZF0038 /* ZFPortraitViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/Core/ZFPortraitViewController.h"; sourceTree = "<group>"; };
+		ZF0039 /* ZFPortraitViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/Core/ZFPortraitViewController.m"; sourceTree = "<group>"; };
+		ZF0040 /* ZFPresentTransition.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/Core/ZFPresentTransition.h"; sourceTree = "<group>"; };
+		ZF0041 /* ZFPresentTransition.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/Core/ZFPresentTransition.m"; sourceTree = "<group>"; };
+		ZF0042 /* ZFReachabilityManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/Core/ZFReachabilityManager.h"; sourceTree = "<group>"; };
+		ZF0043 /* ZFReachabilityManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/Core/ZFReachabilityManager.m"; sourceTree = "<group>"; };
+		ZF0044 /* ZFAVPlayerManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/AVPlayer/ZFAVPlayerManager.h"; sourceTree = "<group>"; };
+		ZF0045 /* ZFAVPlayerManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/AVPlayer/ZFAVPlayerManager.m"; sourceTree = "<group>"; };
+		ZF0046 /* UIImageView+ZFCache.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/ControlView/UIImageView+ZFCache.h"; sourceTree = "<group>"; };
+		ZF0047 /* UIImageView+ZFCache.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/ControlView/UIImageView+ZFCache.m"; sourceTree = "<group>"; };
+		ZF0048 /* UIView+ZFFrame.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/ControlView/UIView+ZFFrame.h"; sourceTree = "<group>"; };
+		ZF0049 /* UIView+ZFFrame.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/ControlView/UIView+ZFFrame.m"; sourceTree = "<group>"; };
+		ZF0050 /* ZFLandScapeControlView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/ControlView/ZFLandScapeControlView.h"; sourceTree = "<group>"; };
+		ZF0051 /* ZFLandScapeControlView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/ControlView/ZFLandScapeControlView.m"; sourceTree = "<group>"; };
+		ZF0052 /* ZFLoadingView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/ControlView/ZFLoadingView.h"; sourceTree = "<group>"; };
+		ZF0053 /* ZFLoadingView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/ControlView/ZFLoadingView.m"; sourceTree = "<group>"; };
+		ZF0054 /* ZFNetworkSpeedMonitor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/ControlView/ZFNetworkSpeedMonitor.h"; sourceTree = "<group>"; };
+		ZF0055 /* ZFNetworkSpeedMonitor.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/ControlView/ZFNetworkSpeedMonitor.m"; sourceTree = "<group>"; };
+		ZF0056 /* ZFPlayerControlView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/ControlView/ZFPlayerControlView.h"; sourceTree = "<group>"; };
+		ZF0057 /* ZFPlayerControlView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/ControlView/ZFPlayerControlView.m"; sourceTree = "<group>"; };
+		ZF0058 /* ZFPlayerStatusBar.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/ControlView/ZFPlayerStatusBar.h"; sourceTree = "<group>"; };
+		ZF0059 /* ZFPlayerStatusBar.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/ControlView/ZFPlayerStatusBar.m"; sourceTree = "<group>"; };
+		ZF0060 /* ZFPortraitControlView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/ControlView/ZFPortraitControlView.h"; sourceTree = "<group>"; };
+		ZF0061 /* ZFPortraitControlView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/ControlView/ZFPortraitControlView.m"; sourceTree = "<group>"; };
+		ZF0062 /* ZFSliderView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/ControlView/ZFSliderView.h"; sourceTree = "<group>"; };
+		ZF0063 /* ZFSliderView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/ControlView/ZFSliderView.m"; sourceTree = "<group>"; };
+		ZF0064 /* ZFSmallFloatControlView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/ControlView/ZFSmallFloatControlView.h"; sourceTree = "<group>"; };
+		ZF0065 /* ZFSmallFloatControlView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/ControlView/ZFSmallFloatControlView.m"; sourceTree = "<group>"; };
+		ZF0066 /* ZFSpeedLoadingView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/ControlView/ZFSpeedLoadingView.h"; sourceTree = "<group>"; };
+		ZF0067 /* ZFSpeedLoadingView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/ControlView/ZFSpeedLoadingView.m"; sourceTree = "<group>"; };
+		ZF0068 /* ZFUtilities.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/ControlView/ZFUtilities.h"; sourceTree = "<group>"; };
+		ZF0069 /* ZFUtilities.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/ControlView/ZFUtilities.m"; sourceTree = "<group>"; };
+		ZF0070 /* ZFVolumeBrightnessView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/ControlView/ZFVolumeBrightnessView.h"; sourceTree = "<group>"; };
+		ZF0071 /* ZFVolumeBrightnessView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/ControlView/ZFVolumeBrightnessView.m"; sourceTree = "<group>"; };
+		ZF9999 /* ZFPlayer.bundle */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "ZFPlayer/Classes/ControlView/ZFPlayer.bundle"; sourceTree = "<group>"; };
+		ZF9001 /* ZFPlayerSwiftUIView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/ZFPlayerSwiftUIView.swift"; sourceTree = "<group>"; };
+		ZF9002 /* iosmovie-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "iosmovie-Bridging-Header.h"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -55,6 +202,82 @@
 			children = (
 				EE0000000002 /* iosmovie */,
 				EE0000000003 /* Products */,
+		ZF8001 /* ZFPlayer */ = {isa = PBXGroup; children = (
+				ZF0001 /* UIScrollView+ZFPlayer.h */,
+				ZF0002 /* UIScrollView+ZFPlayer.m */,
+				ZF0003 /* UIViewController+ZFPlayerRotation.m */,
+				ZF0004 /* ZFFloatView.h */,
+				ZF0005 /* ZFFloatView.m */,
+				ZF0006 /* ZFKVOController.h */,
+				ZF0007 /* ZFKVOController.m */,
+				ZF0008 /* ZFLandscapeRotationManager.h */,
+				ZF0009 /* ZFLandscapeRotationManager.m */,
+				ZF0010 /* ZFLandscapeRotationManager_iOS15.h */,
+				ZF0011 /* ZFLandscapeRotationManager_iOS15.m */,
+				ZF0012 /* ZFLandscapeRotationManager_iOS16.h */,
+				ZF0013 /* ZFLandscapeRotationManager_iOS16.m */,
+				ZF0014 /* ZFLandscapeViewController.h */,
+				ZF0015 /* ZFLandscapeViewController.m */,
+				ZF0016 /* ZFLandscapeViewController_iOS15.h */,
+				ZF0017 /* ZFLandscapeViewController_iOS15.m */,
+				ZF0018 /* ZFLandscapeWindow.h */,
+				ZF0019 /* ZFLandscapeWindow.m */,
+				ZF0020 /* ZFOrientationObserver.h */,
+				ZF0021 /* ZFOrientationObserver.m */,
+				ZF0022 /* ZFPersentInteractiveTransition.h */,
+				ZF0023 /* ZFPersentInteractiveTransition.m */,
+				ZF0024 /* ZFPlayer.h */,
+				ZF0025 /* ZFPlayerConst.h */,
+				ZF0026 /* ZFPlayerController.h */,
+				ZF0027 /* ZFPlayerController.m */,
+				ZF0028 /* ZFPlayerGestureControl.h */,
+				ZF0029 /* ZFPlayerGestureControl.m */,
+				ZF0030 /* ZFPlayerLogManager.h */,
+				ZF0031 /* ZFPlayerLogManager.m */,
+				ZF0032 /* ZFPlayerMediaControl.h */,
+				ZF0033 /* ZFPlayerMediaPlayback.h */,
+				ZF0034 /* ZFPlayerNotification.h */,
+				ZF0035 /* ZFPlayerNotification.m */,
+				ZF0036 /* ZFPlayerView.h */,
+				ZF0037 /* ZFPlayerView.m */,
+				ZF0038 /* ZFPortraitViewController.h */,
+				ZF0039 /* ZFPortraitViewController.m */,
+				ZF0040 /* ZFPresentTransition.h */,
+				ZF0041 /* ZFPresentTransition.m */,
+				ZF0042 /* ZFReachabilityManager.h */,
+				ZF0043 /* ZFReachabilityManager.m */,
+				ZF0044 /* ZFAVPlayerManager.h */,
+				ZF0045 /* ZFAVPlayerManager.m */,
+				ZF0046 /* UIImageView+ZFCache.h */,
+				ZF0047 /* UIImageView+ZFCache.m */,
+				ZF0048 /* UIView+ZFFrame.h */,
+				ZF0049 /* UIView+ZFFrame.m */,
+				ZF0050 /* ZFLandScapeControlView.h */,
+				ZF0051 /* ZFLandScapeControlView.m */,
+				ZF0052 /* ZFLoadingView.h */,
+				ZF0053 /* ZFLoadingView.m */,
+				ZF0054 /* ZFNetworkSpeedMonitor.h */,
+				ZF0055 /* ZFNetworkSpeedMonitor.m */,
+				ZF0056 /* ZFPlayerControlView.h */,
+				ZF0057 /* ZFPlayerControlView.m */,
+				ZF0058 /* ZFPlayerStatusBar.h */,
+				ZF0059 /* ZFPlayerStatusBar.m */,
+				ZF0060 /* ZFPortraitControlView.h */,
+				ZF0061 /* ZFPortraitControlView.m */,
+				ZF0062 /* ZFSliderView.h */,
+				ZF0063 /* ZFSliderView.m */,
+				ZF0064 /* ZFSmallFloatControlView.h */,
+				ZF0065 /* ZFSmallFloatControlView.m */,
+				ZF0066 /* ZFSpeedLoadingView.h */,
+				ZF0067 /* ZFSpeedLoadingView.m */,
+				ZF0068 /* ZFUtilities.h */,
+				ZF0069 /* ZFUtilities.m */,
+				ZF0070 /* ZFVolumeBrightnessView.h */,
+				ZF0071 /* ZFVolumeBrightnessView.m */,
+				ZF9999 /* ZFPlayer.bundle */,
+				ZF9001 /* ZFPlayerSwiftUIView.swift */,
+				ZF9002 /* iosmovie-Bridging-Header.h */,
+		); path = ZFPlayer; sourceTree = "<group>"; };
 			);
 			sourceTree = "<group>";
 		};
@@ -100,9 +323,7 @@
 			);
 			buildRules = ();
 			dependencies = ();
-			packageProductDependencies = (
-				SP1000000001 /* KSPlayer */,
-			);
+			packageProductDependencies = ();
 			name = iosmovie;
 			productName = iosmovie;
 			productReference = CC0000000002 /* iosmovie.app */;
@@ -131,9 +352,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (FF0000000001 /* iosmovie */);
-			packageReferences = (
-				SP0000000001 /* KSPlayer */,
-			);
+			packageReferences = ();
 		};
 /* End PBXProject section */
 
@@ -165,26 +384,45 @@
 				BB0000000009 /* AppleCMSSource.swift in Sources */,
 				B1000000009 /* CacheManager.swift in Sources */,
 				B1000000010 /* CMSSite.swift in Sources */,
+				ZB0002 /* UIScrollView+ZFPlayer.m in Sources */,
+				ZB0003 /* UIViewController+ZFPlayerRotation.m in Sources */,
+				ZB0005 /* ZFFloatView.m in Sources */,
+				ZB0007 /* ZFKVOController.m in Sources */,
+				ZB0009 /* ZFLandscapeRotationManager.m in Sources */,
+				ZB0011 /* ZFLandscapeRotationManager_iOS15.m in Sources */,
+				ZB0013 /* ZFLandscapeRotationManager_iOS16.m in Sources */,
+				ZB0015 /* ZFLandscapeViewController.m in Sources */,
+				ZB0017 /* ZFLandscapeViewController_iOS15.m in Sources */,
+				ZB0019 /* ZFLandscapeWindow.m in Sources */,
+				ZB0021 /* ZFOrientationObserver.m in Sources */,
+				ZB0023 /* ZFPersentInteractiveTransition.m in Sources */,
+				ZB0027 /* ZFPlayerController.m in Sources */,
+				ZB0029 /* ZFPlayerGestureControl.m in Sources */,
+				ZB0031 /* ZFPlayerLogManager.m in Sources */,
+				ZB0035 /* ZFPlayerNotification.m in Sources */,
+				ZB0037 /* ZFPlayerView.m in Sources */,
+				ZB0039 /* ZFPortraitViewController.m in Sources */,
+				ZB0041 /* ZFPresentTransition.m in Sources */,
+				ZB0043 /* ZFReachabilityManager.m in Sources */,
+				ZB0045 /* ZFAVPlayerManager.m in Sources */,
+				ZB0047 /* UIImageView+ZFCache.m in Sources */,
+				ZB0049 /* UIView+ZFFrame.m in Sources */,
+				ZB0051 /* ZFLandScapeControlView.m in Sources */,
+				ZB0053 /* ZFLoadingView.m in Sources */,
+				ZB0055 /* ZFNetworkSpeedMonitor.m in Sources */,
+				ZB0057 /* ZFPlayerControlView.m in Sources */,
+				ZB0059 /* ZFPlayerStatusBar.m in Sources */,
+				ZB0061 /* ZFPortraitControlView.m in Sources */,
+				ZB0063 /* ZFSliderView.m in Sources */,
+				ZB0065 /* ZFSmallFloatControlView.m in Sources */,
+				ZB0067 /* ZFSpeedLoadingView.m in Sources */,
+				ZB0069 /* ZFUtilities.m in Sources */,
+				ZB0071 /* ZFVolumeBrightnessView.m in Sources */,
+				ZB9001 /* ZFPlayerSwiftUIView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		SP0000000001 /* KSPlayer */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/kingslay/KSPlayer.git";
-			requirement = { kind = revision; revision = 25c923b70d3d7881275e8f3d917e1e9752416e27; };
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		SP1000000001 /* KSPlayer */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = SP0000000001 /* KSPlayer */;
-			productName = KSPlayer;
-		};
-/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCBuildConfiguration section */
 		KK0000000001 /* Debug */ = {
@@ -236,6 +474,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.iosmovie.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = "iosmovie/iosmovie-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
@@ -253,6 +492,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.iosmovie.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = "iosmovie/iosmovie-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
