@@ -40,7 +40,7 @@ jobs:
       - name: Create unsigned IPA
         run: |
           mkdir -p Payload
-          cp -R build/Build/Products/Release-iphoneos/iosmovie.app Payload/
+          cp -R build/Build/Products/Release-iphoneos/影视王.app Payload/
           zip -r unsigned.ipa Payload
 
       - name: Upload IPA artifact
