@@ -1,4 +1,4 @@
-﻿name: Build iOS Unsigned IPA
+name: Build iOS Unsigned IPA
 
 on:
   push:
@@ -24,6 +24,12 @@ jobs:
 
       - name: List files
         run: ls -la
+
+      - name: Fix pbxproj encoding
+        run: |
+          sed -i '' 's/\r$//' iosmovie.xcodeproj/project.pbxproj
+          sed -i '' '1s/^\xEF\xBB\xBF//' iosmovie.xcodeproj/project.pbxproj
+          xxd -l 20 iosmovie.xcodeproj/project.pbxproj
 
       - name: Build unsigned iOS app
         run: |
