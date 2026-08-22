@@ -330,7 +330,7 @@ struct PlayerView: View {
                         seek(to: newValue)
                     }
                 ),
-                in: 0...max(duration, 1)
+                in: 0...max(safeDuration, 1)
             )
             .accentColor(.white)
 
@@ -534,6 +534,10 @@ struct PlayerView: View {
         isPlaying = false
         currentTime = 0
         duration = 0
+    }
+
+    private var safeDuration: Double {
+        duration.isFinite && duration > 0 ? duration : 1
     }
 
     private func timeString(_ seconds: Double) -> String {
