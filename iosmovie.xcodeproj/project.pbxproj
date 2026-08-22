@@ -174,7 +174,7 @@
 		SP0000000001 /* KSPlayer */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/kingslay/KSPlayer.git";
-			requirement = { kind = branch; branch = main; };
+			requirement = { kind = revision; revision = 25c923b70d3d7881275e8f3d917e1e9752416e27; };
 		};
 /* End XCRemoteSwiftPackageReference section */
 
