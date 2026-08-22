@@ -225,27 +225,23 @@ struct PlayerView: View {
             }
         }
         .background(Color.black.ignoresSafeArea())
-        .onDisappear {
-            if isFullScreen {
-                forceOrientation(.portrait)
-            }
-        }
     }
 
     private var fullScreenPlayer: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
+        let screenHeight = UIScreen.main.bounds.height
+        let screenWidth = UIScreen.main.bounds.width
+
+        return ZStack {
+            Color.black
 
             if let url = URL(string: currentSource.url) {
                 KSVideoPlayerView(url: url, options: KSOptions(), title: currentSource.name)
-                    .ignoresSafeArea()
             }
 
             VStack {
                 HStack {
                     Button(action: {
                         isFullScreen = false
-                        forceOrientation(.portrait)
                     }) {
                         Image(systemName: "arrow.down.right.and.arrow.up.left")
                             .font(.title2)
@@ -263,6 +259,9 @@ struct PlayerView: View {
                 Spacer()
             }
         }
+        .frame(width: screenHeight, height: screenWidth)
+        .rotationEffect(.degrees(90))
+        .ignoresSafeArea()
     }
 
     private var portraitLayout: some View {
@@ -280,7 +279,6 @@ struct PlayerView: View {
                     HStack(spacing: 12) {
                         Button(action: {
                             isFullScreen = true
-                            forceOrientation(.landscape)
                         }) {
                             Image(systemName: "arrow.up.left.and.arrow.down.right")
                                 .font(.title2)
@@ -342,12 +340,6 @@ struct PlayerView: View {
                 .padding(.horizontal)
                 .padding(.vertical)
             }
-        }
-    }
-
-    private func forceOrientation(_ orientation: UIInterfaceOrientationMask) {
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-            windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: orientation))
         }
     }
 }
