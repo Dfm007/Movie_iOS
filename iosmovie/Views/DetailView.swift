@@ -424,8 +424,7 @@ struct PlayerView: View {
 
     private var fullscreenButton: some View {
         Button(action: {
-            isFullscreen.toggle()
-            showControls = true
+            toggleFullscreen()
         }) {
             Image(systemName: isFullscreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
                 .font(.system(size: 18, weight: .semibold))
@@ -434,6 +433,17 @@ struct PlayerView: View {
                 .background(Color.black.opacity(0.5))
                 .clipShape(Circle())
         }
+    }
+
+    private func toggleFullscreen() {
+        if isFullscreen {
+            UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
+        } else {
+            UIDevice.current.setValue(UIInterfaceOrientation.landscapeRight.rawValue, forKey: "orientation")
+        }
+        UINavigationController.attemptRotationToDeviceOrientation()
+        isFullscreen.toggle()
+        showControls = true
     }
 
     private func errorView(_ error: String) -> some View {
