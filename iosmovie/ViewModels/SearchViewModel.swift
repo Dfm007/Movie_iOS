@@ -23,10 +23,13 @@ final class SearchViewModel: ObservableObject {
     @Published var errorMessage: String?
 
     private let sites: [CMSSite] = CMSSite.all
+    private var lastKeyword: String?
 
     func search(keyword: String) async {
         let text = keyword.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
+        if lastKeyword == text && !results.isEmpty { return }
+        lastKeyword = text
 
         isLoading = true
         errorMessage = nil
