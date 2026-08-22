@@ -5,15 +5,14 @@ import UIKit
 struct PlayerView: View {
     let source: PlaySource
     var allSources: [PlaySource] = []
-    var onClose: () -> Void
+    @Environment(\.dismiss) private var dismiss
     @State private var currentSource: PlaySource
 
     private let episodeColumns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 5)
 
-    init(source: PlaySource, allSources: [PlaySource] = [], onClose: @escaping () -> Void) {
+    init(source: PlaySource, allSources: [PlaySource] = []) {
         self.source = source
         self.allSources = allSources
-        self.onClose = onClose
         _currentSource = State(initialValue: source)
     }
 
@@ -27,7 +26,7 @@ struct PlayerView: View {
         }
         .background(Color.white)
         .overlay(alignment: .topTrailing) {
-            Button(action: { onClose() }) {
+            Button(action: { dismiss() }) {
                 Image(systemName: "xmark")
                     .font(.headline)
                     .foregroundColor(.white)
@@ -107,7 +106,16 @@ struct ZFPlayerRepresentable: UIViewControllerRepresentable {
 
 final class ZFPlayerViewController: UIViewController {
     var playURLString: String = ""
-    private var playerVC: AVPlayerViewController?
+    private var player: ZFPlayerController?
+    private var lastURLString: String = ""
+
+    override var shouldAutorotate: Bool {
+        return true
+    }
+
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        return .all
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -116,34 +124,27 @@ final class ZFPlayerViewController: UIViewController {
     }
 
     private func setupPlayer() {
-        guard let url = URL(string: playURLString) else { return }
+        lastURLString = playURLString
 
-        let player = AVPlayer(url: url)
-        let playerVC = AVPlayerViewController()
-        playerVC.player = player
-        playerVC.showsPlaybackControls = true
-        self.playerVC = playerVC
+        let manager = ZFAVPlayerManager()
+        let player = ZFPlayerController(playerManager: manager, containerView: view)
+        player.controlView = ZFPlayerControlView()
+        self.player = player
 
-        addChild(playerVC)
-        playerVC.view.frame = view.bounds
-        playerVC.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        view.addSubview(playerVC.view)
-        playerVC.didMove(toParent: self)
-
-        player.play()
+        if let url = URL(string: playURLString) {
+            manager.assetURL = url
+        }
+        player.playTheIndex(0)
     }
 
     func restartIfNeeded() {
-        playerVC?.player?.pause()
-        playerVC?.player = nil
-        playerVC?.removeFromParent()
-        playerVC?.view.removeFromSuperview()
-        playerVC = nil
+        guard playURLString != lastURLString else { return }
+        player?.stop()
         setupPlayer()
     }
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        playerVC?.player?.pause()
+        player?.stop()
     }
 }
