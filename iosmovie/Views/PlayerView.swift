@@ -56,7 +56,7 @@ final class ZFPlayerViewController: UIViewController {
 
         let manager = ZFAVPlayerManager()
         let player = ZFPlayerController(playerManager: manager, containerView: view)
-        player.controlManager = ZFPlayerControlView()
+        player.controlView = ZFPlayerControlView()
         self.player = player
 
         if let url = URL(string: playURLString) {
