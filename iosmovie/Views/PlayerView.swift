@@ -107,16 +107,7 @@ struct ZFPlayerRepresentable: UIViewControllerRepresentable {
 
 final class ZFPlayerViewController: UIViewController {
     var playURLString: String = ""
-    private var player: ZFPlayerController?
-    private var lastURLString: String = ""
-
-    override var shouldAutorotate: Bool {
-        return true
-    }
-
-    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
-        return .all
-    }
+    private var playerVC: AVPlayerViewController?
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -125,27 +116,34 @@ final class ZFPlayerViewController: UIViewController {
     }
 
     private func setupPlayer() {
-        lastURLString = playURLString
+        guard let url = URL(string: playURLString) else { return }
 
-        let manager = ZFAVPlayerManager()
-        let player = ZFPlayerController(playerManager: manager, containerView: view)
-        player.controlView = ZFPlayerControlView()
-        self.player = player
+        let player = AVPlayer(url: url)
+        let playerVC = AVPlayerViewController()
+        playerVC.player = player
+        playerVC.showsPlaybackControls = true
+        self.playerVC = playerVC
 
-        if let url = URL(string: playURLString) {
-            manager.assetURL = url
-        }
-        player.playTheIndex(0)
+        addChild(playerVC)
+        playerVC.view.frame = view.bounds
+        playerVC.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        view.addSubview(playerVC.view)
+        playerVC.didMove(toParent: self)
+
+        player.play()
     }
 
     func restartIfNeeded() {
-        guard playURLString != lastURLString else { return }
-        player?.stop()
+        playerVC?.player?.pause()
+        playerVC?.player = nil
+        playerVC?.removeFromParent()
+        playerVC?.view.removeFromSuperview()
+        playerVC = nil
         setupPlayer()
     }
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        player?.stop()
+        playerVC?.player?.pause()
     }
 }
