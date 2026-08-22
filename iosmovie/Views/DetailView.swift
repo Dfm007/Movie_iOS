@@ -191,6 +191,7 @@ struct PlayerLayerView: UIViewRepresentable {
         let view = PlayerContainerView()
         view.playerLayer.player = player
         view.playerLayer.videoGravity = .resizeAspect
+        view.layer.addSublayer(view.playerLayer)
         return view
     }
 
@@ -200,15 +201,11 @@ struct PlayerLayerView: UIViewRepresentable {
 }
 
 final class PlayerContainerView: UIView {
-    override static var layerClass: AnyClass {
-        AVPlayerLayer.self
-    }
+    let playerLayer = AVPlayerLayer()
 
-    var playerLayer: AVPlayerLayer {
-        guard let playerLayer = layer as? AVPlayerLayer else {
-            fatalError("PlayerContainerView layer must be AVPlayerLayer")
-        }
-        return playerLayer
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        playerLayer.frame = bounds
     }
 }
 
