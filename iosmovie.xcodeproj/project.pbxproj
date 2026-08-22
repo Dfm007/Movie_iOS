@@ -100,6 +100,9 @@
 			);
 			buildRules = ();
 			dependencies = ();
+			packageProductDependencies = (
+				SP1000000001 /* KSPlayer */,
+			);
 			name = iosmovie;
 			productName = iosmovie;
 			productReference = CC0000000002 /* iosmovie.app */;
@@ -128,6 +131,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (FF0000000001 /* iosmovie */);
+			packageReferences = (
+				SP0000000001 /* KSPlayer */,
+			);
 		};
 /* End PBXProject section */
 
@@ -163,6 +169,22 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		SP0000000001 /* KSPlayer */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/kingslay/KSPlayer.git";
+			requirement = { kind = branch; branch = main; };
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		SP1000000001 /* KSPlayer */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = SP0000000001 /* KSPlayer */;
+			productName = KSPlayer;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCBuildConfiguration section */
 		KK0000000001 /* Debug */ = {
@@ -255,3 +277,4 @@
 	};
 	rootObject = JJ0000000001 /* Project object */;
 }
+
