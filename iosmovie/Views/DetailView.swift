@@ -224,6 +224,7 @@ struct PlayerView: View {
     @State private var playbackRate: Float = 1.0
     @State private var showControls = true
     @State private var timeObserver: Any?
+    @State private var dragStartTime: Double = 0
 
     private let episodeColumns = [
         GridItem(.flexible(), spacing: 8),
@@ -256,8 +257,13 @@ struct PlayerView: View {
             cleanup()
         }
         .onTapGesture {
-            withAnimation {
-                showControls.toggle()
+            if isLocked {
+                isLocked.toggle()
+                showControls = true
+            } else {
+                withAnimation {
+                    showControls.toggle()
+                }
             }
         }
     }
@@ -290,6 +296,22 @@ struct PlayerView: View {
                 controlsOverlay
             }
         }
+        .gesture(
+            DragGesture(minimumDistance: 20)
+                .onChanged { value in
+                    if dragStartTime == 0 {
+                        dragStartTime = currentTime
+                    }
+                    let delta = Double(value.translation.width) * 0.5
+                    let newTime = min(max(dragStartTime + delta, 0), safeDuration)
+                    currentTime = newTime
+                }
+                .onEnded { value in
+                    let targetTime = currentTime
+                    seek(to: targetTime)
+                    dragStartTime = 0
+                }
+        )
     }
 
     private var controlsOverlay: some View {
@@ -374,9 +396,7 @@ struct PlayerView: View {
     private var lockButton: some View {
         Button(action: {
             isLocked.toggle()
-            if isLocked {
-                showControls = false
-            }
+            showControls = true
         }) {
             Image(systemName: isLocked ? "lock.fill" : "lock.open")
                 .font(.system(size: 18, weight: .semibold))
