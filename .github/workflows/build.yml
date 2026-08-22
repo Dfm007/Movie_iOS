@@ -12,23 +12,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Cache SPM dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            build/SourcePackages
-            ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
-          key: spm-${{ runner.os }}-${{ hashFiles('iosmovie.xcodeproj/project.pbxproj') }}
-          restore-keys: |
-            spm-${{ runner.os }}-
+      - name: Install xcodegen
+        run: brew install xcodegen
 
-      - name: List files
-        run: ls -la
+      - name: Generate xcodeproj
+        run: xcodegen generate
 
-      - name: Debug pbxproj
+      - name: Verify generated project
         run: |
           xxd -l 20 iosmovie.xcodeproj/project.pbxproj
-          plutil -lint iosmovie.xcodeproj/project.pbxproj 2>&1 || true
+          plutil -lint iosmovie.xcodeproj/project.pbxproj
 
       - name: Build unsigned iOS app
         run: |
