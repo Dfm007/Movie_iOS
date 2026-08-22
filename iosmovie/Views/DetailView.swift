@@ -1,5 +1,5 @@
-﻿import SwiftUI
-import AVKit
+import SwiftUI
+import KSPlayer
 
 struct DetailView: View {
     let detailURL: String
@@ -202,7 +202,7 @@ struct PlayerView: View {
             Color.black.ignoresSafeArea()
 
             if let url = URL(string: source.url) {
-                VideoPlayer(player: AVPlayer(url: url))
+                KSVideoPlayerView(url: url, options: KSOptions(), title: source.name)
                     .ignoresSafeArea()
             } else {
                 Text("播放地址无效")
