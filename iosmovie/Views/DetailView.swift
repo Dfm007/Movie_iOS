@@ -1,5 +1,4 @@
 import SwiftUI
-import KSPlayer
 
 struct DetailView: View {
     let detailURL: String
