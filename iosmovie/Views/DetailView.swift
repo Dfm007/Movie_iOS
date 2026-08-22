@@ -17,15 +17,15 @@ struct DetailView: View {
     var body: some View {
         Group {
             if viewModel.isLoading {
-                ProgressView("鍔犺浇涓?..")
+                ProgressView("加载中...")
             } else if let error = viewModel.errorMessage {
                 VStack(spacing: 12) {
-                    Text("鍔犺浇澶辫触")
+                    Text("加载失败")
                         .font(.headline)
                     Text(error)
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Button("閲嶈瘯") {
+                    Button("重试") {
                         Task { await viewModel.loadDetail(path: detailURL) }
                     }
                 }
@@ -35,7 +35,7 @@ struct DetailView: View {
                         headerView
                         infoSection
 
-                        Picker("閲囬泦绔?, selection: $viewModel.selectedSite) {
+                        Picker("采集站", selection: $viewModel.selectedSite) {
                             ForEach(viewModel.sites) { site in
                                 Text(site.name).tag(site)
                             }
@@ -83,7 +83,7 @@ struct DetailView: View {
                 Text(viewModel.movieTitle)
                     .font(.headline)
                     .lineLimit(3)
-                Text("閲囬泦绔欙細\(viewModel.selectedSite.name)")
+                Text("采集站：\(viewModel.selectedSite.name)")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -124,12 +124,12 @@ struct DetailView: View {
                     .foregroundColor(.secondary)
             }
             if !viewModel.director.isEmpty {
-                Text("瀵兼紨锛歕(viewModel.director)")
+                Text("导演：\(viewModel.director)")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
             if !viewModel.actors.isEmpty {
-                Text("涓绘紨锛歕(viewModel.actors)")
+                Text("主演：\(viewModel.actors)")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
