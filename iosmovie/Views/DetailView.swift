@@ -200,6 +200,7 @@ struct PlayerView: View {
     let allSources: [PlaySource]
     @Environment(\.dismiss) private var dismiss
     @State private var currentSource: PlaySource
+    @State private var isFullScreen = false
 
     init(source: PlaySource, allSources: [PlaySource]) {
         self.source = source
@@ -216,25 +217,89 @@ struct PlayerView: View {
     ]
 
     var body: some View {
-        VStack(spacing: 0) {
-            ZStack(alignment: .topTrailing) {
-                Color.black
-                if let url = URL(string: currentSource.url) {
-                    KSVideoPlayerView(url: url, options: KSOptions(), title: currentSource.name)
-                        .aspectRatio(16/9, contentMode: .fit)
-                } else {
-                    Text("播放地址无效")
-                        .foregroundColor(.white)
-                }
+        Group {
+            if isFullScreen {
+                fullScreenPlayer
+            } else {
+                portraitLayout
+            }
+        }
+        .background(Color.black.ignoresSafeArea())
+        .onDisappear {
+            if isFullScreen {
+                forceOrientation(.portrait)
+            }
+        }
+    }
 
-                Button(action: { dismiss() }) {
-                    Image(systemName: "xmark")
-                        .font(.title2)
-                        .foregroundColor(.white)
-                        .padding()
+    private var fullScreenPlayer: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            if let url = URL(string: currentSource.url) {
+                KSVideoPlayerView(url: url, options: KSOptions(), title: currentSource.name)
+                    .ignoresSafeArea()
+            }
+
+            VStack {
+                HStack {
+                    Button(action: {
+                        isFullScreen = false
+                        forceOrientation(.portrait)
+                    }) {
+                        Image(systemName: "arrow.down.right.and.arrow.up.left")
+                            .font(.title2)
+                            .foregroundColor(.white)
+                            .padding()
+                    }
+                    Spacer()
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark")
+                            .font(.title2)
+                            .foregroundColor(.white)
+                            .padding()
+                    }
+                }
+                Spacer()
+            }
+        }
+    }
+
+    private var portraitLayout: some View {
+        VStack(spacing: 0) {
+            GeometryReader { geo in
+                ZStack(alignment: .topTrailing) {
+                    Color.black
+                    if let url = URL(string: currentSource.url) {
+                        KSVideoPlayerView(url: url, options: KSOptions(), title: currentSource.name)
+                    } else {
+                        Text("播放地址无效")
+                            .foregroundColor(.white)
+                    }
+
+                    HStack(spacing: 12) {
+                        Button(action: {
+                            isFullScreen = true
+                            forceOrientation(.landscape)
+                        }) {
+                            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                .font(.title2)
+                                .foregroundColor(.white)
+                                .padding(8)
+                        }
+
+                        Button(action: { dismiss() }) {
+                            Image(systemName: "xmark")
+                                .font(.title2)
+                                .foregroundColor(.white)
+                                .padding(8)
+                        }
+                    }
+                    .padding(.trailing, 8)
+                    .padding(.top, 8)
                 }
             }
-            .frame(maxWidth: .infinity)
+            .frame(height: UIScreen.main.bounds.width * 9 / 16)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 8) {
@@ -277,8 +342,12 @@ struct PlayerView: View {
                 .padding(.horizontal)
                 .padding(.vertical)
             }
-            .background(Color.black.ignoresSafeArea())
         }
-        .background(Color.black.ignoresSafeArea())
+    }
+
+    private func forceOrientation(_ orientation: UIInterfaceOrientationMask) {
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: orientation))
+        }
     }
 }
