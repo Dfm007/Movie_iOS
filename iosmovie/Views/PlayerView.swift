@@ -142,33 +142,55 @@ final class ZFPlayerViewController: UIViewController {
 
     private func setupCustomFullScreenButton() {
         let button = UIButton(type: .system)
-        button.setImage(UIImage(systemName: "arrow.up.left.and.arrow.down.right"), for: .normal)
-        button.tintColor = .white
-        button.backgroundColor = UIColor.black.withAlphaComponent(0.5)
-        button.layer.cornerRadius = 6
+        button.setTitle("全屏", for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 14, weight: .semibold)
+        button.setTitleColor(.white, for: .normal)
+        button.backgroundColor = UIColor.black.withAlphaComponent(0.6)
+        button.layer.cornerRadius = 8
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(toggleFullScreen), for: .touchUpInside)
         view.addSubview(button)
+        view.bringSubviewToFront(button)
 
         NSLayoutConstraint.activate([
-            button.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
-            button.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -12),
-            button.widthAnchor.constraint(equalToConstant: 36),
-            button.heightAnchor.constraint(equalToConstant: 36)
+            button.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            button.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -16),
+            button.widthAnchor.constraint(equalToConstant: 64),
+            button.heightAnchor.constraint(equalToConstant: 40)
         ])
     }
 
 @objc private func toggleFullScreen() {
-    guard let windowScene = view.window?.windowScene else { return }
-
-    let isLandscape = windowScene.interfaceOrientation.isLandscape
-    let target: UIInterfaceOrientationMask = isLandscape ? .portrait : .landscapeRight
-
-    if #available(iOS 16.0, *) {
-        windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: target)) { error in
-            print("fullscreen error: \(error.localizedDescription)")
+    // 第 1 步：确认按钮点击已触发
+    let alert = UIAlertController(title: "debug 1", message: "按钮点击已触发", preferredStyle: .alert)
+    alert.addAction(UIAlertAction(title: "继续", style: .default) { _ in
+        // 第 2 步：拿 windowScene
+        guard let windowScene = self.view.window?.windowScene else {
+            let err = UIAlertController(title: "debug 2", message: "失败：拿不到 windowScene", preferredStyle: .alert)
+            err.addAction(UIAlertAction(title: "OK", style: .default))
+            self.present(err, animated: true)
+            return
         }
-    }
+
+        let isLandscape = windowScene.interfaceOrientation.isLandscape
+        let target: UIInterfaceOrientationMask = isLandscape ? .portrait : .landscapeRight
+
+        let info = UIAlertController(title: "debug 3", message: "当前：\(isLandscape ? "横屏" : "竖屏")，目标：\(target == .portrait ? "竖屏" : "横屏")", preferredStyle: .alert)
+        info.addAction(UIAlertAction(title: "继续", style: .default) { _ in
+            // 第 3 步：请求横屏
+            if #available(iOS 16.0, *) {
+                windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: target)) { error in
+                    DispatchQueue.main.async {
+                        let fail = UIAlertController(title: "debug 4", message: "requestGeometryUpdate 失败：\(error.localizedDescription)", preferredStyle: .alert)
+                        fail.addAction(UIAlertAction(title: "OK", style: .default))
+                        self.present(fail, animated: true)
+                    }
+                }
+            }
+        })
+        self.present(info, animated: true)
+    })
+    present(alert, animated: true)
 }
 
     func restartIfNeeded() {
