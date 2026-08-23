@@ -163,7 +163,6 @@ final class ZFPlayerViewController: UIViewController {
     }
 
     private func setupOverlayButtons() {
-        // 全屏按钮（图标外观）
         let full = UIButton(type: .system)
         full.setImage(UIImage(systemName: "arrow.up.left.and.arrow.down.right"), for: .normal)
         full.tintColor = .white
@@ -175,14 +174,13 @@ final class ZFPlayerViewController: UIViewController {
         view.bringSubviewToFront(full)
 
         NSLayoutConstraint.activate([
-            full.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
-            full.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -12),
+            full.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -60),
+            full.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -16),
             full.widthAnchor.constraint(equalToConstant: 36),
             full.heightAnchor.constraint(equalToConstant: 36)
         ])
         fullScreenButton = full
 
-        // 倍速按钮（全屏后显示）
         let speed = UIButton(type: .system)
         speed.setTitle("1.0x", for: .normal)
         speed.titleLabel?.font = .systemFont(ofSize: 13, weight: .semibold)
@@ -196,8 +194,8 @@ final class ZFPlayerViewController: UIViewController {
         view.bringSubviewToFront(speed)
 
         NSLayoutConstraint.activate([
-            speed.trailingAnchor.constraint(equalTo: full.leadingAnchor, constant: -12),
-            speed.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -12),
+            speed.trailingAnchor.constraint(equalTo: full.leadingAnchor, constant: -20),
+            speed.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -16),
             speed.widthAnchor.constraint(equalToConstant: 48),
             speed.heightAnchor.constraint(equalToConstant: 36)
         ])
@@ -206,7 +204,7 @@ final class ZFPlayerViewController: UIViewController {
 
     private func setupSpeedHintLabel() {
         let label = UILabel()
-        label.text = "3x快进中"
+        label.text = "2x快进中"
         label.font = .systemFont(ofSize: 14, weight: .medium)
         label.textColor = .white
         label.textAlignment = .center
@@ -220,7 +218,7 @@ final class ZFPlayerViewController: UIViewController {
 
         NSLayoutConstraint.activate([
             label.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            label.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            label.topAnchor.constraint(equalTo: view.topAnchor, constant: 80),
             label.widthAnchor.constraint(equalToConstant: 120),
             label.heightAnchor.constraint(equalToConstant: 40)
         ])
@@ -247,7 +245,7 @@ final class ZFPlayerViewController: UIViewController {
     }
 
     @objc private func showSpeedMenu() {
-        let sheet = UIAlertController(title: "播放速度", message: nil, preferredStyle: .actionSheet)
+        let sheet = UIAlertController(title: "播放速度", message: nil, preferredStyle: .alert)
         let rates: [Float] = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
         for rate in rates {
             sheet.addAction(UIAlertAction(title: "\(rate)x", style: .default) { [weak self] _ in
@@ -255,10 +253,6 @@ final class ZFPlayerViewController: UIViewController {
             })
         }
         sheet.addAction(UIAlertAction(title: "取消", style: .cancel))
-        if let popover = sheet.popoverPresentationController {
-            popover.sourceView = speedButton
-            popover.sourceRect = speedButton?.bounds ?? .zero
-        }
         present(sheet, animated: true)
     }
 
@@ -278,7 +272,7 @@ final class ZFPlayerViewController: UIViewController {
         switch gesture.state {
         case .began:
             speedHintLabel?.isHidden = false
-            player?.currentPlayerManager.rate = 3.0
+            player?.currentPlayerManager.rate = 2.0
         case .ended, .cancelled, .failed:
             speedHintLabel?.isHidden = true
             player?.currentPlayerManager.rate = normalRate
