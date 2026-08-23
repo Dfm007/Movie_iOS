@@ -7,23 +7,26 @@ struct PlayerView: View {
     var allSources: [PlaySource] = []
     var onClose: () -> Void
     @State private var currentSource: PlaySource
+    @State private var hideEpisodeList = false
 
     private let episodeColumns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 5)
 
-init(source: PlaySource, allSources: [PlaySource] = [], onClose: @escaping () -> Void) {
-    self.source = source
-    self.allSources = allSources
-    self.onClose = onClose
-    _currentSource = State(initialValue: source)
-}
+    init(source: PlaySource, allSources: [PlaySource] = [], onClose: @escaping () -> Void) {
+        self.source = source
+        self.allSources = allSources
+        self.onClose = onClose
+        _currentSource = State(initialValue: source)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             ZFPlayerRepresentable(url: currentSource.url)
-                .frame(height: UIScreen.main.bounds.width * 9 / 16)
+                .frame(height: hideEpisodeList ? UIScreen.main.bounds.height : UIScreen.main.bounds.width * 9 / 16)
                 .background(Color.black)
 
-            episodeListView
+            if !hideEpisodeList {
+                episodeListView
+            }
         }
         .background(Color.white)
         .overlay(alignment: .topTrailing) {
@@ -37,6 +40,9 @@ init(source: PlaySource, allSources: [PlaySource] = [], onClose: @escaping () ->
             }
             .padding(.top, 8)
             .padding(.trailing, 8)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("toggleEpisodeList"))) { _ in
+            hideEpisodeList.toggle()
         }
     }
 
@@ -108,6 +114,10 @@ final class ZFPlayerViewController: UIViewController {
     var playURLString: String = ""
     private var player: ZFPlayerController?
     private var lastURLString: String = ""
+    private var fullScreenButton: UIButton?
+    private var speedButton: UIButton?
+    private var isFullScreen = false
+    private var normalRate: Float = 1.0
 
     override var shouldAutorotate: Bool {
         return true
@@ -121,7 +131,7 @@ final class ZFPlayerViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = .black
         setupPlayer()
-        setupCustomFullScreenButton()
+        setupOverlayButtons()
     }
 
     private func setupPlayer() {
@@ -138,60 +148,91 @@ final class ZFPlayerViewController: UIViewController {
             manager.assetURL = url
         }
         player.playTheIndex(0)
+
+        addLongPressSpeedGesture()
     }
 
-    private func setupCustomFullScreenButton() {
-        let button = UIButton(type: .system)
-        button.setTitle("全屏", for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 14, weight: .semibold)
-        button.setTitleColor(.white, for: .normal)
-        button.backgroundColor = UIColor.black.withAlphaComponent(0.6)
-        button.layer.cornerRadius = 8
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.addTarget(self, action: #selector(toggleFullScreen), for: .touchUpInside)
-        view.addSubview(button)
-        view.bringSubviewToFront(button)
+    private func setupOverlayButtons() {
+        let full = UIButton(type: .system)
+        full.setTitle("全屏", for: .normal)
+        full.titleLabel?.font = .systemFont(ofSize: 14, weight: .semibold)
+        full.setTitleColor(.white, for: .normal)
+        full.backgroundColor = UIColor.black.withAlphaComponent(0.6)
+        full.layer.cornerRadius = 8
+        full.translatesAutoresizingMaskIntoConstraints = false
+        full.addTarget(self, action: #selector(toggleFullScreen), for: .touchUpInside)
+        view.addSubview(full)
+        view.bringSubviewToFront(full)
 
         NSLayoutConstraint.activate([
-            button.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            button.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -16),
-            button.widthAnchor.constraint(equalToConstant: 64),
-            button.heightAnchor.constraint(equalToConstant: 40)
+            full.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            full.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -16),
+            full.widthAnchor.constraint(equalToConstant: 60),
+            full.heightAnchor.constraint(equalToConstant: 40)
         ])
+        fullScreenButton = full
+
+        let speed = UIButton(type: .system)
+        speed.setTitle("1.0x", for: .normal)
+        speed.titleLabel?.font = .systemFont(ofSize: 14, weight: .semibold)
+        speed.setTitleColor(.white, for: .normal)
+        speed.backgroundColor = UIColor.black.withAlphaComponent(0.6)
+        speed.layer.cornerRadius = 8
+        speed.translatesAutoresizingMaskIntoConstraints = false
+        speed.addTarget(self, action: #selector(showSpeedMenu), for: .touchUpInside)
+        speed.isHidden = true
+        view.addSubview(speed)
+        view.bringSubviewToFront(speed)
+
+        NSLayoutConstraint.activate([
+            speed.trailingAnchor.constraint(equalTo: full.leadingAnchor, constant: -12),
+            speed.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -16),
+            speed.widthAnchor.constraint(equalToConstant: 60),
+            speed.heightAnchor.constraint(equalToConstant: 40)
+        ])
+        speedButton = speed
     }
 
-@objc private func toggleFullScreen() {
-    // 第 1 步：确认按钮点击已触发
-    let alert = UIAlertController(title: "debug 1", message: "按钮点击已触发", preferredStyle: .alert)
-    alert.addAction(UIAlertAction(title: "继续", style: .default) { _ in
-        // 第 2 步：拿 windowScene
-        guard let windowScene = self.view.window?.windowScene else {
-            let err = UIAlertController(title: "debug 2", message: "失败：拿不到 windowScene", preferredStyle: .alert)
-            err.addAction(UIAlertAction(title: "OK", style: .default))
-            self.present(err, animated: true)
-            return
+    @objc private func toggleFullScreen() {
+        isFullScreen.toggle()
+        speedButton?.isHidden = !isFullScreen
+        NotificationCenter.default.post(name: NSNotification.Name("toggleEpisodeList"), object: nil)
+    }
+
+    @objc private func showSpeedMenu() {
+        let sheet = UIAlertController(title: "播放速度", message: nil, preferredStyle: .actionSheet)
+        let rates: [Float] = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
+        for rate in rates {
+            sheet.addAction(UIAlertAction(title: "\(rate)x", style: .default) { [weak self] _ in
+                self?.setRate(rate)
+            })
         }
+        sheet.addAction(UIAlertAction(title: "取消", style: .cancel))
+        present(sheet, animated: true)
+    }
 
-        let isLandscape = windowScene.interfaceOrientation.isLandscape
-        let target: UIInterfaceOrientationMask = isLandscape ? .portrait : .landscapeRight
+    private func setRate(_ rate: Float) {
+        normalRate = rate
+        speedButton?.setTitle("\(rate)x", for: .normal)
+        player?.currentPlayerManager.setRate(rate)
+    }
 
-        let info = UIAlertController(title: "debug 3", message: "当前：\(isLandscape ? "横屏" : "竖屏")，目标：\(target == .portrait ? "竖屏" : "横屏")", preferredStyle: .alert)
-        info.addAction(UIAlertAction(title: "继续", style: .default) { _ in
-            // 第 3 步：请求横屏
-            if #available(iOS 16.0, *) {
-                windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: target)) { error in
-                    DispatchQueue.main.async {
-                        let fail = UIAlertController(title: "debug 4", message: "requestGeometryUpdate 失败：\(error.localizedDescription)", preferredStyle: .alert)
-                        fail.addAction(UIAlertAction(title: "OK", style: .default))
-                        self.present(fail, animated: true)
-                    }
-                }
-            }
-        })
-        self.present(info, animated: true)
-    })
-    present(alert, animated: true)
-}
+    private func addLongPressSpeedGesture() {
+        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
+        longPress.minimumPressDuration = 0.4
+        view.addGestureRecognizer(longPress)
+    }
+
+    @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
+        switch gesture.state {
+        case .began:
+            player?.currentPlayerManager.setRate(2.0)
+        case .ended, .cancelled, .failed:
+            player?.currentPlayerManager.setRate(normalRate)
+        default:
+            break
+        }
+    }
 
     func restartIfNeeded() {
         guard playURLString != lastURLString else { return }
