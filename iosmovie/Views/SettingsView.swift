@@ -3,6 +3,7 @@
 struct SettingsView: View {
     @State private var sites: [CMSSite] = CMSSite.all
     @State private var showAddSheet = false
+    @State private var editingSite: CMSSite?
 
     var body: some View {
         List {
@@ -14,13 +15,18 @@ struct SettingsView: View {
 
             Section("自定义源") {
                 ForEach(sites) { site in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(site.name)
-                            .font(.body)
-                        Text(site.baseURL)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .lineLimit(2)
+                    Button {
+                        editingSite = site
+                    } label: {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(site.name)
+                                .font(.body)
+                                .foregroundColor(.primary)
+                            Text(site.baseURL)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .lineLimit(2)
+                        }
                     }
                 }
                 .onDelete(perform: deleteSites)
@@ -44,6 +50,14 @@ struct SettingsView: View {
                 sites.append(newSite)
                 CMSSite.saveSites(sites)
                 showAddSheet = false
+            }
+        }
+        .sheet(item: $editingSite) { site in
+            EditSiteView(site: site) { name, url in
+                if let index = sites.firstIndex(where: { $0.id == site.id }) {
+                    sites[index] = CMSSite(id: site.id, name: name, baseURL: url)
+                    CMSSite.saveSites(sites)
+                }
             }
         }
     }
@@ -81,6 +95,50 @@ struct AddSiteView: View {
                 }
             }
             .navigationTitle("添加源")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+struct EditSiteView: View {
+    let site: CMSSite
+    var onSave: (String, String) -> Void
+
+    @State private var name: String
+    @State private var url: String
+    @Environment(\.dismiss) private var dismiss
+
+    init(site: CMSSite, onSave: @escaping (String, String) -> Void) {
+        self.site = site
+        self.onSave = onSave
+        _name = State(initialValue: site.name)
+        _url = State(initialValue: site.baseURL)
+    }
+
+    var body: some View {
+        NavigationView {
+            Form {
+                Section("源名称") {
+                    TextField("源名称", text: $name)
+                }
+                Section("采集站地址") {
+                    TextField("采集站地址", text: $url)
+                }
+                Section {
+                    Button("保存") {
+                        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let trimmedURL = url.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !trimmedName.isEmpty, !trimmedURL.isEmpty else { return }
+                        onSave(trimmedName, trimmedURL)
+                        dismiss()
+                    }
+                }
+            }
+            .navigationTitle("编辑源")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("取消") { dismiss() }
