@@ -13,17 +13,47 @@ struct PlayerPresenter: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ host: UIViewController, context: Context) {
-        if isPresented, host.presentedViewController == nil {
-            let vc = PlayerHostingController(source: source, allSources: allSources) { [weak host] in
-                host?.dismiss(animated: true) {
-                    isPresented = false
-                }
+        if isPresented {
+            PlayerWindowPresenter.shared.present(source: source, allSources: allSources) {
+                isPresented = false
             }
-            vc.modalPresentationStyle = .fullScreen
-            host.present(vc, animated: true)
-        } else if !isPresented, host.presentedViewController != nil {
-            host.dismiss(animated: true)
         }
+    }
+}
+
+final class PlayerWindowPresenter {
+    static let shared = PlayerWindowPresenter()
+    private var previousRoot: UIViewController?
+    private var playerVC: PlayerHostingController?
+
+    func present(source: PlaySource, allSources: [PlaySource], onClose: @escaping () -> Void) {
+        guard playerVC == nil else { return }
+        guard let window = Self.keyWindow() else { return }
+
+        previousRoot = window.rootViewController
+
+        let vc = PlayerHostingController(source: source, allSources: allSources) { [weak self] in
+            self?.dismiss()
+            onClose()
+        }
+        playerVC = vc
+        window.rootViewController = vc
+    }
+
+    func dismiss() {
+        guard let window = Self.keyWindow() else { return }
+        if let previousRoot {
+            window.rootViewController = previousRoot
+        }
+        playerVC = nil
+        previousRoot = nil
+    }
+
+    private static func keyWindow() -> UIWindow? {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first { $0.isKeyWindow }
     }
 }
 
