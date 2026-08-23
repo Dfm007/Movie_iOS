@@ -1,4 +1,4 @@
-import SwiftUI
+﻿import SwiftUI
 import AVKit
 import UIKit
 
@@ -129,6 +129,7 @@ final class ZFPlayerViewController: UIViewController {
         let manager = ZFAVPlayerManager()
         let player = ZFPlayerController(playerManager: manager, containerView: view)
         player.controlView = ZFPlayerControlView()
+        player.orientationObserver.fullScreenMode = .portrait
         self.player = player
 
         if let url = URL(string: playURLString) {
