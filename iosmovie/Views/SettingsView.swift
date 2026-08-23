@@ -4,6 +4,7 @@ struct SettingsView: View {
     @State private var sites: [CMSSite] = CMSSite.all
     @State private var showAddSheet = false
     @State private var editingSite: CMSSite?
+    @State private var showResetAlert = false
 
     var body: some View {
         List {
@@ -37,8 +38,7 @@ struct SettingsView: View {
                     showAddSheet = true
                 }
                 Button("恢复默认源") {
-                    CMSSite.resetToBuiltIn()
-                    sites = CMSSite.all
+                    showResetAlert = true
                 }
                 .foregroundColor(.red)
             }
@@ -59,6 +59,13 @@ struct SettingsView: View {
                     CMSSite.saveSites(sites)
                 }
             }
+        }
+        .alert("确认恢复默认源吗？", isPresented: $showResetAlert) {
+            Button("是", role: .destructive) {
+                CMSSite.resetToBuiltIn()
+                sites = CMSSite.all
+            }
+            Button("否", role: .cancel) { }
         }
     }
 
