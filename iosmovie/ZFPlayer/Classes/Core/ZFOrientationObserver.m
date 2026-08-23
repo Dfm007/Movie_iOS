@@ -1,4 +1,4 @@
-
+﻿
 //  ZFOrentationObserver.m
 //  ZFPlayer
 //
@@ -141,7 +141,7 @@
 }
 
 - (void)handleDeviceOrientationChange {
-    if (self.fullScreenMode == ZFFullScreenModePortrait || !self.allowOrientationRotation) return;
+    if (self.isFullScreen || self.fullScreenMode == ZFFullScreenModePortrait || !self.allowOrientationRotation) return;
     [self.landscapeRotationManager handleDeviceOrientationChange];
 }
 
@@ -276,7 +276,7 @@
 - (void)setFullScreen:(BOOL)fullScreen {
     _fullScreen = fullScreen;
     [self.landscapeRotationManager.landscapeViewController setNeedsStatusBarAppearanceUpdate];
-    [UIViewController attemptRotationToDeviceOrientation];
+    
 }
 
 - (void)setFullScreenStatusBarHidden:(BOOL)fullScreenStatusBarHidden {
