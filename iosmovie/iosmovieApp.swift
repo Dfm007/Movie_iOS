@@ -2,39 +2,36 @@
 import UIKit
 
 @main
-struct iosmovieApp: App {
-    var body: some Scene {
-        WindowGroup {
-            RotationContainer {
-                HomeView()
-            }
-            .ignoresSafeArea()
-        }
+class AppDelegate: UIResponder, UIApplicationDelegate {
+    var window: UIWindow?
+
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        let window = UIWindow(frame: UIScreen.main.bounds)
+        let rootVC = RootViewController()
+        window.rootViewController = rootVC
+        window.makeKeyAndVisible()
+        self.window = window
+        return true
     }
 }
 
-struct RotationContainer<Content: View>: UIViewControllerRepresentable {
-    let content: Content
+final class RootViewController: UIViewController {
+    override func viewDidLoad() {
+        super.viewDidLoad()
 
-    init(@ViewBuilder content: () -> Content) {
-        self.content = content()
+        let hosting = UIHostingController(rootView: HomeView())
+        addChild(hosting)
+        hosting.view.frame = view.bounds
+        hosting.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        view.addSubview(hosting.view)
+        hosting.didMove(toParent: self)
     }
 
-    func makeUIViewController(context: Context) -> RotationHostingController<Content> {
-        RotationHostingController(rootView: content)
-    }
-
-    func updateUIViewController(_ uiViewController: RotationHostingController<Content>, context: Context) {
-        uiViewController.rootView = content
-    }
-}
-
-final class RotationHostingController<Content: View>: UIHostingController<Content> {
     override var shouldAutorotate: Bool {
-        true
+        return true
     }
 
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
-        .allButUpsideDown
+        return .allButUpsideDown
     }
 }
