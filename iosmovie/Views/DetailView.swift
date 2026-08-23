@@ -199,3 +199,4 @@ struct DetailView: View {
         }
         .padding(.horizontal)
     }
+}
