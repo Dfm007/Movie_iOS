@@ -1,4 +1,4 @@
-﻿import SwiftUI
+import SwiftUI
 
 struct SearchResultView: View {
     let keyword: String
@@ -124,8 +124,8 @@ struct SearchDetailView: View {
 	DetailView(
     detailURL: item.sourceDetails.first?.detailURL ?? "",
     initialTitle: item.title,
-    availableSites: ...,
-    detailMap: ...
+    availableSites: item.sourceDetails.map { $0.site },
+    detailMap: Dictionary(uniqueKeysWithValues: item.sourceDetails.map { ($0.site.id, $0.detailURL) })
 )
         // DetailView(
             // detailURL: item.sourceDetails.first?.detailURL ?? "",
