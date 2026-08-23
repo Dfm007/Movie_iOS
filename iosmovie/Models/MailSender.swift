@@ -20,7 +20,7 @@ final class MailSender: ObservableObject {
 
         let dateString = Self.currentDateString()
         let contactText = contact.isEmpty ? "未填写" : contact
-        let subject = "影视王反馈 - \(type)"
+        let subject = "影视王反馈-\(type)"
         let body = """
         反馈类型：\(type)
         反馈时间：\(dateString)
@@ -72,9 +72,24 @@ final class MailSender: ObservableObject {
             using: .tls
         )
 
+        var hasFinished = false
+        let finishOnce: (Bool, String) -> Void = { success, message in
+            guard !hasFinished else { return }
+            hasFinished = true
+            connection.cancel()
+            completion(success, message)
+        }
+
+        // 连接超时：如果 20 秒内没连上，直接失败
+        let connectTimeout = DispatchWorkItem {
+            finishOnce(false, "连接服务器超时，请检查网络后重试")
+        }
+        DispatchQueue.global().asyncAfter(deadline: .now() + 20, execute: connectTimeout)
+
         connection.stateUpdateHandler = { state in
             switch state {
             case .ready:
+                connectTimeout.cancel()
                 let session = SMTPSession(connection: connection)
                 session.start(
                     username: username,
@@ -83,11 +98,11 @@ final class MailSender: ObservableObject {
                     to: to,
                     subject: subject,
                     body: body,
-                    completion: completion
+                    completion: finishOnce
                 )
             case .failed(let error):
-                connection.cancel()
-                completion(false, "连接失败：\(error.localizedDescription)")
+                connectTimeout.cancel()
+                finishOnce(false, "连接失败：\(error.localizedDescription)")
             default:
                 break
             }
@@ -99,7 +114,6 @@ final class MailSender: ObservableObject {
 private final class SMTPSession {
     private let connection: NWConnection
     private var buffer = Data()
-    private var commandQueue: [String] = []
     private var currentStage = 0
     private var username = ""
     private var password = ""
@@ -108,6 +122,8 @@ private final class SMTPSession {
     private var subject = ""
     private var body = ""
     private var completion: ((Bool, String) -> Void)?
+
+    private var timeoutWorkItem: DispatchWorkItem?
 
     init(connection: NWConnection) {
         self.connection = connection
@@ -129,86 +145,132 @@ private final class SMTPSession {
         self.subject = subject
         self.body = body
         self.completion = completion
+
+        // 整个 SMTP 会话最长等 60 秒，超过就失败
+        scheduleTimeout()
         receive()
+    }
+
+    private func scheduleTimeout() {
+        timeoutWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.finish(false, "发送超时，请稍后重试")
+        }
+        timeoutWorkItem = workItem
+        DispatchQueue.global().asyncAfter(deadline: .now() + 60, execute: workItem)
     }
 
     private func receive() {
         connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, _, error in
             guard let self = self else { return }
+
             if let error = error {
                 self.finish(false, "接收失败：\(error.localizedDescription)")
                 return
             }
+
             if let data = data, !data.isEmpty {
                 self.buffer.append(data)
                 self.processResponse()
             } else {
+                // 收到空数据：交给下一次 receive，但不清空已有 buffer
                 self.receive()
             }
         }
     }
 
     private func processResponse() {
-        guard let response = String(data: buffer, encoding: .utf8), response.contains("\r\n") else {
-            receive()
+        // 尝试从 buffer 中解析出完整的一行或多行 SMTP 响应
+        while true {
+            guard let lineRange = buffer.range(of: Data("\r\n".utf8)) else {
+                // 还没有完整一行，继续等
+                if buffer.count > 65536 {
+                    finish(false, "服务器响应异常")
+                } else {
+                    receive()
+                }
+                return
+            }
+
+            let lineData = buffer.subdata(in: buffer.startIndex..<lineRange.lowerBound)
+            buffer.removeSubrange(buffer.startIndex...lineRange.upperBound)
+
+            guard let line = String(data: lineData, encoding: .utf8), !line.isEmpty else {
+                continue
+            }
+
+            // SMTP 多行响应：250- 表示后面还有续行，250 表示结束
+            let codeString = String(line.prefix(3))
+            let isLastLine = line.count < 4 || line[line.index(line.startIndex, offsetBy: 3)] != "-"
+
+            guard let codeValue = Int(codeString) else {
+                finish(false, "服务器响应格式错误")
+                return
+            }
+
+            // 如果这一行是续行，继续读下一行，不改变阶段
+            if !isLastLine {
+                continue
+            }
+
+            handleResponse(code: codeValue)
             return
         }
+    }
 
-        let code = response.prefix(3)
-        let codeValue = Int(code) ?? 0
-
+    private func handleResponse(code: Int) {
         switch currentStage {
         case 0:
-            guard codeValue == 220 else {
+            guard code == 220 else {
                 finish(false, "SMTP 握手失败")
                 return
             }
             sendCommand("EHLO mail\r\n")
         case 1:
-            guard codeValue == 250 else {
+            guard code == 250 else {
                 finish(false, "EHLO 失败")
                 return
             }
             sendCommand("AUTH LOGIN\r\n")
         case 2:
-            guard codeValue == 334 else {
+            guard code == 334 else {
                 finish(false, "认证请求失败")
                 return
             }
             sendCommand("\(Data(username.utf8).base64EncodedString())\r\n")
         case 3:
-            guard codeValue == 334 else {
+            guard code == 334 else {
                 finish(false, "用户名认证失败")
                 return
             }
             sendCommand("\(Data(password.utf8).base64EncodedString())\r\n")
         case 4:
-            guard codeValue == 235 else {
-                finish(false, "授权码认证失败")
+            guard code == 235 else {
+                finish(false, "授权码认证失败，请检查 SMTP 授权码")
                 return
             }
             sendCommand("MAIL FROM:<\(from)>\r\n")
         case 5:
-            guard codeValue == 250 else {
+            guard code == 250 else {
                 finish(false, "发件人设置失败")
                 return
             }
             sendCommand("RCPT TO:<\(to)>\r\n")
         case 6:
-            guard codeValue == 250 || codeValue == 251 else {
+            guard code == 250 || code == 251 else {
                 finish(false, "收件人设置失败")
                 return
             }
             sendCommand("DATA\r\n")
         case 7:
-            guard codeValue == 354 else {
+            guard code == 354 else {
                 finish(false, "DATA 命令失败")
                 return
             }
             let mailData = buildMailData()
             sendRawData(mailData)
         case 8:
-            guard codeValue == 250 else {
+            guard code == 250 else {
                 finish(false, "邮件发送失败")
                 return
             }
@@ -221,15 +283,15 @@ private final class SMTPSession {
     }
 
     private func sendCommand(_ command: String) {
-        buffer.removeAll()
         currentStage += 1
+        scheduleTimeout()
         connection.send(content: Data(command.utf8), completion: .contentProcessed { _ in })
         receive()
     }
 
     private func sendRawData(_ data: Data) {
-        buffer.removeAll()
         currentStage += 1
+        scheduleTimeout()
         connection.send(content: data, completion: .contentProcessed { _ in })
         receive()
     }
@@ -249,6 +311,7 @@ private final class SMTPSession {
     }
 
     private func finish(_ success: Bool, _ message: String) {
+        timeoutWorkItem?.cancel()
         connection.cancel()
         completion?(success, message)
         completion = nil
