@@ -6,6 +6,7 @@ struct DetailView: View {
     var detailMap: [String: String] = [:]
     @StateObject private var viewModel = DetailViewModel()
     @State private var playingSource: PlaySource?
+    @State private var playerPresented = false
 
     private let episodeColumns = [
         GridItem(.flexible(), spacing: 8),
@@ -66,15 +67,13 @@ struct DetailView: View {
             }
             await viewModel.loadDetail(path: detailURL)
         }
-.overlay {
-    if let source = playingSource {
-        PlayerView(source: source, allSources: viewModel.sources) {
-            playingSource = nil
-        }
-        .transition(.move(edge: .bottom))
-        .zIndex(1)
-    }
-}
+        .background(
+            PlayerPresenter(
+                source: playingSource ?? viewModel.sources.first ?? PlaySource(id: "", name: "", url: "", format: "", episodes: []),
+                allSources: viewModel.sources,
+                isPresented: $playerPresented
+            )
+        )
     }
 
     private var headerView: some View {
@@ -165,6 +164,7 @@ struct DetailView: View {
                 if source.episodes.isEmpty {
                     Button(action: {
                         playingSource = source
+                        playerPresented = true
                     }) {
                         Text(source.name)
                             .font(.subheadline)
@@ -182,6 +182,7 @@ struct DetailView: View {
                         ForEach(source.episodes) { episode in
                             Button(action: {
                                 playingSource = episode
+                                playerPresented = true
                             }) {
                                 Text(episode.name)
                                     .font(.caption)
@@ -198,4 +199,3 @@ struct DetailView: View {
         }
         .padding(.horizontal)
     }
-}
