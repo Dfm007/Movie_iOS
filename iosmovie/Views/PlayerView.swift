@@ -121,6 +121,7 @@ final class ZFPlayerViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = .black
         setupPlayer()
+        setupCustomFullScreenButton()
     }
 
     private func setupPlayer() {
@@ -128,14 +129,40 @@ final class ZFPlayerViewController: UIViewController {
 
         let manager = ZFAVPlayerManager()
         let player = ZFPlayerController(playerManager: manager, containerView: view)
-        player.controlView = ZFPlayerControlView()
-        player.orientationObserver.fullScreenMode = .portrait
+        let controlView = ZFPlayerControlView()
+        player.controlView = controlView
+        controlView.portraitControlView.fullScreenBtn.isHidden = true
         self.player = player
 
         if let url = URL(string: playURLString) {
             manager.assetURL = url
         }
         player.playTheIndex(0)
+    }
+
+    private func setupCustomFullScreenButton() {
+        let button = UIButton(type: .system)
+        button.setImage(UIImage(systemName: "arrow.up.left.and.arrow.down.right"), for: .normal)
+        button.tintColor = .white
+        button.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        button.layer.cornerRadius = 6
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(toggleFullScreen), for: .touchUpInside)
+        view.addSubview(button)
+
+        NSLayoutConstraint.activate([
+            button.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
+            button.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -12),
+            button.widthAnchor.constraint(equalToConstant: 36),
+            button.heightAnchor.constraint(equalToConstant: 36)
+        ])
+    }
+
+    @objc private func toggleFullScreen() {
+        let isLandscape = UIDevice.current.orientation.isLandscape
+        let target: UIInterfaceOrientation = isLandscape ? .portrait : .landscapeRight
+        UIDevice.current.setValue(target.rawValue, forKey: "orientation")
+        UIViewController.attemptRotationToDeviceOrientation()
     }
 
     func restartIfNeeded() {
