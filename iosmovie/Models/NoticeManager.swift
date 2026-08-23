@@ -42,8 +42,9 @@ final class NoticeManager: ObservableObject {
     }
 
     static func parse(html: String) -> Notice? {
-        guard let title = extract(html, tag: "title"),
-              let message = extract(html, tag: "message") else {
+        let normalizedHTML = preprocessHTML(html)
+        guard let title = extract(normalizedHTML, tag: "title"),
+              let message = extract(normalizedHTML, tag: "message") else {
             return nil
         }
         return Notice(
@@ -51,6 +52,17 @@ final class NoticeManager: ObservableObject {
             titleSegments: parseSegments(from: title),
             messageSegments: parseSegments(from: message)
         )
+    }
+
+    private static func preprocessHTML(_ text: String) -> String {
+        var result = text
+        result = result.replacingOccurrences(of: "<br />", with: "[br]")
+        result = result.replacingOccurrences(of: "<br/>", with: "[br]")
+        result = result.replacingOccurrences(of: "<br>", with: "[br]")
+        result = result.replacingOccurrences(of: "\r\n", with: "[br]")
+        result = result.replacingOccurrences(of: "\n", with: "[br]")
+        result = result.replacingOccurrences(of: "\r", with: "[br]")
+        return result
     }
 
     private static func extract(_ text: String, tag: String) -> String? {
