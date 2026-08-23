@@ -35,7 +35,7 @@ init(source: PlaySource, allSources: [PlaySource] = [], onClose: @escaping () ->
                     .background(Color.black.opacity(0.5))
                     .clipShape(Circle())
             }
-            .padding(.top, 44)
+            .padding(.top, 8)
             .padding(.trailing, 8)
         }
     }
