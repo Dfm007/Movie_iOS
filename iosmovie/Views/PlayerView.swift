@@ -38,7 +38,7 @@ struct PlayerView: View {
                     .background(Color.black.opacity(0.5))
                     .clipShape(Circle())
             }
-            .padding(.top, 8)
+            .padding(.top, hideEpisodeList ? 60 : 8)
             .padding(.trailing, 8)
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("toggleEpisodeList"))) { _ in
@@ -119,6 +119,7 @@ final class ZFPlayerViewController: UIViewController {
     private var isFullScreen = false
     private var normalRate: Float = 1.0
     private var originalFrame: CGRect = .zero
+    private var speedHintLabel: UILabel?
 
     override var shouldAutorotate: Bool {
         return true
@@ -133,6 +134,7 @@ final class ZFPlayerViewController: UIViewController {
         view.backgroundColor = .black
         setupPlayer()
         setupOverlayButtons()
+        setupSpeedHintLabel()
     }
 
     private func setupPlayer() {
@@ -161,31 +163,32 @@ final class ZFPlayerViewController: UIViewController {
     }
 
     private func setupOverlayButtons() {
+        // 全屏按钮（图标外观）
         let full = UIButton(type: .system)
-        full.setTitle("全屏", for: .normal)
-        full.titleLabel?.font = .systemFont(ofSize: 14, weight: .semibold)
-        full.setTitleColor(.white, for: .normal)
-        full.backgroundColor = UIColor.black.withAlphaComponent(0.6)
-        full.layer.cornerRadius = 8
+        full.setImage(UIImage(systemName: "arrow.up.left.and.arrow.down.right"), for: .normal)
+        full.tintColor = .white
+        full.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        full.layer.cornerRadius = 6
         full.translatesAutoresizingMaskIntoConstraints = false
         full.addTarget(self, action: #selector(toggleFullScreen), for: .touchUpInside)
         view.addSubview(full)
         view.bringSubviewToFront(full)
 
         NSLayoutConstraint.activate([
-            full.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            full.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -16),
-            full.widthAnchor.constraint(equalToConstant: 60),
-            full.heightAnchor.constraint(equalToConstant: 40)
+            full.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
+            full.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -12),
+            full.widthAnchor.constraint(equalToConstant: 36),
+            full.heightAnchor.constraint(equalToConstant: 36)
         ])
         fullScreenButton = full
 
+        // 倍速按钮（全屏后显示）
         let speed = UIButton(type: .system)
         speed.setTitle("1.0x", for: .normal)
-        speed.titleLabel?.font = .systemFont(ofSize: 14, weight: .semibold)
+        speed.titleLabel?.font = .systemFont(ofSize: 13, weight: .semibold)
         speed.setTitleColor(.white, for: .normal)
-        speed.backgroundColor = UIColor.black.withAlphaComponent(0.6)
-        speed.layer.cornerRadius = 8
+        speed.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        speed.layer.cornerRadius = 6
         speed.translatesAutoresizingMaskIntoConstraints = false
         speed.addTarget(self, action: #selector(showSpeedMenu), for: .touchUpInside)
         speed.isHidden = true
@@ -194,11 +197,34 @@ final class ZFPlayerViewController: UIViewController {
 
         NSLayoutConstraint.activate([
             speed.trailingAnchor.constraint(equalTo: full.leadingAnchor, constant: -12),
-            speed.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -16),
-            speed.widthAnchor.constraint(equalToConstant: 60),
-            speed.heightAnchor.constraint(equalToConstant: 40)
+            speed.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -12),
+            speed.widthAnchor.constraint(equalToConstant: 48),
+            speed.heightAnchor.constraint(equalToConstant: 36)
         ])
         speedButton = speed
+    }
+
+    private func setupSpeedHintLabel() {
+        let label = UILabel()
+        label.text = "3x快进中"
+        label.font = .systemFont(ofSize: 14, weight: .medium)
+        label.textColor = .white
+        label.textAlignment = .center
+        label.backgroundColor = UIColor.black.withAlphaComponent(0.55)
+        label.layer.cornerRadius = 8
+        label.layer.masksToBounds = true
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.isHidden = true
+        view.addSubview(label)
+        view.bringSubviewToFront(label)
+
+        NSLayoutConstraint.activate([
+            label.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            label.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            label.widthAnchor.constraint(equalToConstant: 120),
+            label.heightAnchor.constraint(equalToConstant: 40)
+        ])
+        speedHintLabel = label
     }
 
     @objc private func toggleFullScreen() {
@@ -229,6 +255,10 @@ final class ZFPlayerViewController: UIViewController {
             })
         }
         sheet.addAction(UIAlertAction(title: "取消", style: .cancel))
+        if let popover = sheet.popoverPresentationController {
+            popover.sourceView = speedButton
+            popover.sourceRect = speedButton?.bounds ?? .zero
+        }
         present(sheet, animated: true)
     }
 
@@ -247,8 +277,10 @@ final class ZFPlayerViewController: UIViewController {
     @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
         switch gesture.state {
         case .began:
-            player?.currentPlayerManager.rate = 2.0
+            speedHintLabel?.isHidden = false
+            player?.currentPlayerManager.rate = 3.0
         case .ended, .cancelled, .failed:
+            speedHintLabel?.isHidden = true
             player?.currentPlayerManager.rate = normalRate
         default:
             break
