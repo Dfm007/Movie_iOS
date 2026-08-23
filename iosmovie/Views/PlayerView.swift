@@ -118,6 +118,7 @@ final class ZFPlayerViewController: UIViewController {
     private var speedButton: UIButton?
     private var isFullScreen = false
     private var normalRate: Float = 1.0
+    private var originalFrame: CGRect = .zero
 
     override var shouldAutorotate: Bool {
         return true
@@ -150,6 +151,13 @@ final class ZFPlayerViewController: UIViewController {
         player.playTheIndex(0)
 
         addLongPressSpeedGesture()
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        if !isFullScreen {
+            originalFrame = view.frame
+        }
     }
 
     private func setupOverlayButtons() {
@@ -197,6 +205,19 @@ final class ZFPlayerViewController: UIViewController {
         isFullScreen.toggle()
         speedButton?.isHidden = !isFullScreen
         NotificationCenter.default.post(name: NSNotification.Name("toggleEpisodeList"), object: nil)
+
+        if isFullScreen {
+            let screen = UIScreen.main.bounds
+            UIView.animate(withDuration: 0.3) {
+                self.view.transform = CGAffineTransform(rotationAngle: .pi / 2)
+                self.view.frame = CGRect(x: 0, y: 0, width: screen.height, height: screen.width)
+            }
+        } else {
+            UIView.animate(withDuration: 0.3) {
+                self.view.transform = .identity
+                self.view.frame = self.originalFrame
+            }
+        }
     }
 
     @objc private func showSpeedMenu() {
