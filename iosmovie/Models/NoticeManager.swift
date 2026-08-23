@@ -84,17 +84,28 @@ final class NoticeManager: ObservableObject {
         while currentIndex < text.endIndex {
             let remainingRange = currentIndex..<text.endIndex
 
-            if let brRange = text.range(of: "[br]", range: remainingRange) {
-                if brRange.lowerBound > currentIndex {
-                    let plainText = String(text[currentIndex..<brRange.lowerBound])
+            let brRange = text.range(of: "[br]", range: remainingRange)
+            let colorRange = text.range(of: "[color=", range: remainingRange)
+
+            if brRange == nil && colorRange == nil {
+                let remaining = String(text[currentIndex..<text.endIndex])
+                if !remaining.isEmpty {
+                    segments.append(NoticeTextSegment(text: remaining))
+                }
+                break
+            }
+
+            if let br = brRange, colorRange == nil || br.lowerBound < colorRange!.lowerBound {
+                if br.lowerBound > currentIndex {
+                    let plainText = String(text[currentIndex..<br.lowerBound])
                     segments.append(NoticeTextSegment(text: plainText))
                 }
                 segments.append(.lineBreak())
-                currentIndex = brRange.upperBound
+                currentIndex = br.upperBound
                 continue
             }
 
-            guard let colorStartRange = text.range(of: "[color=", range: remainingRange) else {
+            guard let colorStartRange = colorRange else {
                 let remaining = String(text[currentIndex..<text.endIndex])
                 if !remaining.isEmpty {
                     segments.append(NoticeTextSegment(text: remaining))

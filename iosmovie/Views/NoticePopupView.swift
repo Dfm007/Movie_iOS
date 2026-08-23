@@ -13,10 +13,10 @@ struct NoticePopupView: View {
                 }
 
             VStack(spacing: 16) {
-                richText(titleSegments: notice.titleSegments, fontSize: 18, fontWeight: .bold)
+                Text(attributedText(from: notice.titleSegments, fontSize: 18, fontWeight: .bold))
                     .multilineTextAlignment(.center)
 
-                richText(titleSegments: notice.messageSegments, fontSize: 15, fontWeight: .regular)
+                Text(attributedText(from: notice.messageSegments, fontSize: 15, fontWeight: .regular))
                     .multilineTextAlignment(.leading)
 
                 Button("知道了") {
@@ -38,18 +38,27 @@ struct NoticePopupView: View {
         }
     }
 
-    private func richText(titleSegments: [NoticeTextSegment], fontSize: CGFloat, fontWeight: Font.Weight) -> Text {
-        var combined = Text("")
-        for segment in titleSegments {
+    private func attributedText(from segments: [NoticeTextSegment], fontSize: CGFloat, fontWeight: Font.Weight) -> AttributedString {
+        var result = AttributedString()
+
+        for segment in segments {
             if segment.isLineBreak {
-                combined = combined + Text("\n")
-            } else {
-                let part = Text(segment.text)
-                    .font(.system(size: fontSize, weight: fontWeight))
-                    .foregroundColor(segment.color ?? .primary)
-                combined = combined + part
+                result += AttributedString("\n")
+                continue
             }
+
+            var part = AttributedString(segment.text)
+            part.font = .system(size: fontSize, weight: fontWeight)
+
+            if let color = segment.color {
+                part.foregroundColor = color
+            } else {
+                part.foregroundColor = .primary
+            }
+
+            result += part
         }
-        return combined
+
+        return result
     }
 }
