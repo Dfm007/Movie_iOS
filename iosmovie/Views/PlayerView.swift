@@ -235,7 +235,7 @@ final class ZFPlayerViewController: UIViewController {
     private func setRate(_ rate: Float) {
         normalRate = rate
         speedButton?.setTitle("\(rate)x", for: .normal)
-        player?.currentPlayerManager.setRate(rate)
+        player?.currentPlayerManager.rate = rate
     }
 
     private func addLongPressSpeedGesture() {
@@ -247,9 +247,9 @@ final class ZFPlayerViewController: UIViewController {
     @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
         switch gesture.state {
         case .began:
-            player?.currentPlayerManager.setRate(2.0)
+            player?.currentPlayerManager.rate = 2.0
         case .ended, .cancelled, .failed:
-            player?.currentPlayerManager.setRate(normalRate)
+            player?.currentPlayerManager.rate = normalRate
         default:
             break
         }
