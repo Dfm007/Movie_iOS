@@ -50,16 +50,13 @@ struct HomeView: View {
         .onAppear {
             noticeManager.fetch()
         }
-        .alert(
-            noticeManager.notice?.title ?? "公告",
-            isPresented: $showNotice,
-            actions: {
-                Button("知道了", role: .cancel) { }
-            },
-            message: {
-                Text(noticeManager.notice?.message ?? "")
+        .overlay {
+            if showNotice, let notice = noticeManager.notice {
+                NoticePopupView(notice: notice) {
+                    showNotice = false
+                }
             }
-        )
+        }
         .onChange(of: noticeManager.notice) { newValue in
             if newValue != nil {
                 showNotice = true
