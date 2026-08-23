@@ -158,12 +158,18 @@ final class ZFPlayerViewController: UIViewController {
         ])
     }
 
-    @objc private func toggleFullScreen() {
-        let isLandscape = UIDevice.current.orientation.isLandscape
-        let target: UIInterfaceOrientation = isLandscape ? .portrait : .landscapeRight
-        UIDevice.current.setValue(target.rawValue, forKey: "orientation")
-        UIViewController.attemptRotationToDeviceOrientation()
+@objc private func toggleFullScreen() {
+    guard let windowScene = view.window?.windowScene else { return }
+
+    let isLandscape = windowScene.interfaceOrientation.isLandscape
+    let target: UIInterfaceOrientationMask = isLandscape ? .portrait : .landscapeRight
+
+    if #available(iOS 16.0, *) {
+        windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: target)) { error in
+            print("fullscreen error: \(error.localizedDescription)")
+        }
     }
+}
 
     func restartIfNeeded() {
         guard playURLString != lastURLString else { return }
