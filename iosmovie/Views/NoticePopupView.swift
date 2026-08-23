@@ -41,10 +41,14 @@ struct NoticePopupView: View {
     private func richText(titleSegments: [NoticeTextSegment], fontSize: CGFloat, fontWeight: Font.Weight) -> Text {
         var combined = Text("")
         for segment in titleSegments {
-            let part = Text(segment.text)
-                .font(.system(size: fontSize, weight: fontWeight))
-                .foregroundColor(segment.color ?? .primary)
-            combined = combined + part
+            if segment.isLineBreak {
+                combined = combined + Text("\n")
+            } else {
+                let part = Text(segment.text)
+                    .font(.system(size: fontSize, weight: fontWeight))
+                    .foregroundColor(segment.color ?? .primary)
+                combined = combined + part
+            }
         }
         return combined
     }

@@ -4,6 +4,17 @@ import SwiftUI
 struct NoticeTextSegment: Equatable {
     let text: String
     let color: Color?
+    let isLineBreak: Bool
+
+    init(text: String, color: Color? = nil, isLineBreak: Bool = false) {
+        self.text = text
+        self.color = color
+        self.isLineBreak = isLineBreak
+    }
+
+    static func lineBreak() -> NoticeTextSegment {
+        NoticeTextSegment(text: "", color: nil, isLineBreak: true)
+    }
 }
 
 struct Notice: Equatable {
@@ -59,23 +70,35 @@ final class NoticeManager: ObservableObject {
         var currentIndex = text.startIndex
 
         while currentIndex < text.endIndex {
-            guard let colorStartRange = text.range(of: "[color=", range: currentIndex..<text.endIndex) else {
+            let remainingRange = currentIndex..<text.endIndex
+
+            if let brRange = text.range(of: "[br]", range: remainingRange) {
+                if brRange.lowerBound > currentIndex {
+                    let plainText = String(text[currentIndex..<brRange.lowerBound])
+                    segments.append(NoticeTextSegment(text: plainText))
+                }
+                segments.append(.lineBreak())
+                currentIndex = brRange.upperBound
+                continue
+            }
+
+            guard let colorStartRange = text.range(of: "[color=", range: remainingRange) else {
                 let remaining = String(text[currentIndex..<text.endIndex])
                 if !remaining.isEmpty {
-                    segments.append(NoticeTextSegment(text: remaining, color: nil))
+                    segments.append(NoticeTextSegment(text: remaining))
                 }
                 break
             }
 
             if colorStartRange.lowerBound > currentIndex {
                 let plainText = String(text[currentIndex..<colorStartRange.lowerBound])
-                segments.append(NoticeTextSegment(text: plainText, color: nil))
+                segments.append(NoticeTextSegment(text: plainText))
             }
 
             let afterColorTag = colorStartRange.upperBound
             guard let colorEndBracket = text.range(of: "]", range: afterColorTag..<text.endIndex) else {
                 let remaining = String(text[currentIndex..<text.endIndex])
-                segments.append(NoticeTextSegment(text: remaining, color: nil))
+                segments.append(NoticeTextSegment(text: remaining))
                 break
             }
 
@@ -85,7 +108,7 @@ final class NoticeManager: ObservableObject {
             guard let contentStart = text.index(colorEndBracket.upperBound, offsetBy: 0, limitedBy: text.endIndex),
                   let closeRange = text.range(of: "[/color]", range: contentStart..<text.endIndex) else {
                 let remaining = String(text[currentIndex..<text.endIndex])
-                segments.append(NoticeTextSegment(text: remaining, color: nil))
+                segments.append(NoticeTextSegment(text: remaining))
                 break
             }
 
