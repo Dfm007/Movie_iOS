@@ -1,4 +1,4 @@
-﻿import Foundation
+import Foundation
 
 @MainActor
 final class DetailViewModel: ObservableObject {
@@ -19,6 +19,7 @@ final class DetailViewModel: ObservableObject {
     var sites: [CMSSite] = CMSSite.all
 
     private var siteDetailMap: [String: String] = [:]
+    private var currentMovieTitle = ""
 
     func configure(availableSites: [CMSSite], detailMap: [String: String]) {
         sites = availableSites.isEmpty ? CMSSite.all : availableSites
@@ -32,11 +33,21 @@ final class DetailViewModel: ObservableObject {
 
     func loadDetail(path: String, site: CMSSite? = nil) async {
         let targetSite = site ?? selectedSite
+        let isSiteSwitch = site != nil && site?.id != selectedSite.id
         selectedSite = targetSite
         isLoading = true
         errorMessage = nil
 
         let source = makeSource(for: targetSite)
+
+        if isSiteSwitch && !currentMovieTitle.isEmpty {
+            if let matched = try? await source.searchMovies(keyword: currentMovieTitle), let first = matched.first {
+                await loadDetailDirect(on: source, path: first.id)
+                isLoading = false
+                return
+            }
+        }
+
         let actualPath: String
         if !path.isEmpty && (path.hasPrefix("http") || !siteDetailMap.isEmpty) {
             actualPath = siteDetailMap[targetSite.id] ?? path
@@ -61,6 +72,7 @@ final class DetailViewModel: ObservableObject {
             remarks = detail.remarks
             intro = detail.intro
             sources = detail.sources
+            currentMovieTitle = detail.title
         } catch {
             errorMessage = error.localizedDescription
         }
