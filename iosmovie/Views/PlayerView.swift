@@ -120,6 +120,7 @@ final class ZFPlayerViewController: UIViewController {
     private var normalRate: Float = 1.0
     private var originalFrame: CGRect = .zero
     private var speedHintLabel: UILabel?
+    private var speedMenuView: UIView?
 
     override var shouldAutorotate: Bool {
         return true
@@ -188,7 +189,7 @@ final class ZFPlayerViewController: UIViewController {
         speed.backgroundColor = UIColor.black.withAlphaComponent(0.5)
         speed.layer.cornerRadius = 6
         speed.translatesAutoresizingMaskIntoConstraints = false
-        speed.addTarget(self, action: #selector(showSpeedMenu), for: .touchUpInside)
+        speed.addTarget(self, action: #selector(toggleSpeedMenu), for: .touchUpInside)
         speed.isHidden = true
         view.addSubview(speed)
         view.bringSubviewToFront(speed)
@@ -244,16 +245,67 @@ final class ZFPlayerViewController: UIViewController {
         }
     }
 
-    @objc private func showSpeedMenu() {
-        let sheet = UIAlertController(title: "播放速度", message: nil, preferredStyle: .alert)
-        let rates: [Float] = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
-        for rate in rates {
-            sheet.addAction(UIAlertAction(title: "\(rate)x", style: .default) { [weak self] _ in
-                self?.setRate(rate)
-            })
+    @objc private func toggleSpeedMenu() {
+        if speedMenuView != nil {
+            dismissSpeedMenu()
+        } else {
+            showSpeedMenu()
         }
-        sheet.addAction(UIAlertAction(title: "取消", style: .cancel))
-        present(sheet, animated: true)
+    }
+
+    private func showSpeedMenu() {
+        let menu = UIView()
+        menu.backgroundColor = UIColor.black.withAlphaComponent(0.85)
+        menu.layer.cornerRadius = 12
+        menu.layer.masksToBounds = true
+        menu.translatesAutoresizingMaskIntoConstraints = false
+
+        let rates: [Float] = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
+        var buttons: [UIButton] = []
+
+        for rate in rates {
+            let btn = UIButton(type: .system)
+            btn.setTitle("\(rate)x", for: .normal)
+            btn.setTitleColor(.white, for: .normal)
+            btn.titleLabel?.font = .systemFont(ofSize: 15, weight: .medium)
+            btn.tag = Int(rate * 100)
+            btn.addTarget(self, action: #selector(speedSelected(_:)), for: .touchUpInside)
+            buttons.append(btn)
+        }
+
+        let stack = UIStackView(arrangedSubviews: buttons)
+        stack.axis = .vertical
+        stack.spacing = 4
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        menu.addSubview(stack)
+
+        NSLayoutConstraint.activate([
+            stack.topAnchor.constraint(equalTo: menu.topAnchor, constant: 8),
+            stack.bottomAnchor.constraint(equalTo: menu.bottomAnchor, constant: -8),
+            stack.leadingAnchor.constraint(equalTo: menu.leadingAnchor, constant: 12),
+            stack.trailingAnchor.constraint(equalTo: menu.trailingAnchor, constant: -12)
+        ])
+
+        view.addSubview(menu)
+        view.bringSubviewToFront(menu)
+
+        NSLayoutConstraint.activate([
+            menu.trailingAnchor.constraint(equalTo: speedButton!.leadingAnchor, constant: -12),
+            menu.bottomAnchor.constraint(equalTo: speedButton!.topAnchor, constant: -8)
+        ])
+
+        speedMenuView = menu
+    }
+
+    private func dismissSpeedMenu() {
+        speedMenuView?.removeFromSuperview()
+        speedMenuView = nil
+    }
+
+    @objc private func speedSelected(_ sender: UIButton) {
+        let rate = Float(sender.tag) / 100.0
+        setRate(rate)
+        dismissSpeedMenu()
     }
 
     private func setRate(_ rate: Float) {
