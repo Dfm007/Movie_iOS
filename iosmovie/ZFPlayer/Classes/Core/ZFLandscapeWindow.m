@@ -1,8 +1,8 @@
-//
+﻿//
 //  ZFLandScaprWindow.m
 //  ZFPlayer
 //
-// Copyright (c) 2020年 任子丰 ( http://github.com/renzifeng )
+// Copyright (c) 2020骞?浠诲瓙涓?( http://github.com/renzifeng )
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -33,7 +33,7 @@
 - (instancetype)initWithFrame:(CGRect)frame {
     self = [super initWithFrame:frame];
     if (self) {
-        self.windowLevel = UIWindowLevelStatusBar - 1;
+        self.windowLevel = UIWindowLevelAlert - 1;
         if (@available(iOS 13.0, *)) {
             if (self.windowScene == nil) {
                 self.windowScene = UIApplication.sharedApplication.keyWindow.windowScene;
@@ -77,3 +77,4 @@
 }
 
 @end
+
