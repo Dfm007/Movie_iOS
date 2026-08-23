@@ -35,15 +35,7 @@
 }
 
 - (void)setNeedsUpdateOfSupportedInterfaceOrientations {
-    if (@available(iOS 16.0, *)) {
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 160000
-        [UIApplication.sharedApplication.keyWindow.rootViewController setNeedsUpdateOfSupportedInterfaceOrientations];
-        [self.window.rootViewController setNeedsUpdateOfSupportedInterfaceOrientations];
-#else
-        [(id)UIApplication.sharedApplication.keyWindow.rootViewController setNeedsUpdateOfSupportedInterfaceOrientations];
-        [(id)self.window.rootViewController setNeedsUpdateOfSupportedInterfaceOrientations];
-#endif
-    }
+    // Disabled to avoid system orientation re-evaluation on iOS 16+.
 }
 
 - (void)interfaceOrientation:(UIInterfaceOrientation)orientation completion:(void(^ __nullable)(void))completion {
