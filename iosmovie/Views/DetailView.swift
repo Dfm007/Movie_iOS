@@ -2,6 +2,7 @@ import SwiftUI
 
 struct DetailView: View {
     let detailURL: String
+	let initialTitle: String
     var availableSites: [CMSSite]? = nil
     var detailMap: [String: String] = [:]
     @StateObject private var viewModel = DetailViewModel()
@@ -16,11 +17,12 @@ struct DetailView: View {
         GridItem(.flexible(), spacing: 8)
     ]
 
-    init(detailURL: String, availableSites: [CMSSite]? = nil, detailMap: [String: String] = [:]) {
-        self.detailURL = detailURL
-        self.availableSites = availableSites
-        self.detailMap = detailMap
-    }
+init(detailURL: String, initialTitle: String = "", availableSites: [CMSSite]? = nil, detailMap: [String: String] = [:]) {
+    self.detailURL = detailURL
+    self.initialTitle = initialTitle
+    self.availableSites = availableSites
+    self.detailMap = detailMap
+}
 
     var body: some View {
         Group {
@@ -63,6 +65,7 @@ struct DetailView: View {
         .navigationTitle(viewModel.movieTitle)
         .task {
             if let sites = availableSites {
+				viewModel.setInitialTitle(initialTitle)
                 viewModel.configure(availableSites: sites, detailMap: detailMap)
             }
             await viewModel.loadDetail(path: detailURL)

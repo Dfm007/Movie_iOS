@@ -121,10 +121,16 @@ struct SearchDetailView: View {
     let item: SearchResultItem
 
     var body: some View {
-        DetailView(
-            detailURL: item.sourceDetails.first?.detailURL ?? "",
-            availableSites: item.sourceDetails.map { $0.site },
-            detailMap: Dictionary(uniqueKeysWithValues: item.sourceDetails.map { ($0.site.id, $0.detailURL) })
-        )
+	DetailView(
+    detailURL: item.sourceDetails.first?.detailURL ?? "",
+    initialTitle: item.title,
+    availableSites: ...,
+    detailMap: ...
+)
+        // DetailView(
+            // detailURL: item.sourceDetails.first?.detailURL ?? "",
+            // availableSites: item.sourceDetails.map { $0.site },
+            // detailMap: Dictionary(uniqueKeysWithValues: item.sourceDetails.map { ($0.site.id, $0.detailURL) })
+        // )
     }
 }

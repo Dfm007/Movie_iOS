@@ -99,7 +99,7 @@ struct HomeView: View {
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 16) {
                     ForEach(viewModel.movies) { movie in
-                        NavigationLink(destination: DetailView(detailURL: movie.detailURL)) {
+                        NavigationLink(destination: DetailView(detailURL: movie.detailURL, initialTitle: movie.title)) {
                             VStack(alignment: .leading, spacing: 6) {
                                 posterView(for: movie)
                                 Text(movie.title)

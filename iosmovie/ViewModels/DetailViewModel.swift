@@ -59,6 +59,12 @@ final class DetailViewModel: ObservableObject {
         isLoading = false
     }
 
+func setInitialTitle(_ title: String) {
+    if !title.isEmpty {
+        currentMovieTitle = title
+    }
+}
+
     private func loadDetailDirect(on source: MovieSourceProtocol, path: String) async {
         do {
             let detail = try await source.fetchMovieDetail(path: path)
