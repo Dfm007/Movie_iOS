@@ -42,6 +42,13 @@ struct SettingsView: View {
                 }
                 .foregroundColor(.red)
             }
+			
+			Section {
+                NavigationLink(destination: FeedbackView()) {
+                    Text("意见反馈")
+                }
+            }
+			
         }
         .navigationTitle("设置")
         .sheet(isPresented: $showAddSheet) {
