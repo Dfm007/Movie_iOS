@@ -2,8 +2,10 @@
 
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
+    @StateObject private var noticeManager = NoticeManager()
     @State private var showSearchResult = false
     @State private var searchKeyword = ""
+    @State private var showNotice = false
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
@@ -43,6 +45,24 @@ struct HomeView: View {
             )
             .task {
                 await viewModel.loadInitial()
+            }
+        }
+        .onAppear {
+            noticeManager.fetch()
+        }
+        .alert(
+            noticeManager.notice?.title ?? "公告",
+            isPresented: $showNotice,
+            actions: {
+                Button("知道了", role: .cancel) { }
+            },
+            message: {
+                Text(noticeManager.notice?.message ?? "")
+            }
+        )
+        .onChange(of: noticeManager.notice) { newValue in
+            if newValue != nil {
+                showNotice = true
             }
         }
     }
