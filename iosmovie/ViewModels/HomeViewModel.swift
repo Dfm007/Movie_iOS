@@ -9,17 +9,34 @@ final class HomeViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var searchText = ""
 
-    private let source: MovieSourceProtocol
-    private let homeCacheKey = "home_movies"
-    private let categoryCacheKey = "movie_categories"
+    private var source: MovieSourceProtocol
+    private var sourceID: String
+    private let homeCacheKey: String
+    private let categoryCacheKey: String
 
-    init(source: MovieSourceProtocol = AppleCMSSource()) {
-        self.source = source
+    init() {
+        let site = CMSSite.selectedDefaultSite
+        self.source = AppleCMSSource(site: site)
+        self.sourceID = site.id
+        self.homeCacheKey = "home_movies_\(site.id)"
+        self.categoryCacheKey = "movie_categories_\(site.id)"
     }
 
     func loadInitial() async {
         await loadCategories()
         await loadHome()
+    }
+
+    func updateDefaultSource(to site: CMSSite) async {
+        guard site.id != sourceID else { return }
+        source = AppleCMSSource(site: site)
+        sourceID = site.id
+        selectedCategoryID = nil
+        movies = []
+        categories = []
+        CacheManager.shared.removeMovies(forKey: homeCacheKey)
+        CacheManager.shared.removeCategories(forKey: categoryCacheKey)
+        await loadInitial()
     }
 
     func loadCategories() async {
@@ -96,6 +113,6 @@ final class HomeViewModel: ObservableObject {
     }
 
     private func categoryCacheKey(for id: Int) -> String {
-        "category_movies_\(id)"
+        "\(categoryCacheKey)_\(id)"
     }
 }

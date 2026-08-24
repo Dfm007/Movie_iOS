@@ -43,4 +43,16 @@ final class CacheManager {
         guard let data = try? Data(contentsOf: fileURL) else { return nil }
         return try? JSONDecoder().decode([MovieCategory].self, from: data)
     }
+
+    func removeMovies(forKey key: String) {
+        guard let dir = cacheDirectory else { return }
+        let fileURL = dir.appendingPathComponent("\(key).json")
+        try? fileManager.removeItem(at: fileURL)
+    }
+
+    func removeCategories(forKey key: String) {
+        guard let dir = cacheDirectory else { return }
+        let fileURL = dir.appendingPathComponent("\(key)_categories.json")
+        try? fileManager.removeItem(at: fileURL)
+    }
 }

@@ -6,6 +6,7 @@ struct CMSSite: Identifiable, Hashable, Codable {
     let baseURL: String
 
     private static let storageKey = "custom_cms_sites"
+    private static let defaultSiteKey = "default_cms_site_id"
 
     static let builtInSites: [CMSSite] = [
         CMSSite(id: "lzm3u8", name: "lzm3u8", baseURL: "http://cj.lziapi.com/api.php/provide/vod/from/lzm3u8"),
@@ -25,6 +26,15 @@ struct CMSSite: Identifiable, Hashable, Codable {
         all[0]
     }
 
+    static var selectedDefaultSite: CMSSite {
+        let savedID = UserDefaults.standard.string(forKey: defaultSiteKey)
+        return all.first(where: { $0.id == savedID }) ?? all[0]
+    }
+
+    static func saveDefaultSiteID(_ id: String) {
+        UserDefaults.standard.set(id, forKey: defaultSiteKey)
+    }
+
     static func saveSites(_ sites: [CMSSite]) {
         if let data = try? JSONEncoder().encode(sites) {
             UserDefaults.standard.set(data, forKey: storageKey)
@@ -33,5 +43,6 @@ struct CMSSite: Identifiable, Hashable, Codable {
 
     static func resetToBuiltIn() {
         UserDefaults.standard.removeObject(forKey: storageKey)
+        UserDefaults.standard.removeObject(forKey: defaultSiteKey)
     }
 }

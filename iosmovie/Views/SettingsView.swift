@@ -2,6 +2,7 @@
 
 struct SettingsView: View {
     @State private var sites: [CMSSite] = CMSSite.all
+    @State private var defaultSiteID: String = CMSSite.selectedDefaultSite.id
     @State private var showAddSheet = false
     @State private var editingSite: CMSSite?
     @State private var showResetAlert = false
@@ -12,6 +13,23 @@ struct SettingsView: View {
                 Text("目前仅支持苹果 CMS 采集站")
                     .font(.caption)
                     .foregroundColor(.secondary)
+            }
+
+            Section {
+                Picker("默认源", selection: $defaultSiteID) {
+                    ForEach(sites) { site in
+                        Text(site.name).tag(site.id)
+                    }
+                }
+                .onChange(of: defaultSiteID) { newID in
+                    CMSSite.saveDefaultSiteID(newID)
+                }
+
+                Text("主页只会显示默认源的影视")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            } header: {
+                Text("默认源")
             }
 
             Section("自定义源") {
@@ -42,15 +60,18 @@ struct SettingsView: View {
                 }
                 .foregroundColor(.red)
             }
-			
-			Section {
+
+            Section {
                 NavigationLink(destination: FeedbackView()) {
                     Text("意见反馈")
                 }
             }
-			
         }
         .navigationTitle("设置")
+        .onAppear {
+            sites = CMSSite.all
+            defaultSiteID = CMSSite.selectedDefaultSite.id
+        }
         .sheet(isPresented: $showAddSheet) {
             AddSiteView { name, url in
                 let newSite = CMSSite(id: UUID().uuidString, name: name, baseURL: url)
@@ -71,6 +92,7 @@ struct SettingsView: View {
             Button("是", role: .destructive) {
                 CMSSite.resetToBuiltIn()
                 sites = CMSSite.all
+                defaultSiteID = CMSSite.selectedDefaultSite.id
             }
             Button("否", role: .cancel) { }
         }
@@ -79,6 +101,10 @@ struct SettingsView: View {
     private func deleteSites(at offsets: IndexSet) {
         sites.remove(atOffsets: offsets)
         CMSSite.saveSites(sites)
+        if !sites.contains(where: { $0.id == defaultSiteID }) {
+            defaultSiteID = sites.first?.id ?? ""
+            CMSSite.saveDefaultSiteID(defaultSiteID)
+        }
     }
 }
 
