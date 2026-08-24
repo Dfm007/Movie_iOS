@@ -22,7 +22,17 @@ final class DetailViewModel: ObservableObject {
     private var currentMovieTitle = ""
 
     func configure(availableSites: [CMSSite], detailMap: [String: String]) {
-        sites = availableSites.isEmpty ? CMSSite.all : availableSites
+        let sourceSites = availableSites.isEmpty ? CMSSite.all : availableSites
+        let defaultSite = CMSSite.selectedDefaultSite
+
+        // 默认源置顶，其余源保持原顺序
+        var ordered: [CMSSite] = []
+        if let first = sourceSites.first(where: { $0.id == defaultSite.id }) {
+            ordered.append(first)
+        }
+        ordered.append(contentsOf: sourceSites.filter { $0.id != defaultSite.id })
+        sites = ordered.isEmpty ? sourceSites : ordered
+
         selectedSite = sites.first ?? .defaultSite
         siteDetailMap = detailMap
     }
@@ -113,7 +123,7 @@ final class DetailViewModel: ObservableObject {
         var dp = Array(repeating: Array(repeating: 0, count: bChars.count + 1), count: aChars.count + 1)
 
         for i in 0...aChars.count { dp[i][0] = i }
-        for j in 0...bChars.count { dp[j][0] = j }
+        for j in 0...bChars.count { dp[0][j] = j }
 
         for i in 1...aChars.count {
             for j in 1...bChars.count {
