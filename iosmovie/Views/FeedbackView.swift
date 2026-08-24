@@ -32,27 +32,11 @@ struct FeedbackView: View {
                 TextEditor(text: $content)
                     .frame(minHeight: 150)
                     .focused($focusedField, equals: .content)
-                    .toolbar {
-                        ToolbarItemGroup(placement: .keyboard) {
-                            Spacer()
-                            Button("完成") {
-                                focusedField = nil
-                            }
-                        }
-                    }
             }
 
             Section("联系方式（选填）") {
                 TextField("邮箱或 QQ", text: $contact)
                     .focused($focusedField, equals: .contact)
-                    .toolbar {
-                        ToolbarItemGroup(placement: .keyboard) {
-                            Spacer()
-                            Button("完成") {
-                                focusedField = nil
-                            }
-                        }
-                    }
             }
 
             Section {
@@ -71,6 +55,14 @@ struct FeedbackView: View {
                     }
                 }
                 .disabled(feedbackSender.isSending || content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("完成") {
+                    focusedField = nil
+                }
             }
         }
         .navigationTitle("意见反馈")
