@@ -8,6 +8,13 @@ struct FeedbackView: View {
     @State private var contact = ""
     @State private var showResult = false
 
+    private enum Field: Hashable {
+        case content
+        case contact
+    }
+
+    @FocusState private var focusedField: Field?
+
     private let feedbackTypes = ["问题反馈", "功能建议", "其他"]
 
     var body: some View {
@@ -24,10 +31,28 @@ struct FeedbackView: View {
             Section("反馈内容") {
                 TextEditor(text: $content)
                     .frame(minHeight: 150)
+                    .focused($focusedField, equals: .content)
+                    .toolbar {
+                        ToolbarItemGroup(placement: .keyboard) {
+                            Spacer()
+                            Button("完成") {
+                                focusedField = nil
+                            }
+                        }
+                    }
             }
 
             Section("联系方式（选填）") {
                 TextField("邮箱或 QQ", text: $contact)
+                    .focused($focusedField, equals: .contact)
+                    .toolbar {
+                        ToolbarItemGroup(placement: .keyboard) {
+                            Spacer()
+                            Button("完成") {
+                                focusedField = nil
+                            }
+                        }
+                    }
             }
 
             Section {
@@ -57,6 +82,8 @@ struct FeedbackView: View {
     }
 
     private func submit() {
+        focusedField = nil
+
         let trimmedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedContent.isEmpty else { return }
 
