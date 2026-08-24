@@ -8,6 +8,7 @@ struct PlayerView: View {
     var onClose: () -> Void
     @State private var currentSource: PlaySource
     @State private var hideEpisodeList = false
+    @State private var isFullScreen = false
 
     private let episodeColumns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 5)
 
@@ -20,26 +21,28 @@ struct PlayerView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            WebPlayerView(urlString: resolveURL(for: currentSource.url))
-                .frame(height: hideEpisodeList ? UIScreen.main.bounds.height : UIScreen.main.bounds.width * 9 / 16)
+            WebPlayerView(urlString: resolveURL(for: currentSource.url), isFullScreen: $isFullScreen)
+                .frame(height: isFullScreen ? UIScreen.main.bounds.width : (hideEpisodeList ? UIScreen.main.bounds.height : UIScreen.main.bounds.width * 9 / 16))
                 .background(Color.black)
 
-            if !hideEpisodeList {
+            if !isFullScreen && !hideEpisodeList {
                 episodeListView
             }
         }
         .background(Color.white)
         .overlay(alignment: .topTrailing) {
-            Button(action: { onClose() }) {
-                Image(systemName: "xmark")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .padding(12)
-                    .background(Color.black.opacity(0.5))
-                    .clipShape(Circle())
+            if !isFullScreen {
+                Button(action: { onClose() }) {
+                    Image(systemName: "xmark")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .padding(12)
+                        .background(Color.black.opacity(0.5))
+                        .clipShape(Circle())
+                }
+                .padding(.top, hideEpisodeList ? 60 : 8)
+                .padding(.trailing, 8)
             }
-            .padding(.top, hideEpisodeList ? 60 : 8)
-            .padding(.trailing, 8)
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("toggleEpisodeList"))) { _ in
             hideEpisodeList.toggle()
@@ -47,7 +50,6 @@ struct PlayerView: View {
     }
 
     private func resolveURL(for videoURL: String) -> String {
-        // 对视频地址做完整 URL 编码，避免 & 等字符截断参数
         guard let encoded = videoURL.addingPercentEncoding(withAllowedCharacters: .alphanumerics) else {
             return "https://lziplayer.com/?url="
         }
@@ -105,6 +107,7 @@ struct PlayerView: View {
 
 struct WebPlayerView: UIViewRepresentable {
     let urlString: String
+    @Binding var isFullScreen: Bool
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
@@ -134,10 +137,42 @@ struct WebPlayerView: UIViewRepresentable {
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator()
+        Coordinator(self)
     }
 
     final class Coordinator: NSObject, WKNavigationDelegate {
+        var parent: WebPlayerView
+
+        init(_ parent: WebPlayerView) {
+            self.parent = parent
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            injectFullScreenBlocker(webView)
+        }
+
+        private func injectFullScreenBlocker(_ webView: WKWebView) {
+            let js = """
+            (function() {
+                function blockFullScreen(video) {
+                    video.addEventListener('webkitbeginfullscreen', function(e) {
+                        e.preventDefault();
+                        window.webkit.messageHandlers.fullScreenHandler.postMessage('enterFullScreen');
+                    });
+                }
+                document.querySelectorAll('video').forEach(blockFullScreen);
+                new MutationObserver(function(mutations) {
+                    mutations.forEach(function(m) {
+                        m.addedNodes.forEach(function(node) {
+                            if (node.tagName === 'VIDEO') blockFullScreen(node);
+                        });
+                    });
+                }).observe(document.body, { childList: true, subtree: true });
+            })();
+            """
+            webView.evaluateJavaScript(js, completionHandler: nil)
+        }
+
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
             // 加载失败可在此处理
         }
