@@ -211,12 +211,16 @@ private struct SitePickerLabel: View {
     @ObservedObject var latencyManager: SiteLatencyManager
 
     var body: some View {
-        HStack(spacing: 4) {
+        (
             Text(site.name)
-            Text(latencyManager.latencyText(for: site))
+                .foregroundColor(.primary)
+            +
+            Text(" \(latencyManager.latencyText(for: site))")
                 .font(.caption2)
                 .foregroundColor(latencyManager.color(for: site))
-        }
+        )
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
         .tag(site)
     }
 }
