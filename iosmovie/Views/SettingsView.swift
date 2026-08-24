@@ -21,9 +21,10 @@ struct SettingsView: View {
                         Text(site.name).tag(site.id)
                     }
                 }
-                .onChange(of: defaultSiteID) { newID in
-                    CMSSite.saveDefaultSiteID(newID)
-                }
+.onChange(of: defaultSiteID) { newID in
+    CMSSite.saveDefaultSiteID(newID)
+    NotificationCenter.default.post(name: .defaultSourceDidChange, object: nil)
+}
 
                 Text("主页只会显示默认源的影视")
                     .font(.caption)

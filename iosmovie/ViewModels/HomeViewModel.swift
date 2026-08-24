@@ -1,4 +1,5 @@
 ﻿import Foundation
+import SwiftUI
 
 @MainActor
 final class HomeViewModel: ObservableObject {
@@ -27,14 +28,20 @@ final class HomeViewModel: ObservableObject {
         await loadHome()
     }
 
+    func refreshDefaultSourceIfNeeded() async {
+        let current = CMSSite.selectedDefaultSite
+        guard current.id != sourceID else { return }
+        await updateDefaultSource(to: current)
+    }
+
     func updateDefaultSource(to site: CMSSite) async {
         guard site.id != sourceID else { return }
 
-        // 先删旧源的缓存
+        // 先清除旧源缓存
         CacheManager.shared.removeMovies(forKey: homeCacheKey)
         CacheManager.shared.removeCategories(forKey: categoryCacheKey)
 
-        // 再切换源和缓存 key
+        // 切换源与缓存 key
         source = AppleCMSSource(site: site)
         sourceID = site.id
         homeCacheKey = "home_movies_\(site.id)"
@@ -43,8 +50,13 @@ final class HomeViewModel: ObservableObject {
         selectedCategoryID = nil
         movies = []
         categories = []
+        isLoading = true
+        errorMessage = nil
 
-        await loadInitial()
+        await loadCategories()
+        await loadHome()
+
+        isLoading = false
     }
 
     func loadCategories() async {

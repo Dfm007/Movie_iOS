@@ -39,9 +39,17 @@ struct HomeView: View {
             .task {
                 await viewModel.loadInitial()
             }
+            .onReceive(NotificationCenter.default.publisher(for: .defaultSourceDidChange)) { _ in
+                Task {
+                    await viewModel.updateDefaultSource(to: CMSSite.selectedDefaultSite)
+                }
+            }
         }
         .onAppear {
             noticeManager.fetch()
+            Task {
+                await viewModel.refreshDefaultSourceIfNeeded()
+            }
         }
         .overlay {
             if showNotice, let notice = noticeManager.notice {

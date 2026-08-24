@@ -1,5 +1,9 @@
 ﻿import Foundation
 
+extension Notification.Name {
+    static let defaultSourceDidChange = Notification.Name("defaultSourceDidChange")
+}
+
 struct CMSSite: Identifiable, Hashable, Codable {
     let id: String
     let name: String
