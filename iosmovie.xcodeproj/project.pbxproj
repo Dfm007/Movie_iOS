@@ -16,6 +16,7 @@
 		BB0000000009 /* AppleCMSSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000009 /* AppleCMSSource.swift */; };
 		B1000000009 /* CacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000009 /* CacheManager.swift */; };
 		B1000000010 /* CMSSite.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000010 /* CMSSite.swift */; };
+		B1000000011 /* FeedbackSender.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000011 /* FeedbackSender.swift */; };
 		BB0000000011 /* SearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000011 /* SearchViewModel.swift */; };
 		BB0000000012 /* SearchResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000012 /* SearchResultView.swift */; };
 		BB0000000013 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000013 /* SettingsView.swift */; };
@@ -108,6 +109,7 @@
 		A1000000009 /* CacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/CacheManager.swift"; sourceTree = "<group>"; };
 		A1000000010 /* CMSSite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Models/CMSSite.swift"; sourceTree = "<group>"; };
 		AA0000000011 /* SearchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ViewModels/SearchViewModel.swift"; sourceTree = "<group>"; };
+		A1000000011 /* FeedbackSender.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Models/FeedbackSender.swift"; sourceTree = "<group>"; };
 		AA0000000012 /* SearchResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/SearchResultView.swift"; sourceTree = "<group>"; };
 		AA0000000013 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/SettingsView.swift"; sourceTree = "<group>"; };
 		ZF0001 /* UIScrollView+ZFPlayer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/Core/UIScrollView+ZFPlayer.h"; sourceTree = "<group>"; };
@@ -299,6 +301,7 @@
 				A1000000010 /* CMSSite.swift */,
 				CC0000000001 /* Info.plist */,
 			);
+				A1000000011 /* FeedbackSender.swift */,
 			path = iosmovie;
 			sourceTree = "<group>";
 		};
@@ -387,6 +390,7 @@
 				ZB0002 /* UIScrollView+ZFPlayer.m in Sources */,
 				ZB0003 /* UIViewController+ZFPlayerRotation.m in Sources */,
 				ZB0005 /* ZFFloatView.m in Sources */,
+				B1000000011 /* FeedbackSender.swift in Sources */,
 				ZB0007 /* ZFKVOController.m in Sources */,
 				ZB0009 /* ZFLandscapeRotationManager.m in Sources */,
 				ZB0011 /* ZFLandscapeRotationManager_iOS15.m in Sources */,

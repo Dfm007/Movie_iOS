@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct FeedbackView: View {
-    @StateObject private var mailSender = MailSender()
+    @StateObject private var feedbackSender = FeedbackSender()
 
     @State private var selectedType = "问题反馈"
     @State private var content = ""
@@ -34,7 +34,7 @@ struct FeedbackView: View {
                 Button {
                     submit()
                 } label: {
-                    if mailSender.isSending {
+                    if feedbackSender.isSending {
                         HStack {
                             Spacer()
                             ProgressView()
@@ -45,14 +45,14 @@ struct FeedbackView: View {
                             .frame(maxWidth: .infinity)
                     }
                 }
-                .disabled(mailSender.isSending || content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(feedbackSender.isSending || content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
         .navigationTitle("意见反馈")
         .alert("提示", isPresented: $showResult) {
             Button("确定", role: .cancel) { }
         } message: {
-            Text(mailSender.resultMessage ?? "")
+            Text(feedbackSender.resultMessage ?? "")
         }
     }
 
@@ -60,7 +60,7 @@ struct FeedbackView: View {
         let trimmedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedContent.isEmpty else { return }
 
-        mailSender.sendFeedback(
+        feedbackSender.sendFeedback(
             type: selectedType,
             content: trimmedContent,
             contact: contact.trimmingCharacters(in: .whitespacesAndNewlines)
