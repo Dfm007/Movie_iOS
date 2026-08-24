@@ -11,8 +11,8 @@ final class HomeViewModel: ObservableObject {
 
     private var source: MovieSourceProtocol
     private var sourceID: String
-    private let homeCacheKey: String
-    private let categoryCacheKey: String
+    private var homeCacheKey: String
+    private var categoryCacheKey: String
 
     init() {
         let site = CMSSite.selectedDefaultSite
@@ -29,13 +29,21 @@ final class HomeViewModel: ObservableObject {
 
     func updateDefaultSource(to site: CMSSite) async {
         guard site.id != sourceID else { return }
+
+        // 先删旧源的缓存
+        CacheManager.shared.removeMovies(forKey: homeCacheKey)
+        CacheManager.shared.removeCategories(forKey: categoryCacheKey)
+
+        // 再切换源和缓存 key
         source = AppleCMSSource(site: site)
         sourceID = site.id
+        homeCacheKey = "home_movies_\(site.id)"
+        categoryCacheKey = "movie_categories_\(site.id)"
+
         selectedCategoryID = nil
         movies = []
         categories = []
-        CacheManager.shared.removeMovies(forKey: homeCacheKey)
-        CacheManager.shared.removeCategories(forKey: categoryCacheKey)
+
         await loadInitial()
     }
 
