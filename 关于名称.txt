@@ -1,5 +1,0 @@
-以后改 App 显示名，主要就两个文件：
-
-Info.plist 里的 CFBundleDisplayName 和 CFBundleName
-
-HomeView.swift 里的 navigationTitle
