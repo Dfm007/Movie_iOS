@@ -15,6 +15,10 @@ final class HomeViewModel: ObservableObject {
     private var homeCacheKey: String
     private var categoryCacheKey: String
 
+    var currentSite: CMSSite {
+        CMSSite.all.first(where: { $0.id == sourceID }) ?? CMSSite.selectedDefaultSite
+    }
+
     init() {
         let site = CMSSite.selectedDefaultSite
         self.source = AppleCMSSource(site: site)
@@ -37,11 +41,9 @@ final class HomeViewModel: ObservableObject {
     func updateDefaultSource(to site: CMSSite) async {
         guard site.id != sourceID else { return }
 
-        // 先清除旧源缓存
         CacheManager.shared.removeMovies(forKey: homeCacheKey)
         CacheManager.shared.removeCategories(forKey: categoryCacheKey)
 
-        // 切换源与缓存 key
         source = AppleCMSSource(site: site)
         sourceID = site.id
         homeCacheKey = "home_movies_\(site.id)"

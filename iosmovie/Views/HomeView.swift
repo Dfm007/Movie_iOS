@@ -157,7 +157,15 @@ struct HomeView: View {
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 16) {
                     ForEach(viewModel.movies) { movie in
-                        NavigationLink(destination: DetailView(detailURL: movie.detailURL, initialTitle: movie.title)) {
+                        let currentSite = viewModel.currentSite
+                        NavigationLink(
+                            destination: DetailView(
+                                detailURL: movie.detailURL,
+                                initialTitle: movie.title,
+                                availableSites: [currentSite],
+                                detailMap: [currentSite.id: movie.detailURL]
+                            )
+                        ) {
                             VStack(alignment: .leading, spacing: 6) {
                                 posterView(for: movie)
                                 Text(movie.title)
