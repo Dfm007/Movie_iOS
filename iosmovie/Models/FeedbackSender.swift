@@ -5,7 +5,7 @@ final class FeedbackSender: ObservableObject {
     @Published var resultMessage: String?
     @Published var isSuccess = false
 
-    private let workerURL = URL(string: "https://crimson-fire-b332.724625725.workers.dev/")!
+    private let workerURL = URL(string: "https://feedback-sender-afpparrxxe.cn-hangzhou.fcapp.run")!
 
     func sendFeedback(type: String, content: String, contact: String, completion: @escaping (Bool, String) -> Void) {
         isSending = true
