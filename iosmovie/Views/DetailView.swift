@@ -48,13 +48,7 @@ struct DetailView: View {
 
                         Picker("采集站", selection: $viewModel.selectedSite) {
                             ForEach(viewModel.sites) { site in
-                                HStack(spacing: 4) {
-                                    Text(site.name)
-                                    Text(latencyManager.latencyText(for: site))
-                                        .font(.caption2)
-                                        .foregroundColor(latencyManager.color(for: site))
-                                }
-                                .tag(site)
+                                SitePickerLabel(site: site, latencyManager: latencyManager)
                             }
                         }
                         .pickerStyle(SegmentedPickerStyle())
@@ -209,5 +203,20 @@ struct DetailView: View {
             }
         }
         .padding(.horizontal)
+    }
+}
+
+private struct SitePickerLabel: View {
+    let site: CMSSite
+    @ObservedObject var latencyManager: SiteLatencyManager
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(site.name)
+            Text(latencyManager.latencyText(for: site))
+                .font(.caption2)
+                .foregroundColor(latencyManager.color(for: site))
+        }
+        .tag(site)
     }
 }

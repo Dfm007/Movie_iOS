@@ -19,14 +19,8 @@ struct SettingsView: View {
             Section {
                 Picker("默认源", selection: $defaultSiteID) {
                     ForEach(sites) { site in
-                        HStack {
-                            Text(site.name)
-                            Spacer()
-                            Text(latencyManager.latencyText(for: site))
-                                .font(.caption)
-                                .foregroundColor(latencyManager.color(for: site))
-                        }
-                        .tag(site.id)
+                        SiteLatencyLabel(site: site, latencyManager: latencyManager)
+                            .tag(site.id)
                     }
                 }
                 .onChange(of: defaultSiteID) { newID in
@@ -47,15 +41,7 @@ struct SettingsView: View {
                         editingSite = site
                     } label: {
                         VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Text(site.name)
-                                    .font(.body)
-                                    .foregroundColor(.primary)
-                                Spacer()
-                                Text(latencyManager.latencyText(for: site))
-                                    .font(.caption)
-                                    .foregroundColor(latencyManager.color(for: site))
-                            }
+                            SiteLatencyLabel(site: site, latencyManager: latencyManager)
                             Text(site.baseURL)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
@@ -123,6 +109,21 @@ struct SettingsView: View {
         if !sites.contains(where: { $0.id == defaultSiteID }) {
             defaultSiteID = sites.first?.id ?? ""
             CMSSite.saveDefaultSiteID(defaultSiteID)
+        }
+    }
+}
+
+private struct SiteLatencyLabel: View {
+    let site: CMSSite
+    @ObservedObject var latencyManager: SiteLatencyManager
+
+    var body: some View {
+        HStack {
+            Text(site.name)
+            Spacer()
+            Text(latencyManager.latencyText(for: site))
+                .font(.caption)
+                .foregroundColor(latencyManager.color(for: site))
         }
     }
 }
