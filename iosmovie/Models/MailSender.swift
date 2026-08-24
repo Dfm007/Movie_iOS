@@ -15,6 +15,7 @@ final class MailSender: ObservableObject {
     @Published var isSuccess = false
 
     func sendFeedback(type: String, content: String, contact: String, completion: @escaping (Bool, String) -> Void) {
+        print("[MailSender] sendFeedback start, type=\(type)")
         isSending = true
         resultMessage = nil
 
@@ -40,6 +41,7 @@ final class MailSender: ObservableObject {
             subject: subject,
             body: body
         ) { [weak self] success, message in
+            print("[MailSender] sendFeedback callback, success=\(success), message=\(message)")
             DispatchQueue.main.async {
                 self?.isSending = false
                 self?.isSuccess = success
@@ -66,6 +68,7 @@ final class MailSender: ObservableObject {
         body: String,
         completion: @escaping (Bool, String) -> Void
     ) {
+        print("[SMTP] connecting to \(host):\(port)")
         let connection = NWConnection(
             host: NWEndpoint.Host(host),
             port: NWEndpoint.Port(rawValue: port)!,
@@ -76,19 +79,27 @@ final class MailSender: ObservableObject {
         let finishOnce: (Bool, String) -> Void = { success, message in
             guard !hasFinished else { return }
             hasFinished = true
+            print("[SMTP] finishOnce, success=\(success), message=\(message)")
             connection.cancel()
             completion(success, message)
         }
 
-        // 连接超时：如果 20 秒内没连上，直接失败
         let connectTimeout = DispatchWorkItem {
+            print("[SMTP] connect timeout fired")
             finishOnce(false, "连接服务器超时，请检查网络后重试")
         }
         DispatchQueue.global().asyncAfter(deadline: .now() + 20, execute: connectTimeout)
 
         connection.stateUpdateHandler = { state in
             switch state {
+            case .setup:
+                print("[SMTP] state: setup")
+            case .waiting(let error):
+                print("[SMTP] state: waiting, error=\(error.localizedDescription)")
+            case .preparing:
+                print("[SMTP] state: preparing")
             case .ready:
+                print("[SMTP] state: ready")
                 connectTimeout.cancel()
                 let session = SMTPSession(connection: connection)
                 session.start(
@@ -101,10 +112,13 @@ final class MailSender: ObservableObject {
                     completion: finishOnce
                 )
             case .failed(let error):
+                print("[SMTP] state: failed, error=\(error.localizedDescription)")
                 connectTimeout.cancel()
                 finishOnce(false, "连接失败：\(error.localizedDescription)")
-            default:
-                break
+            case .cancelled:
+                print("[SMTP] state: cancelled")
+            @unknown default:
+                print("[SMTP] state: unknown")
             }
         }
         connection.start(queue: .global(qos: .utility))
@@ -146,7 +160,7 @@ private final class SMTPSession {
         self.body = body
         self.completion = completion
 
-        // 整个 SMTP 会话最长等 60 秒，超过就失败
+        print("[SMTP] session start, stage=\(currentStage)")
         scheduleTimeout()
         receive()
     }
@@ -154,6 +168,7 @@ private final class SMTPSession {
     private func scheduleTimeout() {
         timeoutWorkItem?.cancel()
         let workItem = DispatchWorkItem { [weak self] in
+            print("[SMTP] session timeout fired, stage=\(self?.currentStage ?? -1)")
             self?.finish(false, "发送超时，请稍后重试")
         }
         timeoutWorkItem = workItem
@@ -161,29 +176,32 @@ private final class SMTPSession {
     }
 
     private func receive() {
+        print("[SMTP] receive called, stage=\(currentStage), buffer=\(buffer.count)")
         connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, _, error in
             guard let self = self else { return }
 
             if let error = error {
+                print("[SMTP] receive error, stage=\(self.currentStage), error=\(error.localizedDescription)")
                 self.finish(false, "接收失败：\(error.localizedDescription)")
                 return
             }
 
             if let data = data, !data.isEmpty {
+                print("[SMTP] receive data, stage=\(self.currentStage), bytes=\(data.count), text=\(String(data: data, encoding: .utf8) ?? "<binary>")")
                 self.buffer.append(data)
                 self.processResponse()
             } else {
-                // 收到空数据：交给下一次 receive，但不清空已有 buffer
+                print("[SMTP] receive empty data, stage=\(self.currentStage), call receive again")
                 self.receive()
             }
         }
     }
 
     private func processResponse() {
-        // 尝试从 buffer 中解析出完整的一行或多行 SMTP 响应
+        print("[SMTP] processResponse, stage=\(currentStage), buffer=\(buffer.count)")
         while true {
             guard let lineRange = buffer.range(of: Data("\r\n".utf8)) else {
-                // 还没有完整一行，继续等
+                print("[SMTP] processResponse: no full line, buffer=\(buffer.count)")
                 if buffer.count > 65536 {
                     finish(false, "服务器响应异常")
                 } else {
@@ -199,16 +217,17 @@ private final class SMTPSession {
                 continue
             }
 
-            // SMTP 多行响应：250- 表示后面还有续行，250 表示结束
+            print("[SMTP] response line: \(line)")
+
             let codeString = String(line.prefix(3))
             let isLastLine = line.count < 4 || line[line.index(line.startIndex, offsetBy: 3)] != "-"
 
             guard let codeValue = Int(codeString) else {
+                print("[SMTP] invalid response code: \(line)")
                 finish(false, "服务器响应格式错误")
                 return
             }
 
-            // 如果这一行是续行，继续读下一行，不改变阶段
             if !isLastLine {
                 continue
             }
@@ -219,6 +238,7 @@ private final class SMTPSession {
     }
 
     private func handleResponse(code: Int) {
+        print("[SMTP] handleResponse, stage=\(currentStage), code=\(code)")
         switch currentStage {
         case 0:
             guard code == 220 else {
@@ -283,6 +303,7 @@ private final class SMTPSession {
     }
 
     private func sendCommand(_ command: String) {
+        print("[SMTP] sendCommand, stage=\(currentStage) -> \(currentStage + 1), command=\(command.trimmingCharacters(in: .whitespacesAndNewlines))")
         currentStage += 1
         scheduleTimeout()
         connection.send(content: Data(command.utf8), completion: .contentProcessed { _ in })
@@ -290,6 +311,7 @@ private final class SMTPSession {
     }
 
     private func sendRawData(_ data: Data) {
+        print("[SMTP] sendRawData, stage=\(currentStage) -> \(currentStage + 1), bytes=\(data.count)")
         currentStage += 1
         scheduleTimeout()
         connection.send(content: data, completion: .contentProcessed { _ in })
@@ -311,6 +333,7 @@ private final class SMTPSession {
     }
 
     private func finish(_ success: Bool, _ message: String) {
+        print("[SMTP] finish called, success=\(success), message=\(message), stage=\(currentStage)")
         timeoutWorkItem?.cancel()
         connection.cancel()
         completion?(success, message)
