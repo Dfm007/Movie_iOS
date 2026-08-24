@@ -2,10 +2,11 @@ import SwiftUI
 
 struct DetailView: View {
     let detailURL: String
-	let initialTitle: String
+    let initialTitle: String
     var availableSites: [CMSSite]? = nil
     var detailMap: [String: String] = [:]
     @StateObject private var viewModel = DetailViewModel()
+    @StateObject private var latencyManager = SiteLatencyManager.shared
     @State private var playingSource: PlaySource?
     @State private var playerPresented = false
 
@@ -17,12 +18,12 @@ struct DetailView: View {
         GridItem(.flexible(), spacing: 8)
     ]
 
-init(detailURL: String, initialTitle: String = "", availableSites: [CMSSite]? = nil, detailMap: [String: String] = [:]) {
-    self.detailURL = detailURL
-    self.initialTitle = initialTitle
-    self.availableSites = availableSites
-    self.detailMap = detailMap
-}
+    init(detailURL: String, initialTitle: String = "", availableSites: [CMSSite]? = nil, detailMap: [String: String] = [:]) {
+        self.detailURL = detailURL
+        self.initialTitle = initialTitle
+        self.availableSites = availableSites
+        self.detailMap = detailMap
+    }
 
     var body: some View {
         Group {
@@ -47,7 +48,13 @@ init(detailURL: String, initialTitle: String = "", availableSites: [CMSSite]? = 
 
                         Picker("采集站", selection: $viewModel.selectedSite) {
                             ForEach(viewModel.sites) { site in
-                                Text(site.name).tag(site)
+                                HStack(spacing: 4) {
+                                    Text(site.name)
+                                    Text(latencyManager.latencyText(for: site))
+                                        .font(.caption2)
+                                        .foregroundColor(latencyManager.color(for: site))
+                                }
+                                .tag(site)
                             }
                         }
                         .pickerStyle(SegmentedPickerStyle())
@@ -65,9 +72,10 @@ init(detailURL: String, initialTitle: String = "", availableSites: [CMSSite]? = 
         .navigationTitle(viewModel.movieTitle)
         .task {
             if let sites = availableSites {
-				viewModel.setInitialTitle(initialTitle)
+                viewModel.setInitialTitle(initialTitle)
                 viewModel.configure(availableSites: sites, detailMap: detailMap)
             }
+            await latencyManager.measureAll(sites: viewModel.sites)
             await viewModel.loadDetail(path: detailURL)
         }
         .background(

@@ -6,6 +6,7 @@ struct SettingsView: View {
     @State private var showAddSheet = false
     @State private var editingSite: CMSSite?
     @State private var showResetAlert = false
+    @StateObject private var latencyManager = SiteLatencyManager.shared
 
     var body: some View {
         List {
@@ -18,13 +19,20 @@ struct SettingsView: View {
             Section {
                 Picker("默认源", selection: $defaultSiteID) {
                     ForEach(sites) { site in
-                        Text(site.name).tag(site.id)
+                        HStack {
+                            Text(site.name)
+                            Spacer()
+                            Text(latencyManager.latencyText(for: site))
+                                .font(.caption)
+                                .foregroundColor(latencyManager.color(for: site))
+                        }
+                        .tag(site.id)
                     }
                 }
-.onChange(of: defaultSiteID) { newID in
-    CMSSite.saveDefaultSiteID(newID)
-    NotificationCenter.default.post(name: .defaultSourceDidChange, object: nil)
-}
+                .onChange(of: defaultSiteID) { newID in
+                    CMSSite.saveDefaultSiteID(newID)
+                    NotificationCenter.default.post(name: .defaultSourceDidChange, object: nil)
+                }
 
                 Text("主页只会显示默认源的影视")
                     .font(.caption)
@@ -39,9 +47,15 @@ struct SettingsView: View {
                         editingSite = site
                     } label: {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(site.name)
-                                .font(.body)
-                                .foregroundColor(.primary)
+                            HStack {
+                                Text(site.name)
+                                    .font(.body)
+                                    .foregroundColor(.primary)
+                                Spacer()
+                                Text(latencyManager.latencyText(for: site))
+                                    .font(.caption)
+                                    .foregroundColor(latencyManager.color(for: site))
+                            }
                             Text(site.baseURL)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
@@ -53,6 +67,9 @@ struct SettingsView: View {
             }
 
             Section {
+                Button("重新测速") {
+                    Task { await latencyManager.measureAll(sites: sites) }
+                }
                 Button("添加源") {
                     showAddSheet = true
                 }
@@ -69,9 +86,10 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("设置")
-        .onAppear {
+        .task {
             sites = CMSSite.all
             defaultSiteID = CMSSite.selectedDefaultSite.id
+            await latencyManager.measureAll(sites: sites)
         }
         .sheet(isPresented: $showAddSheet) {
             AddSiteView { name, url in
