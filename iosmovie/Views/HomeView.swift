@@ -16,6 +16,7 @@ struct HomeView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
+                searchBar
                 categoryBar
                 content
             }
@@ -25,14 +26,6 @@ struct HomeView: View {
                     NavigationLink(destination: SettingsView()) {
                         Image(systemName: "gear")
                     }
-                }
-            }
-            .searchable(text: $viewModel.searchText, prompt: "搜索影视")
-            .onSubmit(of: .search) {
-                let keyword = viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !keyword.isEmpty {
-                    searchKeyword = keyword
-                    showSearchResult = true
                 }
             }
             .background(
@@ -62,6 +55,46 @@ struct HomeView: View {
                 showNotice = true
             }
         }
+    }
+
+    private var searchBar: some View {
+        HStack(spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.secondary)
+
+                TextField("搜索影视", text: $viewModel.searchText)
+                    .textFieldStyle(PlainTextFieldStyle())
+                    .autocapitalization(.none)
+                    .disableAutocorrection(true)
+                    .onSubmit {
+                        submitSearch()
+                    }
+
+                if !viewModel.searchText.isEmpty {
+                    Button {
+                        viewModel.searchText = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(Color(.systemGray6))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+
+            Button("搜索") {
+                submitSearch()
+            }
+            .buttonStyle(PlainButtonStyle())
+            .foregroundColor(.blue)
+            .disabled(viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
     }
 
     private var categoryBar: some View {
@@ -190,10 +223,19 @@ struct HomeView: View {
                     Image(systemName: "film")
                         .font(.system(size: 24))
                         .foregroundColor(.white.opacity(0.7))
-                    Text(movie.type)
-                        .font(.system(size: 10))
-                        .foregroundColor(.white.opacity(0.6))
+                    Text(movie.title)
+                        .font(.caption2)
+                        .foregroundColor(.white.opacity(0.7))
+                        .lineLimit(1)
+                        .padding(.horizontal, 8)
                 }
             )
+    }
+
+    private func submitSearch() {
+        let keyword = viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !keyword.isEmpty else { return }
+        searchKeyword = keyword
+        showSearchResult = true
     }
 }
