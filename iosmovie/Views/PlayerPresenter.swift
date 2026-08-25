@@ -23,30 +23,38 @@ struct PlayerPresenter: UIViewControllerRepresentable {
 
 final class PlayerWindowPresenter {
     static let shared = PlayerWindowPresenter()
-    private var previousRoot: UIViewController?
+    private var playerWindow: UIWindow?
     private var playerVC: PlayerHostingController?
 
     func present(source: PlaySource, allSources: [PlaySource], onClose: @escaping () -> Void) {
-        guard playerVC == nil else { return }
-        guard let window = Self.keyWindow() else { return }
-
-        previousRoot = window.rootViewController
+        guard playerWindow == nil else { return }
+        guard let windowScene = Self.activeWindowScene() else { return }
 
         let vc = PlayerHostingController(source: source, allSources: allSources) { [weak self] in
             self?.dismiss()
             onClose()
         }
         playerVC = vc
+
+        let window = UIWindow(windowScene: windowScene)
         window.rootViewController = vc
+        window.windowLevel = .normal + 1
+        window.makeKeyAndVisible()
+        playerWindow = window
     }
 
     func dismiss() {
-        guard let window = Self.keyWindow() else { return }
-        if let previousRoot {
-            window.rootViewController = previousRoot
-        }
+        playerWindow?.isHidden = true
+        playerWindow = nil
         playerVC = nil
-        previousRoot = nil
+        // 让原 SwiftUI 主 window 重新成为 key window
+        Self.keyWindow()?.makeKey()
+    }
+
+    private static func activeWindowScene() -> UIWindowScene? {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first { $0.activationState == .foregroundActive }
     }
 
     private static func keyWindow() -> UIWindow? {
@@ -71,6 +79,10 @@ final class PlayerHostingController: UIHostingController<PlayerView> {
     }
 
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
-        .all
+        .allButUpsideDown
+    }
+
+    override var preferredInterfaceOrientationForPresentation: UIInterfaceOrientation {
+        .portrait
     }
 }
