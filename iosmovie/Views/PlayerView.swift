@@ -7,6 +7,7 @@ final class PlayerViewController: UIViewController {
     var onClose: () -> Void
 
     private var player: ZFPlayerController?
+    private var playerManager: ZFAVPlayerManager?
     private var currentSource: PlaySource
     private var episodeListView: UICollectionView?
 
@@ -35,6 +36,7 @@ final class PlayerViewController: UIViewController {
 
     private func setupPlayer() {
         let manager = ZFAVPlayerManager()
+        self.playerManager = manager
         let player = ZFPlayerController(playerManager: manager, containerView: view)
         let controlView = ZFPlayerControlView()
         player.controlView = controlView
@@ -90,10 +92,10 @@ final class PlayerViewController: UIViewController {
     }
 
     private func play(url: String) {
-        guard let player = player else { return }
+        guard let manager = playerManager else { return }
         if let url = URL(string: url) {
-            (player.playerManager as? ZFAVPlayerManager)?.assetURL = url
-            player.playTheIndex(0)
+            manager.assetURL = url
+            player?.playTheIndex(0)
         }
     }
 }
