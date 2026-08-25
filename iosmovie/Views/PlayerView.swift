@@ -94,8 +94,8 @@ struct CLPlayerRepresentable: UIViewRepresentable {
 
     func makeUIView(context: Context) -> CLPlayer {
         let player = CLPlayer(frame: .zero) { config in
-            config.isAutoRotate = true
-            config.topBarHiddenStyle = .onlySmall
+config.rotateStyle = .all
+config.topBarHiddenStyle = .onlySmall
         }
 
         if let url = URL(string: urlString) {
