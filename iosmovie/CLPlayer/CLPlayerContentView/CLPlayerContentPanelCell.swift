@@ -1,11 +1,10 @@
-//
+﻿//
 //  CLPlayerContentPanelCell.swift
 //  CLPlayer
 //
 //  Created by Chen JmoVxia on 2021/12/13.
 //
 
-import SnapKit
 import UIKit
 
 class CLPlayerContentPanelCell: UICollectionViewCell {

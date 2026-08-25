@@ -1,11 +1,10 @@
-//
+﻿//
 //  CLAnimationTransitioning.swift
 //  CLPlayer
 //
 //  Created by Chen JmoVxia on 2021/10/27.
 //
 
-import SnapKit
 import UIKit
 
 extension CLAnimationTransitioning {

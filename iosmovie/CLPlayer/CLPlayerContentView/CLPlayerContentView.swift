@@ -1,4 +1,4 @@
-//
+﻿//
 //  CLPlayerContentView.swift
 //  CLPlayer
 //
@@ -6,10 +6,9 @@
 //
 import AVFoundation
 import MediaPlayer
-import SnapKit
 import UIKit
 
-// MARK: - JmoVxia---枚举
+// MARK: - JmoVxia---鏋氫妇
 
 extension CLPlayerContentView {
     enum CLPlayerScreenState {
@@ -176,9 +175,9 @@ class CLPlayerContentView: UIView {
         let view = UIButton()
         view.isHidden = true
         view.titleLabel?.font = .systemFont(ofSize: 14)
-        view.setTitle("加载失败,点击重试", for: .normal)
-        view.setTitle("加载失败,点击重试", for: .selected)
-        view.setTitle("加载失败,点击重试", for: .highlighted)
+        view.setTitle("鍔犺浇澶辫触,鐐瑰嚮閲嶈瘯", for: .normal)
+        view.setTitle("鍔犺浇澶辫触,鐐瑰嚮閲嶈瘯", for: .selected)
+        view.setTitle("鍔犺浇澶辫触,鐐瑰嚮閲嶈瘯", for: .highlighted)
         view.setTitleColor(.white, for: .normal)
         view.setTitleColor(.white, for: .selected)
         view.setTitleColor(.white, for: .highlighted)
@@ -257,7 +256,7 @@ class CLPlayerContentView: UIView {
 
     private var rates: [Float] = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0]
 
-    private var videoGravity: [(name: String, mode: AVLayerVideoGravity)] = [("适应", .resizeAspect), ("拉伸", .resizeAspectFill), ("填充", .resize)]
+    private var videoGravity: [(name: String, mode: AVLayerVideoGravity)] = [("閫傚簲", .resizeAspect), ("鎷変几", .resizeAspectFill), ("濉厖", .resize)]
 
     private let morePanelWidth: CGFloat = max(UIScreen.main.bounds.width, UIScreen.main.bounds.height) * 0.382
 
@@ -359,7 +358,7 @@ class CLPlayerContentView: UIView {
     }
 }
 
-// MARK: - JmoVxia---布局
+// MARK: - JmoVxia---甯冨眬
 
 private extension CLPlayerContentView {
     func initSubViews() {
@@ -575,7 +574,7 @@ private extension CLPlayerContentView {
     }
 }
 
-// MARK: - JmoVxia---私有方法
+// MARK: - JmoVxia---绉佹湁鏂规硶
 
 private extension CLPlayerContentView {
     func showMorePanel() {
@@ -640,7 +639,7 @@ private extension CLPlayerContentView {
     }
 }
 
-// MARK: - JmoVxia---公共方法
+// MARK: - JmoVxia---鍏叡鏂规硶
 
 extension CLPlayerContentView {
     func animationLayout(safeAreaInsets: UIEdgeInsets, to screenState: CLPlayerScreenState) {
@@ -714,7 +713,7 @@ extension CLPlayerContentView: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, viewForSupplementaryElementOfKind kind: String, at indexPath: IndexPath) -> UICollectionReusableView {
         if kind == UICollectionView.elementKindSectionHeader {
             let headView = collectionView.dequeueReusableSupplementaryView(ofKind: UICollectionView.elementKindSectionHeader, withReuseIdentifier: "CLPlayerContentPanelHeadView", for: indexPath)
-            (headView as? CLPlayerContentPanelHeadView)?.title = indexPath.section == 0 ? "播放速度" : "填充模式"
+            (headView as? CLPlayerContentPanelHeadView)?.title = indexPath.section == 0 ? "鎾斁閫熷害" : "濉厖妯″紡"
             return headView
         }
         return UICollectionReusableView()

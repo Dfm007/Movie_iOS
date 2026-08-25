@@ -1,4 +1,4 @@
-//
+﻿//
 //  CLPlayerView.swift
 //  CLPlayer
 //
@@ -6,7 +6,6 @@
 //
 
 import AVFoundation
-import SnapKit
 import UIKit
 
 extension CLPlayerView {
@@ -206,7 +205,7 @@ extension CLPlayerView {
     }
 }
 
-// MARK: - JmoVxia---布局
+// MARK: - JmoVxia---甯冨眬
 
 private extension CLPlayerView {
     func initSubViews() {
@@ -403,7 +402,7 @@ private extension CLPlayerView {
     }
 }
 
-// MARK: - JmoVxia---公共方法
+// MARK: - JmoVxia---鍏叡鏂规硶
 
 extension CLPlayerView {
     func play() {
