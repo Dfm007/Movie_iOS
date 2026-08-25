@@ -121,6 +121,7 @@ final class ZFPlayerViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = .black
         setupPlayer()
+        setupFullScreenButton()
     }
 
     private func setupPlayer() {
@@ -131,13 +132,32 @@ final class ZFPlayerViewController: UIViewController {
         let controlView = ZFPlayerControlView()
         player.controlView = controlView
         // 隐藏 ZFPlayer 原生全屏按钮，用我们的全屏逻辑
-        controlView.portraitControlView.fullScreenBtn.isHidden = true
         self.player = player
 
         if let url = URL(string: playURLString) {
             manager.assetURL = url
         }
         player.playTheIndex(0)
+    }
+    private func setupFullScreenButton() {
+        let button = UIButton(type: .system)
+        button.setImage(UIImage(systemName: "arrow.up.left.and.arrow.down.right"), for: .normal)
+        button.tintColor = .white
+        button.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        button.layer.cornerRadius = 18
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(fullScreenTapped), for: .touchUpInside)
+        view.addSubview(button)
+        NSLayoutConstraint.activate([
+            button.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
+            button.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -16),
+            button.widthAnchor.constraint(equalToConstant: 36),
+            button.heightAnchor.constraint(equalToConstant: 36)
+        ])
+    }
+
+    @objc private func fullScreenTapped() {
+        enterFullScreen()
     }
 
     func restartIfNeeded() {
