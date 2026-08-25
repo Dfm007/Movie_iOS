@@ -44,7 +44,7 @@ if isFullScreen {
                     .padding(12)
                     .background(Color.black.opacity(0.5))
                     .clipShape(Circle())
-                    .rotationEffect(.degrees(-90))
+                    .rotationEffect(.degrees(90))
             }
             .padding(.trailing, 8)
         }
