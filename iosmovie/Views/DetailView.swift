@@ -207,3 +207,21 @@ struct DetailView: View {
         .padding(.horizontal)
     }
 }
+private struct SitePickerLabel: View {
+    let site: CMSSite
+    @ObservedObject var latencyManager: SiteLatencyManager
+
+    var body: some View {
+        (
+            Text(site.name)
+                .foregroundColor(.primary)
+            +
+            Text(" \(latencyManager.latencyText(for: site))")
+                .font(.caption2)
+                .foregroundColor(latencyManager.color(for: site))
+        )
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
+        .tag(site)
+    }
+}
