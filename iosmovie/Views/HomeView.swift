@@ -158,14 +158,14 @@ struct HomeView: View {
                 LazyVGrid(columns: columns, spacing: 16) {
                     ForEach(viewModel.movies) { movie in
                         let currentSite = viewModel.currentSite
-                        NavigationLink(
-                            destination: DetailView(
-                                detailURL: movie.detailURL,
-                                initialTitle: movie.title,
-                                availableSites: [currentSite],
-                                detailMap: [currentSite.id: movie.detailURL]
-                            )
-                        ) {
+NavigationLink(
+    destination: DetailView(
+        detailURL: movie.detailURL,
+        initialTitle: movie.title,
+        availableSites: CMSSite.all,          // 传全部源
+        detailMap: [currentSite.id: movie.detailURL]  // 只映射当前默认源的详情地址，其它源靠标题搜索匹配
+    )
+) {
                             VStack(alignment: .leading, spacing: 6) {
                                 posterView(for: movie)
                                 Text(movie.title)
