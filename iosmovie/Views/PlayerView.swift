@@ -142,7 +142,7 @@ final class ZFPlayerViewController: UIViewController {
         guard playURLString != lastURLString else { return }
         lastURLString = playURLString
         if let url = URL(string: playURLString) {
-            (player?.playerManager as? ZFAVPlayerManager)?.assetURL = url
+            playerManager?.assetURL = url
             player?.playTheIndex(0)
         }
     }
