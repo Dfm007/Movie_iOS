@@ -58,12 +58,28 @@ struct HomeDetailRouter: View {
                           !results.isEmpty else {
                         return nil
                     }
-                    // 用与 SearchViewModel 相同的归一化逻辑匹配
+
                     let target = Self.normalize(title)
+
+                    // 1. 完全匹配优先
                     if let exact = results.first(where: { Self.normalize($0.title) == target }) {
                         return (site, exact)
                     }
-                    // 退而求其次：相似度匹配
+
+                    // 2. 候选标题包含目标标题，且是正片（非解说/预告等），选第一个
+                    if let contained = results.first(where: { item in
+                        let cand = Self.normalize(item.title)
+                        return cand.contains(target) && !Self.isNonMainTitle(item.title)
+                    }) {
+                        return (site, contained)
+                    }
+
+                    // 3. 短标题（≤3字）不再做模糊匹配，避免"遮天"配成"一手遮天"
+                    if target.count <= 3 {
+                        return nil
+                    }
+
+                    // 4. 长标题才允许相似度匹配
                     var best: MovieItem?
                     var bestScore = 0.0
                     for item in results {
@@ -90,7 +106,6 @@ struct HomeDetailRouter: View {
         if matches.isEmpty {
             errorMessage = "所有源都未找到该影片"
         } else {
-            // 默认源置顶
             let defaultID = CMSSite.selectedDefaultSite.id
             matches.sort { a, b in
                 if a.site.id == defaultID { return true }
@@ -99,6 +114,12 @@ struct HomeDetailRouter: View {
             }
             sourceDetails = matches
         }
+    }
+
+    // 判断是否是解说、预告等非正片标题
+    private static func isNonMainTitle(_ title: String) -> Bool {
+        let keywords = ["解说", "预告", "花絮", "合集", "cut", "CUT", "Cut", "片段", "精彩"]
+        return keywords.contains(where: { title.contains($0) })
     }
 
     // 与 SearchViewModel.normalize 保持一致
