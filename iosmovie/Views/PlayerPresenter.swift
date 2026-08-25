@@ -23,30 +23,44 @@ struct PlayerPresenter: UIViewControllerRepresentable {
 
 final class PlayerWindowPresenter {
     static let shared = PlayerWindowPresenter()
-    private var previousRoot: UIViewController?
     private var playerVC: PlayerHostingController?
 
     func present(source: PlaySource, allSources: [PlaySource], onClose: @escaping () -> Void) {
         guard playerVC == nil else { return }
-        guard let window = Self.keyWindow() else { return }
-
-        previousRoot = window.rootViewController
+        guard let top = Self.topViewController() else { return }
 
         let vc = PlayerHostingController(source: source, allSources: allSources) { [weak self] in
             self?.dismiss()
             onClose()
         }
+        vc.modalPresentationStyle = .fullScreen
         playerVC = vc
-        window.rootViewController = vc
+        top.present(vc, animated: false)
     }
 
     func dismiss() {
-        guard let window = Self.keyWindow() else { return }
-        if let previousRoot {
-            window.rootViewController = previousRoot
-        }
+        playerVC?.dismiss(animated: false)
         playerVC = nil
-        previousRoot = nil
+    }
+
+    private static func topViewController() -> UIViewController? {
+        guard let root = keyWindow()?.rootViewController else { return nil }
+        return topMost(from: root)
+    }
+
+    private static func topMost(from controller: UIViewController) -> UIViewController {
+        if let presented = controller.presentedViewController {
+            return topMost(from: presented)
+        }
+        if let nav = controller as? UINavigationController,
+           let visible = nav.visibleViewController {
+            return topMost(from: visible)
+        }
+        if let tab = controller as? UITabBarController,
+           let selected = tab.selectedViewController {
+            return topMost(from: selected)
+        }
+        return controller
     }
 
     private static func keyWindow() -> UIWindow? {
