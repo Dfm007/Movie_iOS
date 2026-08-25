@@ -30,7 +30,7 @@ struct PlayerView: View {
             }
         }
         .background(Color.white)
-        .overlay(alignment: .topLeading) {
+        .overlay(alignment: .topTrailing) {
             Button(action: {
                 if isFullScreen {
                     NotificationCenter.default.post(name: NSNotification.Name("exitFullScreenRequest"), object: nil)
@@ -46,7 +46,7 @@ struct PlayerView: View {
                     .clipShape(Circle())
             }
             .padding(.top, hideEpisodeList ? 60 : 8)
-            .padding(.leading, 8)
+            .padding(.trailing, 8)
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("toggleEpisodeList"))) { _ in
             hideEpisodeList.toggle()
@@ -54,6 +54,7 @@ struct PlayerView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("playerFullScreenStateChanged"))) { notification in
             if let isFull = notification.object as? Bool {
                 isFullScreen = isFull
+                hideEpisodeList = isFull
             }
         }
     }
