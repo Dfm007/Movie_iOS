@@ -1,5 +1,6 @@
 ﻿import UIKit
 import AVFoundation
+import AVKit
 
 final class PlayerViewController: UIViewController {
     let source: PlaySource
@@ -9,7 +10,8 @@ final class PlayerViewController: UIViewController {
     private var player: ZFPlayerController?
     private var playerManager: ZFAVPlayerManager?
     private var currentSource: PlaySource
-    private var episodeListView: UICollectionView?
+    private var episodeListView: UICollectionView!
+    private var playerContainerView: UIView!
 
     init(source: PlaySource, allSources: [PlaySource], onClose: @escaping () -> Void) {
         self.source = source
@@ -23,23 +25,39 @@ final class PlayerViewController: UIViewController {
         fatalError("init(coder:) has not been implemented")
     }
 
-    override var shouldAutorotate: Bool { true }
-    override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .allButUpsideDown }
+    override var shouldAutorotate: Bool { false }
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .portrait }
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .black
+        view.backgroundColor = .white
+        setupPlayerContainer()
         setupPlayer()
         setupCloseButton()
         setupEpisodeList()
     }
 
+    private func setupPlayerContainer() {
+        let container = UIView()
+        container.backgroundColor = .black
+        container.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(container)
+        NSLayoutConstraint.activate([
+            container.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            container.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            container.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            container.heightAnchor.constraint(equalTo: view.widthAnchor, multiplier: 9.0/16.0)
+        ])
+        playerContainerView = container
+    }
+
     private func setupPlayer() {
         let manager = ZFAVPlayerManager()
         self.playerManager = manager
-        let player = ZFPlayerController(playerManager: manager, containerView: view)
+        let player = ZFPlayerController(playerManager: manager, containerView: playerContainerView)
         let controlView = ZFPlayerControlView()
         player.controlView = controlView
+        controlView.portraitControlView.fullScreenBtn.isHidden = false
         self.player = player
         if let url = URL(string: currentSource.url) {
             manager.assetURL = url
@@ -70,6 +88,7 @@ final class PlayerViewController: UIViewController {
         layout.minimumInteritemSpacing = 8
         layout.minimumLineSpacing = 8
         layout.sectionInset = UIEdgeInsets(top: 8, left: 16, bottom: 8, right: 16)
+
         let collection = UICollectionView(frame: .zero, collectionViewLayout: layout)
         collection.backgroundColor = .white
         collection.dataSource = self
@@ -78,10 +97,10 @@ final class PlayerViewController: UIViewController {
         collection.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(collection)
         NSLayoutConstraint.activate([
+            collection.topAnchor.constraint(equalTo: playerContainerView.bottomAnchor),
             collection.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             collection.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            collection.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
-            collection.heightAnchor.constraint(equalToConstant: 200)
+            collection.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
         ])
         episodeListView = collection
     }
