@@ -8,6 +8,7 @@ struct PlayerView: View {
     var onClose: () -> Void
     @State private var currentSource: PlaySource
     @State private var hideEpisodeList = false
+    @State private var isFullScreen = false
 
     private let episodeColumns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 5)
 
@@ -29,9 +30,15 @@ struct PlayerView: View {
             }
         }
         .background(Color.white)
-        .overlay(alignment: .topTrailing) {
-            Button(action: { onClose() }) {
-                Image(systemName: "xmark")
+        .overlay(alignment: .topLeading) {
+            Button(action: {
+                if isFullScreen {
+                    NotificationCenter.default.post(name: NSNotification.Name("exitFullScreenRequest"), object: nil)
+                } else {
+                    onClose()
+                }
+            }) {
+                Image(systemName: "chevron.left")
                     .font(.headline)
                     .foregroundColor(.white)
                     .padding(12)
@@ -39,10 +46,15 @@ struct PlayerView: View {
                     .clipShape(Circle())
             }
             .padding(.top, hideEpisodeList ? 60 : 8)
-            .padding(.trailing, 8)
+            .padding(.leading, 8)
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("toggleEpisodeList"))) { _ in
             hideEpisodeList.toggle()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("playerFullScreenStateChanged"))) { notification in
+            if let isFull = notification.object as? Bool {
+                isFullScreen = isFull
+            }
         }
     }
 
@@ -137,6 +149,17 @@ final class ZFPlayerViewController: UIViewController {
         setupPlayer()
         setupOverlayButtons()
         setupSpeedHintLabel()
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleExitFullScreenRequest),
+            name: NSNotification.Name("exitFullScreenRequest"),
+            object: nil
+        )
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 
     private func setupPlayer() {
@@ -234,6 +257,7 @@ final class ZFPlayerViewController: UIViewController {
         speedButton?.isHidden = !isFullScreen
         fullScreenTrailingConstraint?.constant = isFullScreen ? -60 : -12
         NotificationCenter.default.post(name: NSNotification.Name("toggleEpisodeList"), object: nil)
+        NotificationCenter.default.post(name: NSNotification.Name("playerFullScreenStateChanged"), object: isFullScreen)
 
         if isFullScreen {
             let screen = UIScreen.main.bounds
@@ -248,6 +272,20 @@ final class ZFPlayerViewController: UIViewController {
                 self.view.frame = self.originalFrame
                 self.view.layoutIfNeeded()
             }
+        }
+    }
+
+    @objc private func handleExitFullScreenRequest() {
+        guard isFullScreen else { return }
+        isFullScreen = false
+        speedButton?.isHidden = true
+        fullScreenTrailingConstraint?.constant = -12
+        NotificationCenter.default.post(name: NSNotification.Name("playerFullScreenStateChanged"), object: false)
+
+        UIView.animate(withDuration: 0.3) {
+            self.view.transform = .identity
+            self.view.frame = self.originalFrame
+            self.view.layoutIfNeeded()
         }
     }
 
