@@ -157,15 +157,9 @@ struct HomeView: View {
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 16) {
                     ForEach(viewModel.movies) { movie in
-                        let currentSite = viewModel.currentSite
-NavigationLink(
-    destination: DetailView(
-        detailURL: movie.detailURL,
-        initialTitle: movie.title,
-        availableSites: CMSSite.all,          // 传全部源
-        detailMap: [currentSite.id: movie.detailURL]  // 只映射当前默认源的详情地址，其它源靠标题搜索匹配
-    )
-) {
+                        NavigationLink(
+                            destination: HomeDetailRouter(movie: movie)
+                        ) {
                             VStack(alignment: .leading, spacing: 6) {
                                 posterView(for: movie)
                                 Text(movie.title)
@@ -239,11 +233,9 @@ NavigationLink(
                     Image(systemName: "film")
                         .font(.system(size: 24))
                         .foregroundColor(.white.opacity(0.7))
-                    Text(movie.title)
-                        .font(.caption2)
-                        .foregroundColor(.white.opacity(0.7))
-                        .lineLimit(1)
-                        .padding(.horizontal, 8)
+                    Text(movie.type)
+                        .font(.system(size: 10))
+                        .foregroundColor(.white.opacity(0.6))
                 }
             )
     }

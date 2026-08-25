@@ -20,6 +20,7 @@
 		BB0000000011 /* SearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000011 /* SearchViewModel.swift */; };
 		BB0000000012 /* SearchResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000012 /* SearchResultView.swift */; };
 		BB0000000013 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000013 /* SettingsView.swift */; };
+		BB0000000014 /* HomeDetailRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000014 /* HomeDetailRouter.swift */; };
 		ZB0001 /* UIScrollView+ZFPlayer.h in Sources */ = {isa = PBXBuildFile; fileRef = ZF0001 /* UIScrollView+ZFPlayer.h */; };
 		ZB0002 /* UIScrollView+ZFPlayer.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0002 /* UIScrollView+ZFPlayer.m */; };
 		ZB0003 /* UIViewController+ZFPlayerRotation.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0003 /* UIViewController+ZFPlayerRotation.m */; };
@@ -112,6 +113,7 @@
 		A1000000011 /* FeedbackSender.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Models/FeedbackSender.swift"; sourceTree = "<group>"; };
 		AA0000000012 /* SearchResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/SearchResultView.swift"; sourceTree = "<group>"; };
 		AA0000000013 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/SettingsView.swift"; sourceTree = "<group>"; };
+		AA0000000014 /* HomeDetailRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/HomeDetailRouter.swift"; sourceTree = "<group>"; };
 		ZF0001 /* UIScrollView+ZFPlayer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ZFPlayer/Classes/Core/UIScrollView+ZFPlayer.h"; sourceTree = "<group>"; };
 		ZF0002 /* UIScrollView+ZFPlayer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/Core/UIScrollView+ZFPlayer.m"; sourceTree = "<group>"; };
 		ZF0003 /* UIViewController+ZFPlayerRotation.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ZFPlayer/Classes/Core/UIViewController+ZFPlayerRotation.m"; sourceTree = "<group>"; };
@@ -296,6 +298,7 @@
 				AA0000000011 /* SearchViewModel.swift */,
 				AA0000000012 /* SearchResultView.swift */,
 				AA0000000013 /* SettingsView.swift */,
+				AA0000000014 /* HomeDetailRouter.swift */,
 				AA0000000009 /* AppleCMSSource.swift */,
 				A1000000009 /* CacheManager.swift */,
 				A1000000010 /* CMSSite.swift */,
@@ -384,6 +387,7 @@
 				BB0000000011 /* SearchViewModel.swift in Sources */,
 				BB0000000012 /* SearchResultView.swift in Sources */,
 				BB0000000013 /* SettingsView.swift in Sources */,
+				BB0000000014 /* HomeDetailRouter.swift in Sources */,
 				BB0000000009 /* AppleCMSSource.swift in Sources */,
 				B1000000009 /* CacheManager.swift in Sources */,
 				B1000000010 /* CMSSite.swift in Sources */,
