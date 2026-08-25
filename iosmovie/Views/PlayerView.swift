@@ -31,27 +31,27 @@ struct PlayerView: View {
         }
         .background(Color.white)
         .overlay {
-            if isFullScreen {
-                VStack {
-                    HStack {
-                        Spacer()
-                        Button(action: {
-                            NotificationCenter.default.post(name: NSNotification.Name("exitFullScreenRequest"), object: nil)
-                        }) {
-                            Image(systemName: "chevron.left")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                                .padding(12)
-                                .background(Color.black.opacity(0.5))
-                                .clipShape(Circle())
-                                .rotationEffect(.degrees(-90))
-                        }
-                        .padding(.top, 8)
-                        .padding(.trailing, 8)
-                    }
-                    Spacer()
-                }
-            } else {
+if isFullScreen {
+    VStack {
+        HStack {
+            Spacer()
+            Button(action: {
+                NotificationCenter.default.post(name: NSNotification.Name("exitFullScreenRequest"), object: nil)
+            }) {
+                Image(systemName: "chevron.left")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .padding(12)
+                    .background(Color.black.opacity(0.5))
+                    .clipShape(Circle())
+                    .rotationEffect(.degrees(-90))
+            }
+            .padding(.trailing, 8)
+        }
+        Spacer()
+    }
+    .padding(.top, 60)
+} else {
                 VStack {
                     HStack {
                         Button(action: { onClose() }) {
