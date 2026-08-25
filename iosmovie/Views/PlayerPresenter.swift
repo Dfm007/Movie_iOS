@@ -23,28 +23,54 @@ struct PlayerPresenter: UIViewControllerRepresentable {
 
 final class PlayerWindowPresenter {
     static let shared = PlayerWindowPresenter()
-    private var playerWindow: UIWindow?
+    private var previousRoot: UIViewController?
+    private var playerVC: PlayerHostingController?
 
     func present(source: PlaySource, allSources: [PlaySource], onClose: @escaping () -> Void) {
-        guard playerWindow == nil else { return }
-        guard let windowScene = UIApplication.shared.connectedScenes
-            .compactMap({ $0 as? UIWindowScene })
-            .first(where: { $0.activationState == .foregroundActive }) else { return }
+        guard playerVC == nil else { return }
+        guard let window = Self.keyWindow() else { return }
 
-        let vc = PlayerViewController(source: source, allSources: allSources) { [weak self] in
+        previousRoot = window.rootViewController
+
+        let vc = PlayerHostingController(source: source, allSources: allSources) { [weak self] in
             self?.dismiss()
             onClose()
         }
-
-        let window = UIWindow(windowScene: windowScene)
+        playerVC = vc
         window.rootViewController = vc
-        window.windowLevel = .normal + 1
-        window.makeKeyAndVisible()
-        playerWindow = window
     }
 
     func dismiss() {
-        playerWindow?.isHidden = true
-        playerWindow = nil
+        guard let window = Self.keyWindow() else { return }
+        if let previousRoot {
+            window.rootViewController = previousRoot
+        }
+        playerVC = nil
+        previousRoot = nil
+    }
+
+    private static func keyWindow() -> UIWindow? {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first { $0.isKeyWindow }
+    }
+}
+
+final class PlayerHostingController: UIHostingController<PlayerView> {
+    init(source: PlaySource, allSources: [PlaySource], onClose: @escaping () -> Void) {
+        super.init(rootView: PlayerView(source: source, allSources: allSources, onClose: onClose))
+    }
+
+    @MainActor required dynamic init?(coder aDecoder: NSCoder) {
+        nil
+    }
+
+    override var shouldAutorotate: Bool {
+        true
+    }
+
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        .all
     }
 }
