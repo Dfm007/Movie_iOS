@@ -1,4 +1,4 @@
-// !$*UTF8*$!
+﻿// !$*UTF8*$!
 {
 	archiveVersion = 1;
 	classes = {};
@@ -6,6 +6,23 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+				CLF9FE3C7163CBF /* CLGCDTimer.swift */,
+				CLF0071AEBBAC52 /* CLImageHelper.swift */,
+				CLF38CF5BB48843 /* CLPlayer.swift */,
+				CLF78FCAA83BB95 /* CLPlayerConfigure.swift */,
+				CLFD63B2E7652FD /* CLPlayerDelegate.swift */,
+				CLF57632882D31A /* CLPlayerView.swift */,
+				CLF61505B542B82 /* CLAnimationTransitioning.swift */,
+				CLF0A15CFB6DA82 /* CLFullScreenController.swift */,
+				CLF7117E31984CF /* CLFullScreenLeftController.swift */,
+				CLF0182304B9CDC /* CLFullScreenRightController.swift */,
+				CLF70E746546C6B /* CLPlayerContentPanelCell.swift */,
+				CLF4633CF02FB67 /* CLPlayerContentPanelHeadView.swift */,
+				CLFBC9EF16F296A /* CLPlayerContentView.swift */,
+				CLF31DD179BF315 /* CLPlayerContentViewDelegate.swift */,
+				CLF134304E57B82 /* CLRotateAnimationView.swift */,
+				CLF09B4A59DAFD5 /* CLSlider.swift */,
+				CLR92EF206EF7A7 /* CLPlayer.bundle */,
 		BB0000000001 /* iosmovieApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000001 /* iosmovieApp.swift */; };
 		BB0000000002 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000002 /* Models.swift */; };
 		BB0000000003 /* MovieSourceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000003 /* MovieSourceProtocol.swift */; };
@@ -93,6 +110,23 @@
 		ZB0071 /* ZFVolumeBrightnessView.m in Sources */ = {isa = PBXBuildFile; fileRef = ZF0071 /* ZFVolumeBrightnessView.m */; };
 		ZB9999 /* ZFPlayer.bundle in Resources */ = {isa = PBXBuildFile; fileRef = ZF9999 /* ZFPlayer.bundle */; };
 		ZB9001 /* ZFPlayerSwiftUIView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ZF9001 /* ZFPlayerSwiftUIView.swift */; };
+		CLBF77F280FF344 /* CLGCDTimer.swift in Sources */ = {isa = PBXBuildFile; fileRef = CLF9FE3C7163CBF /* CLGCDTimer.swift */; };
+		CLB17F6ADA61C24 /* CLImageHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = CLF0071AEBBAC52 /* CLImageHelper.swift */; };
+		CLB3B32298BB0F4 /* CLPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = CLF38CF5BB48843 /* CLPlayer.swift */; };
+		CLB760D995CBE6C /* CLPlayerConfigure.swift in Sources */ = {isa = PBXBuildFile; fileRef = CLF78FCAA83BB95 /* CLPlayerConfigure.swift */; };
+		CLB0108F66C94B5 /* CLPlayerDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = CLFD63B2E7652FD /* CLPlayerDelegate.swift */; };
+		CLB99114B18F33C /* CLPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CLF57632882D31A /* CLPlayerView.swift */; };
+		CLB5834009A1384 /* CLAnimationTransitioning.swift in Sources */ = {isa = PBXBuildFile; fileRef = CLF61505B542B82 /* CLAnimationTransitioning.swift */; };
+		CLBC509C0BADABA /* CLFullScreenController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CLF0A15CFB6DA82 /* CLFullScreenController.swift */; };
+		CLBA0FF32739BAC /* CLFullScreenLeftController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CLF7117E31984CF /* CLFullScreenLeftController.swift */; };
+		CLB8F754130937E /* CLFullScreenRightController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CLF0182304B9CDC /* CLFullScreenRightController.swift */; };
+		CLB002DCAD2BAF5 /* CLPlayerContentPanelCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = CLF70E746546C6B /* CLPlayerContentPanelCell.swift */; };
+		CLB35E7E626C6A9 /* CLPlayerContentPanelHeadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CLF4633CF02FB67 /* CLPlayerContentPanelHeadView.swift */; };
+		CLB44B657FF27B6 /* CLPlayerContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CLFBC9EF16F296A /* CLPlayerContentView.swift */; };
+		CLB085AE1852EE3 /* CLPlayerContentViewDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = CLF31DD179BF315 /* CLPlayerContentViewDelegate.swift */; };
+		CLB1BB0690910C7 /* CLRotateAnimationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CLF134304E57B82 /* CLRotateAnimationView.swift */; };
+		CLB723E1BC46693 /* CLSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = CLF09B4A59DAFD5 /* CLSlider.swift */; };
+		CLXBFC0A19EF1F7 /* CLPlayer.bundle in Resources */ = {isa = PBXBuildFile; fileRef = CLR92EF206EF7A7 /* CLPlayer.bundle */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -186,6 +220,23 @@
 		ZF9999 /* ZFPlayer.bundle */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "ZFPlayer/Classes/ControlView/ZFPlayer.bundle"; sourceTree = "<group>"; };
 		ZF9001 /* ZFPlayerSwiftUIView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/ZFPlayerSwiftUIView.swift"; sourceTree = "<group>"; };
 		ZF9002 /* iosmovie-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "iosmovie-Bridging-Header.h"; sourceTree = "<group>"; };
+		CLF9FE3C7163CBF /* CLGCDTimer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CLPlayer/CLGCDTimer.swift"; sourceTree = "<group>"; };
+		CLF0071AEBBAC52 /* CLImageHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CLPlayer/CLImageHelper.swift"; sourceTree = "<group>"; };
+		CLF38CF5BB48843 /* CLPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CLPlayer/CLPlayer.swift"; sourceTree = "<group>"; };
+		CLF78FCAA83BB95 /* CLPlayerConfigure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CLPlayer/CLPlayerConfigure.swift"; sourceTree = "<group>"; };
+		CLFD63B2E7652FD /* CLPlayerDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CLPlayer/CLPlayerDelegate.swift"; sourceTree = "<group>"; };
+		CLF57632882D31A /* CLPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CLPlayer/CLPlayerView.swift"; sourceTree = "<group>"; };
+		CLF61505B542B82 /* CLAnimationTransitioning.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CLPlayer/CLFullScreenController/CLAnimationTransitioning.swift"; sourceTree = "<group>"; };
+		CLF0A15CFB6DA82 /* CLFullScreenController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CLPlayer/CLFullScreenController/CLFullScreenController.swift"; sourceTree = "<group>"; };
+		CLF7117E31984CF /* CLFullScreenLeftController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CLPlayer/CLFullScreenController/CLFullScreenLeftController.swift"; sourceTree = "<group>"; };
+		CLF0182304B9CDC /* CLFullScreenRightController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CLPlayer/CLFullScreenController/CLFullScreenRightController.swift"; sourceTree = "<group>"; };
+		CLF70E746546C6B /* CLPlayerContentPanelCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CLPlayer/CLPlayerContentView/CLPlayerContentPanelCell.swift"; sourceTree = "<group>"; };
+		CLF4633CF02FB67 /* CLPlayerContentPanelHeadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CLPlayer/CLPlayerContentView/CLPlayerContentPanelHeadView.swift"; sourceTree = "<group>"; };
+		CLFBC9EF16F296A /* CLPlayerContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CLPlayer/CLPlayerContentView/CLPlayerContentView.swift"; sourceTree = "<group>"; };
+		CLF31DD179BF315 /* CLPlayerContentViewDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CLPlayer/CLPlayerContentView/CLPlayerContentViewDelegate.swift"; sourceTree = "<group>"; };
+		CLF134304E57B82 /* CLRotateAnimationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CLPlayer/CLPlayerContentView/CLRotateAnimationView.swift"; sourceTree = "<group>"; };
+		CLF09B4A59DAFD5 /* CLSlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CLPlayer/CLPlayerContentView/CLSlider.swift"; sourceTree = "<group>"; };
+		CLR92EF206EF7A7 /* CLPlayer.bundle */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "CLPlayer/CLPlayer.bundle"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -367,6 +418,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+				CLXBFC0A19EF1F7 /* CLPlayer.bundle in Resources */,
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -426,6 +478,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+				CLBF77F280FF344 /* CLGCDTimer.swift in Sources */,
+				CLB17F6ADA61C24 /* CLImageHelper.swift in Sources */,
+				CLB3B32298BB0F4 /* CLPlayer.swift in Sources */,
+				CLB760D995CBE6C /* CLPlayerConfigure.swift in Sources */,
+				CLB0108F66C94B5 /* CLPlayerDelegate.swift in Sources */,
+				CLB99114B18F33C /* CLPlayerView.swift in Sources */,
+				CLB5834009A1384 /* CLAnimationTransitioning.swift in Sources */,
+				CLBC509C0BADABA /* CLFullScreenController.swift in Sources */,
+				CLBA0FF32739BAC /* CLFullScreenLeftController.swift in Sources */,
+				CLB8F754130937E /* CLFullScreenRightController.swift in Sources */,
+				CLB002DCAD2BAF5 /* CLPlayerContentPanelCell.swift in Sources */,
+				CLB35E7E626C6A9 /* CLPlayerContentPanelHeadView.swift in Sources */,
+				CLB44B657FF27B6 /* CLPlayerContentView.swift in Sources */,
+				CLB085AE1852EE3 /* CLPlayerContentViewDelegate.swift in Sources */,
+				CLB1BB0690910C7 /* CLRotateAnimationView.swift in Sources */,
+				CLB723E1BC46693 /* CLSlider.swift in Sources */,
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */

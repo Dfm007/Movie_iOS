@@ -1,14 +1,12 @@
 ﻿import SwiftUI
-import WebKit
 import UIKit
+import AVFoundation
 
 struct PlayerView: View {
     let source: PlaySource
     var allSources: [PlaySource] = []
     var onClose: () -> Void
     @State private var currentSource: PlaySource
-    @State private var hideEpisodeList = false
-    @State private var isFullScreen = false
 
     private let episodeColumns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 5)
 
@@ -21,39 +19,25 @@ struct PlayerView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            WebPlayerView(urlString: resolveURL(for: currentSource.url), isFullScreen: $isFullScreen)
-                .frame(height: isFullScreen ? UIScreen.main.bounds.width : (hideEpisodeList ? UIScreen.main.bounds.height : UIScreen.main.bounds.width * 9 / 16))
+            CLPlayerRepresentable(urlString: currentSource.url)
+                .frame(height: UIScreen.main.bounds.width * 9 / 16)
                 .background(Color.black)
 
-            if !isFullScreen && !hideEpisodeList {
-                episodeListView
-            }
+            episodeListView
         }
         .background(Color.white)
         .overlay(alignment: .topTrailing) {
-            if !isFullScreen {
-                Button(action: { onClose() }) {
-                    Image(systemName: "xmark")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .padding(12)
-                        .background(Color.black.opacity(0.5))
-                        .clipShape(Circle())
-                }
-                .padding(.top, hideEpisodeList ? 60 : 8)
-                .padding(.trailing, 8)
+            Button(action: { onClose() }) {
+                Image(systemName: "xmark")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .padding(12)
+                    .background(Color.black.opacity(0.5))
+                    .clipShape(Circle())
             }
+            .padding(.top, 8)
+            .padding(.trailing, 8)
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("toggleEpisodeList"))) { _ in
-            hideEpisodeList.toggle()
-        }
-    }
-
-    private func resolveURL(for videoURL: String) -> String {
-        guard let encoded = videoURL.addingPercentEncoding(withAllowedCharacters: .alphanumerics) else {
-            return "https://lziplayer.com/?url="
-        }
-        return "https://lziplayer.com/?url=\(encoded)"
     }
 
     private var episodeListView: some View {
@@ -105,80 +89,29 @@ struct PlayerView: View {
     }
 }
 
-struct WebPlayerView: UIViewRepresentable {
+struct CLPlayerRepresentable: UIViewRepresentable {
     let urlString: String
-    @Binding var isFullScreen: Bool
 
-    func makeUIView(context: Context) -> WKWebView {
-        let config = WKWebViewConfiguration()
-        config.allowsInlineMediaPlayback = true
-        config.mediaTypesRequiringUserActionForPlayback = []
+    func makeUIView(context: Context) -> CLPlayer {
+        let player = CLPlayer(frame: .zero) { config in
+            config.isAutoRotate = true
+            config.topBarHiddenStyle = .onlySmall
+        }
 
-        let webView = WKWebView(frame: .zero, configuration: config)
-        webView.navigationDelegate = context.coordinator
-        webView.scrollView.isScrollEnabled = false
-        webView.backgroundColor = .black
-        webView.isOpaque = false
+        if let url = URL(string: urlString) {
+            player.url = url
+            player.play()
+        }
 
-        load(in: webView)
-        return webView
+        return player
     }
 
-    func updateUIView(_ webView: WKWebView, context: Context) {
-        if webView.url?.absoluteString != urlString {
-            load(in: webView)
-        }
-    }
-
-    private func load(in webView: WKWebView) {
-        guard let url = URL(string: urlString) else { return }
-        let request = URLRequest(url: url)
-        webView.load(request)
-    }
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-
-    final class Coordinator: NSObject, WKNavigationDelegate {
-        var parent: WebPlayerView
-
-        init(_ parent: WebPlayerView) {
-            self.parent = parent
-        }
-
-        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            injectFullScreenBlocker(webView)
-        }
-
-        private func injectFullScreenBlocker(_ webView: WKWebView) {
-            let js = """
-            (function() {
-                function blockFullScreen(video) {
-                    video.addEventListener('webkitbeginfullscreen', function(e) {
-                        e.preventDefault();
-                        window.webkit.messageHandlers.fullScreenHandler.postMessage('enterFullScreen');
-                    });
-                }
-                document.querySelectorAll('video').forEach(blockFullScreen);
-                new MutationObserver(function(mutations) {
-                    mutations.forEach(function(m) {
-                        m.addedNodes.forEach(function(node) {
-                            if (node.tagName === 'VIDEO') blockFullScreen(node);
-                        });
-                    });
-                }).observe(document.body, { childList: true, subtree: true });
-            })();
-            """
-            webView.evaluateJavaScript(js, completionHandler: nil)
-        }
-
-        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-            // 加载失败可在此处理
-        }
-
-        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-            // 加载失败可在此处理
+    func updateUIView(_ player: CLPlayer, context: Context) {
+        if player.url?.absoluteString != urlString {
+            if let url = URL(string: urlString) {
+                player.url = url
+                player.play()
+            }
         }
     }
 }
