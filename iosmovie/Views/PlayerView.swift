@@ -230,25 +230,17 @@ final class ZFPlayerViewController: UIViewController {
     }
 
     @objc private func toggleFullScreen() {
+        guard let player = player else { return }
+        if isFullScreen {
+            player.enterFullScreen(false, animated: true)
+        } else {
+            player.enterFullScreen(true, animated: true)
+        }
         isFullScreen.toggle()
         speedButton?.isHidden = !isFullScreen
         fullScreenTrailingConstraint?.constant = isFullScreen ? -60 : -12
         NotificationCenter.default.post(name: NSNotification.Name("toggleEpisodeList"), object: nil)
-
-        if isFullScreen {
-            let screen = UIScreen.main.bounds
-            UIView.animate(withDuration: 0.3) {
-                self.view.transform = CGAffineTransform(rotationAngle: .pi / 2)
-                self.view.frame = CGRect(x: 0, y: 0, width: screen.height, height: screen.width)
-                self.view.layoutIfNeeded()
-            }
-        } else {
-            UIView.animate(withDuration: 0.3) {
-                self.view.transform = .identity
-                self.view.frame = self.originalFrame
-                self.view.layoutIfNeeded()
-            }
-        }
+    }
     }
 
     @objc private func toggleSpeedMenu() {
