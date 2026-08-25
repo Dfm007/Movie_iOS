@@ -109,6 +109,7 @@ struct ZFPlayerRepresentable: UIViewControllerRepresentable {
 
 final class ZFPlayerViewController: UIViewController {
     var playURLString: String = ""
+    private var playerManager: ZFAVPlayerManager?
     private var player: ZFPlayerController?
     private var lastURLString: String = ""
     private var landscapeVC: LandscapePlayerViewController?
@@ -125,6 +126,7 @@ final class ZFPlayerViewController: UIViewController {
     private func setupPlayer() {
         lastURLString = playURLString
         let manager = ZFAVPlayerManager()
+        self.playerManager = manager
         let player = ZFPlayerController(playerManager: manager, containerView: view)
         let controlView = ZFPlayerControlView()
         player.controlView = controlView
