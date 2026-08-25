@@ -17,6 +17,7 @@ final class DetailViewModel: ObservableObject {
     @Published var selectedSite: CMSSite = .defaultSite
 
     var sites: [CMSSite] = CMSSite.all
+    private(set) var hasConfigured = false
 
     private var siteDetailMap: [String: String] = [:]
     private var currentMovieTitle = ""
@@ -35,6 +36,7 @@ final class DetailViewModel: ObservableObject {
 
         selectedSite = sites.first ?? .defaultSite
         siteDetailMap = detailMap
+        hasConfigured = true
     }
 
     private func makeSource(for site: CMSSite) -> MovieSourceProtocol {

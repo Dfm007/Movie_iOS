@@ -65,6 +65,7 @@ struct DetailView: View {
         }
         .navigationTitle(viewModel.movieTitle)
         .task {
+            guard !viewModel.hasConfigured else { return }
             if let sites = availableSites {
                 viewModel.setInitialTitle(initialTitle)
                 viewModel.configure(availableSites: sites, detailMap: detailMap)
@@ -191,9 +192,10 @@ struct DetailView: View {
                             }) {
                                 Text(episode.name)
                                     .font(.caption)
+                                    .foregroundColor(.primary)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 8)
-                                    .background(Color.blue.opacity(0.15))
+                                    .background(Color.gray.opacity(0.15))
                                     .clipShape(RoundedRectangle(cornerRadius: 6))
                             }
                             .buttonStyle(PlainButtonStyle())
@@ -203,24 +205,5 @@ struct DetailView: View {
             }
         }
         .padding(.horizontal)
-    }
-}
-
-private struct SitePickerLabel: View {
-    let site: CMSSite
-    @ObservedObject var latencyManager: SiteLatencyManager
-
-    var body: some View {
-        (
-            Text(site.name)
-                .foregroundColor(.primary)
-            +
-            Text(" \(latencyManager.latencyText(for: site))")
-                .font(.caption2)
-                .foregroundColor(latencyManager.color(for: site))
-        )
-        .lineLimit(1)
-        .minimumScaleFactor(0.8)
-        .tag(site)
     }
 }

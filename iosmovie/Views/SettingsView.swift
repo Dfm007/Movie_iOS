@@ -28,6 +28,9 @@ struct SettingsView: View {
                     NotificationCenter.default.post(name: .defaultSourceDidChange, object: nil)
                 }
 
+                Text("主页只会显示默认源采集到的影视")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             } header: {
                 Text("默认源")
             }
