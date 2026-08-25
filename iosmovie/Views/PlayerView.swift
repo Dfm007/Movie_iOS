@@ -30,23 +30,45 @@ struct PlayerView: View {
             }
         }
         .background(Color.white)
-        .overlay(alignment: .topLeading) {
-            Button(action: {
-                if isFullScreen {
-                    NotificationCenter.default.post(name: NSNotification.Name("exitFullScreenRequest"), object: nil)
-                } else {
-                    onClose()
+        .overlay {
+            if isFullScreen {
+                VStack {
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            NotificationCenter.default.post(name: NSNotification.Name("exitFullScreenRequest"), object: nil)
+                        }) {
+                            Image(systemName: "chevron.left")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .padding(12)
+                                .background(Color.black.opacity(0.5))
+                                .clipShape(Circle())
+                                .rotationEffect(.degrees(-90))
+                        }
+                        .padding(.top, 8)
+                        .padding(.trailing, 8)
+                    }
+                    Spacer()
                 }
-            }) {
-                Image(systemName: "chevron.left")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .padding(12)
-                    .background(Color.black.opacity(0.5))
-                    .clipShape(Circle())
+            } else {
+                VStack {
+                    HStack {
+                        Button(action: { onClose() }) {
+                            Image(systemName: "chevron.left")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .padding(12)
+                                .background(Color.black.opacity(0.5))
+                                .clipShape(Circle())
+                        }
+                        .padding(.top, 8)
+                        .padding(.leading, 8)
+                        Spacer()
+                    }
+                    Spacer()
+                }
             }
-            .padding(.top, hideEpisodeList ? 60 : 8)
-            .padding(.leading, 8)
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("toggleEpisodeList"))) { _ in
             hideEpisodeList.toggle()
