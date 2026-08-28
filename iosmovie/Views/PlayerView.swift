@@ -19,17 +19,17 @@ struct PlayerView: View {
     }
 
     var body: some View {
-    VStack(spacing: 0) {
-        ZFPlayerRepresentable(url: currentSource.url, onClose: onClose)
-            .frame(height: hideEpisodeList ? UIScreen.main.bounds.height : UIScreen.main.bounds.width * 9 / 16)
-            .background(Color.black)
+        VStack(spacing: 0) {
+            ZFPlayerRepresentable(url: currentSource.url, onClose: onClose)
+                .frame(height: hideEpisodeList ? UIScreen.main.bounds.height : UIScreen.main.bounds.width * 9 / 16)
+                .background(Color.black)
 
-        if !hideEpisodeList {
-            episodeListView
+            if !hideEpisodeList {
+                episodeListView
+            }
         }
+        .background(Color.white)
     }
-    .background(Color.white)
-}
 
     private var episodeListView: some View {
         ScrollView {
@@ -219,26 +219,34 @@ final class ZFPlayerViewController: UIViewController {
     }
 
     @objc private func fullScreenTapped() {
-    guard !isFullScreen else { return }
-    isFullScreen = true
-
-    let fullVC = FullScreenPlayerViewController()
-    fullVC.modalPresentationStyle = .fullScreen
-    fullVC.onClose = { [weak self] in
-        self?.isFullScreen = false
+        if isFullScreen {
+            exitFullScreen()
+        } else {
+            presentFullScreen()
+        }
     }
-    fullScreenVC = fullVC
 
-    present(fullVC, animated: false) { [weak self] in
-        guard let self = self else { return }
+    private func presentFullScreen() {
+        guard !isFullScreen else { return }
+        isFullScreen = true
 
-        fullVC.addChild(self)
-        self.view.frame = fullVC.view.bounds
-        self.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        fullVC.view.addSubview(self.view)
-        self.didMove(toParent: fullVC)
+        let fullVC = FullScreenPlayerViewController()
+        fullVC.modalPresentationStyle = .fullScreen
+        fullVC.onClose = { [weak self] in
+            self?.isFullScreen = false
+        }
+        fullScreenVC = fullVC
+
+        present(fullVC, animated: false) { [weak self] in
+            guard let self = self else { return }
+
+            fullVC.addChild(self)
+            self.view.frame = fullVC.view.bounds
+            self.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            fullVC.view.addSubview(self.view)
+            self.didMove(toParent: fullVC)
+        }
     }
-}
 
     @objc private func closeTapped() {
         if isFullScreen {
@@ -253,14 +261,14 @@ final class ZFPlayerViewController: UIViewController {
         isFullScreen = false
 
         self.willMove(toParent: nil)
-self.view.removeFromSuperview()
-self.removeFromParent()
+        self.view.removeFromSuperview()
+        self.removeFromParent()
 
-fullVC.dismiss(animated: false) { [weak self] in
-    guard let self = self else { return }
-    self.view.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.width * 9 / 16)
-    self.view.autoresizingMask = []
-}
+        fullVC.dismiss(animated: false) { [weak self] in
+            guard let self = self else { return }
+            self.view.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.width * 9 / 16)
+            self.view.autoresizingMask = []
+        }
     }
 
     func restartIfNeeded() {
