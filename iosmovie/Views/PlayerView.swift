@@ -48,9 +48,7 @@ struct PlayerView: View {
             VStack(alignment: .leading, spacing: 12) {
                 ForEach(allSources) { group in
                     if group.episodes.isEmpty {
-                        Button(action: {
-                            currentSource = group
-                        }) {
+                        Button(action: { currentSource = group }) {
                             Text(group.name)
                                 .font(.subheadline)
                                 .foregroundColor(currentSource.id == group.id ? .white : .primary)
@@ -68,9 +66,7 @@ struct PlayerView: View {
 
                         LazyVGrid(columns: episodeColumns, spacing: 8) {
                             ForEach(group.episodes) { episode in
-                                Button(action: {
-                                    currentSource = episode
-                                }) {
+                                Button(action: { currentSource = episode }) {
                                     Text(episode.name)
                                         .font(.caption)
                                         .foregroundColor(currentSource.id == episode.id ? .white : .primary)
@@ -112,11 +108,12 @@ final class ZFPlayerViewController: UIViewController {
     private var playerManager: ZFAVPlayerManager?
     private var player: ZFPlayerController?
     private var lastURLString: String = ""
-    private var landscapeVC: LandscapePlayerViewController?
     private var speedButton: UIButton?
     private var normalRate: Float = 1.0
     private var speedHintLabel: UILabel?
     private var speedMenuView: UIView?
+    private var isFullScreen = false
+    private var originalFrame: CGRect = .zero
 
     override var shouldAutorotate: Bool { false }
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .portrait }
@@ -128,6 +125,13 @@ final class ZFPlayerViewController: UIViewController {
         setupFullScreenButton()
         setupSpeedButton()
         setupSpeedHintLabel()
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        if !isFullScreen {
+            originalFrame = view.frame
+        }
     }
 
     private func setupPlayer() {
@@ -210,23 +214,21 @@ final class ZFPlayerViewController: UIViewController {
     }
 
     @objc private func fullScreenTapped() {
-        enterFullScreen()
-    }
+        isFullScreen.toggle()
+        let screen = UIScreen.main.bounds
 
-    func enterFullScreen() {
-        guard landscapeVC == nil else { return }
-        let landscape = LandscapePlayerViewController(urlString: playURLString)
-        landscape.modalPresentationStyle = .fullScreen
-        landscape.onDismiss = { [weak self] in
-            self?.landscapeVC = nil
-        }
-        landscapeVC = landscape
-
-        present(landscape, animated: true) { [weak self] in
-            guard let self = self,
-                  let window = self.view.window,
-                  let landscapeView = landscape.view.superview else { return }
-            window.insertSubview(self.view, belowSubview: landscapeView)
+        if isFullScreen {
+            UIView.animate(withDuration: 0.3) {
+                self.view.transform = CGAffineTransform(rotationAngle: .pi / 2)
+                self.view.frame = CGRect(x: 0, y: 0, width: screen.height, height: screen.width)
+                self.view.layoutIfNeeded()
+            }
+        } else {
+            UIView.animate(withDuration: 0.3) {
+                self.view.transform = .identity
+                self.view.frame = self.originalFrame
+                self.view.layoutIfNeeded()
+            }
         }
     }
 
@@ -259,7 +261,7 @@ final class ZFPlayerViewController: UIViewController {
 
         for rate in rates {
             let btn = UIButton(type: .system)
-            btn.setTitle("\\(rate)x", for: .normal)
+            btn.setTitle("\(rate)x", for: .normal)
             btn.setTitleColor(.white, for: .normal)
             btn.titleLabel?.font = .systemFont(ofSize: 15, weight: .medium)
             btn.tag = Int(rate * 100)
@@ -306,7 +308,7 @@ final class ZFPlayerViewController: UIViewController {
 
     private func setRate(_ rate: Float) {
         normalRate = rate
-        speedButton?.setTitle("\\(rate)x", for: .normal)
+        speedButton?.setTitle("\(rate)x", for: .normal)
         player?.currentPlayerManager.rate = rate
     }
 
@@ -326,66 +328,6 @@ final class ZFPlayerViewController: UIViewController {
             player?.currentPlayerManager.rate = normalRate
         default:
             break
-        }
-    }
-}
-
-final class LandscapePlayerViewController: UIViewController {
-    let urlString: String
-    var onDismiss: (() -> Void)?
-    private var player: ZFPlayerController?
-
-    init(urlString: String) {
-        self.urlString = urlString
-        super.init(nibName: nil, bundle: nil)
-    }
-
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    override var shouldAutorotate: Bool { false }
-    override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .landscapeRight }
-
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        view.backgroundColor = .black
-        setupPlayer()
-        setupBackButton()
-    }
-
-    private func setupPlayer() {
-        let manager = ZFAVPlayerManager()
-        let player = ZFPlayerController(playerManager: manager, containerView: view)
-        let controlView = ZFPlayerControlView()
-        player.controlView = controlView
-        self.player = player
-        if let url = URL(string: urlString) {
-            manager.assetURL = url
-        }
-        player.playTheIndex(0)
-    }
-
-    private func setupBackButton() {
-        let button = UIButton(type: .system)
-        button.setImage(UIImage(systemName: "chevron.left"), for: .normal)
-        button.tintColor = .white
-        button.backgroundColor = UIColor.black.withAlphaComponent(0.5)
-        button.layer.cornerRadius = 18
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.addTarget(self, action: #selector(backTapped), for: .touchUpInside)
-        view.addSubview(button)
-        NSLayoutConstraint.activate([
-            button.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
-            button.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 8),
-            button.widthAnchor.constraint(equalToConstant: 36),
-            button.heightAnchor.constraint(equalToConstant: 36)
-        ])
-    }
-
-    @objc private func backTapped() {
-        dismiss(animated: true) { [weak self] in
-            self?.onDismiss?()
         }
     }
 }
