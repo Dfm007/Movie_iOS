@@ -113,7 +113,6 @@ final class ZFPlayerViewController: UIViewController {
     private var speedHintLabel: UILabel?
     private var speedMenuView: UIView?
     private var isFullScreen = false
-    private var originalFrame: CGRect = .zero
 
     override var shouldAutorotate: Bool { false }
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .portrait }
@@ -125,13 +124,6 @@ final class ZFPlayerViewController: UIViewController {
         setupFullScreenButton()
         setupSpeedButton()
         setupSpeedHintLabel()
-    }
-
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        if !isFullScreen {
-            originalFrame = view.frame
-        }
     }
 
     private func setupPlayer() {
@@ -214,22 +206,24 @@ final class ZFPlayerViewController: UIViewController {
     }
 
     @objc private func fullScreenTapped() {
-        isFullScreen.toggle()
-        let screen = UIScreen.main.bounds
+        guard !isFullScreen, let player = player else { return }
+        isFullScreen = true
 
-        if isFullScreen {
-            UIView.animate(withDuration: 0.3) {
-                self.view.transform = CGAffineTransform(rotationAngle: .pi / 2)
-                self.view.frame = CGRect(x: 0, y: 0, width: screen.height, height: screen.width)
-                self.view.layoutIfNeeded()
-            }
-        } else {
-            UIView.animate(withDuration: 0.3) {
-                self.view.transform = .identity
-                self.view.frame = self.originalFrame
-                self.view.layoutIfNeeded()
-            }
+        let currentTime = player.currentTime
+        player.currentPlayerManager.pause()
+
+        let fullVC = FullScreenPlayerViewController()
+        fullVC.playURL = playURLString
+        fullVC.startTime = currentTime
+        fullVC.modalPresentationStyle = .fullScreen
+        fullVC.onClose = { [weak self] in
+            self?.isFullScreen = false
         }
+        fullVC.onExit = { [weak self] time in
+            self?.player?.seekToTime(time) { _ in }
+            self?.player?.currentPlayerManager.play()
+        }
+        present(fullVC, animated: false)
     }
 
     func restartIfNeeded() {
@@ -328,6 +322,68 @@ final class ZFPlayerViewController: UIViewController {
             player?.currentPlayerManager.rate = normalRate
         default:
             break
+        }
+    }
+}
+
+final class FullScreenPlayerViewController: UIViewController {
+    var playURL: String = ""
+    var startTime: TimeInterval = 0
+    var onClose: (() -> Void)?
+    var onExit: ((TimeInterval) -> Void)?
+
+    private var playerManager: ZFAVPlayerManager?
+    private var player: ZFPlayerController?
+
+    override var shouldAutorotate: Bool { true }
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .landscape }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = .black
+        setupPlayer()
+        setupCloseButton()
+    }
+
+    private func setupPlayer() {
+        let manager = ZFAVPlayerManager()
+        self.playerManager = manager
+        let player = ZFPlayerController(playerManager: manager, containerView: view)
+        let controlView = ZFPlayerControlView()
+        player.controlView = controlView
+        self.player = player
+
+        if let url = URL(string: playURL) {
+            manager.assetURL = url
+        }
+        player.playTheIndex(0)
+        if startTime > 0 {
+            player.seekToTime(startTime) { _ in }
+        }
+    }
+
+    private func setupCloseButton() {
+        let button = UIButton(type: .system)
+        button.setImage(UIImage(systemName: "xmark"), for: .normal)
+        button.tintColor = .white
+        button.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        button.layer.cornerRadius = 18
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
+        view.addSubview(button)
+        NSLayoutConstraint.activate([
+            button.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            button.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
+            button.widthAnchor.constraint(equalToConstant: 36),
+            button.heightAnchor.constraint(equalToConstant: 36)
+        ])
+    }
+
+    @objc private func closeTapped() {
+        let time = player?.currentTime ?? 0
+        onExit?(time)
+        dismiss(animated: false) { [weak self] in
+            self?.onClose?()
         }
     }
 }
