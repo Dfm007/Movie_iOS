@@ -8,7 +8,6 @@ struct PlayerView: View {
     var onClose: () -> Void
     @State private var currentSource: PlaySource
     @State private var hideEpisodeList = false
-    @State private var isFullScreen = false
 
     private let episodeColumns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 5)
 
@@ -30,54 +29,17 @@ struct PlayerView: View {
             }
         }
         .background(Color.white)
-        .overlay {
-if isFullScreen {
-    VStack {
-        HStack {
-            Spacer()
-            Button(action: {
-                NotificationCenter.default.post(name: NSNotification.Name("exitFullScreenRequest"), object: nil)
-            }) {
-                Image(systemName: "chevron.left")
+        .overlay(alignment: .topTrailing) {
+            Button(action: { onClose() }) {
+                Image(systemName: "xmark")
                     .font(.headline)
                     .foregroundColor(.white)
                     .padding(12)
                     .background(Color.black.opacity(0.5))
                     .clipShape(Circle())
-                    .rotationEffect(.degrees(90))
             }
+            .padding(.top, hideEpisodeList ? 60 : 8)
             .padding(.trailing, 8)
-        }
-        Spacer()
-    }
-    .padding(.top, 60)
-} else {
-                VStack {
-                    HStack {
-                        Button(action: { onClose() }) {
-                            Image(systemName: "chevron.left")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                                .padding(12)
-                                .background(Color.black.opacity(0.5))
-                                .clipShape(Circle())
-                        }
-                        .padding(.top, 8)
-                        .padding(.leading, 8)
-                        Spacer()
-                    }
-                    Spacer()
-                }
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("toggleEpisodeList"))) { _ in
-            hideEpisodeList.toggle()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("playerFullScreenStateChanged"))) { notification in
-            if let isFull = notification.object as? Bool {
-                isFullScreen = isFull
-                hideEpisodeList = isFull
-            }
         }
     }
 
@@ -147,48 +109,31 @@ struct ZFPlayerRepresentable: UIViewControllerRepresentable {
 
 final class ZFPlayerViewController: UIViewController {
     var playURLString: String = ""
+    private var playerManager: ZFAVPlayerManager?
     private var player: ZFPlayerController?
     private var lastURLString: String = ""
-    private var fullScreenButton: UIButton?
+    private var landscapeVC: LandscapePlayerViewController?
     private var speedButton: UIButton?
-    private var isFullScreen = false
     private var normalRate: Float = 1.0
-    private var originalFrame: CGRect = .zero
     private var speedHintLabel: UILabel?
     private var speedMenuView: UIView?
-    private var fullScreenTrailingConstraint: NSLayoutConstraint?
 
-    override var shouldAutorotate: Bool {
-        return true
-    }
-
-    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
-        return .all
-    }
+    override var shouldAutorotate: Bool { false }
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .portrait }
 
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .black
         setupPlayer()
-        setupOverlayButtons()
+        setupFullScreenButton()
+        setupSpeedButton()
         setupSpeedHintLabel()
-
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleExitFullScreenRequest),
-            name: NSNotification.Name("exitFullScreenRequest"),
-            object: nil
-        )
-    }
-
-    deinit {
-        NotificationCenter.default.removeObserver(self)
     }
 
     private func setupPlayer() {
         lastURLString = playURLString
-
         let manager = ZFAVPlayerManager()
+        self.playerManager = manager
         let player = ZFPlayerController(playerManager: manager, containerView: view)
         let controlView = ZFPlayerControlView()
         player.controlView = controlView
@@ -203,34 +148,24 @@ final class ZFPlayerViewController: UIViewController {
         addLongPressSpeedGesture()
     }
 
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        if !isFullScreen {
-            originalFrame = view.frame
-        }
+    private func setupFullScreenButton() {
+        let button = UIButton(type: .system)
+        button.setImage(UIImage(systemName: "arrow.up.left.and.arrow.down.right"), for: .normal)
+        button.tintColor = .white
+        button.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        button.layer.cornerRadius = 18
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(fullScreenTapped), for: .touchUpInside)
+        view.addSubview(button)
+        NSLayoutConstraint.activate([
+            button.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
+            button.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -16),
+            button.widthAnchor.constraint(equalToConstant: 36),
+            button.heightAnchor.constraint(equalToConstant: 36)
+        ])
     }
 
-    private func setupOverlayButtons() {
-        let full = UIButton(type: .system)
-        full.setImage(UIImage(systemName: "arrow.up.left.and.arrow.down.right"), for: .normal)
-        full.tintColor = .white
-        full.backgroundColor = UIColor.black.withAlphaComponent(0.5)
-        full.layer.cornerRadius = 6
-        full.translatesAutoresizingMaskIntoConstraints = false
-        full.addTarget(self, action: #selector(toggleFullScreen), for: .touchUpInside)
-        view.addSubview(full)
-        view.bringSubviewToFront(full)
-
-        let trailing = full.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12)
-        NSLayoutConstraint.activate([
-            trailing,
-            full.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -16),
-            full.widthAnchor.constraint(equalToConstant: 36),
-            full.heightAnchor.constraint(equalToConstant: 36)
-        ])
-        fullScreenTrailingConstraint = trailing
-        fullScreenButton = full
-
+    private func setupSpeedButton() {
         let speed = UIButton(type: .system)
         speed.setTitle("1.0x", for: .normal)
         speed.titleLabel?.font = .systemFont(ofSize: 13, weight: .semibold)
@@ -239,17 +174,16 @@ final class ZFPlayerViewController: UIViewController {
         speed.layer.cornerRadius = 6
         speed.translatesAutoresizingMaskIntoConstraints = false
         speed.addTarget(self, action: #selector(toggleSpeedMenu), for: .touchUpInside)
-        speed.isHidden = true
         view.addSubview(speed)
         view.bringSubviewToFront(speed)
+        speedButton = speed
 
         NSLayoutConstraint.activate([
-            speed.trailingAnchor.constraint(equalTo: full.leadingAnchor, constant: -20),
+            speed.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -60),
             speed.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -16),
             speed.widthAnchor.constraint(equalToConstant: 48),
             speed.heightAnchor.constraint(equalToConstant: 36)
         ])
-        speedButton = speed
     }
 
     private func setupSpeedHintLabel() {
@@ -265,6 +199,7 @@ final class ZFPlayerViewController: UIViewController {
         label.isHidden = true
         view.addSubview(label)
         view.bringSubviewToFront(label)
+        speedHintLabel = label
 
         NSLayoutConstraint.activate([
             label.centerXAnchor.constraint(equalTo: view.centerXAnchor),
@@ -272,43 +207,35 @@ final class ZFPlayerViewController: UIViewController {
             label.widthAnchor.constraint(equalToConstant: 120),
             label.heightAnchor.constraint(equalToConstant: 40)
         ])
-        speedHintLabel = label
     }
 
-    @objc private func toggleFullScreen() {
-        isFullScreen.toggle()
-        speedButton?.isHidden = !isFullScreen
-        fullScreenTrailingConstraint?.constant = isFullScreen ? -60 : -12
-        NotificationCenter.default.post(name: NSNotification.Name("toggleEpisodeList"), object: nil)
-        NotificationCenter.default.post(name: NSNotification.Name("playerFullScreenStateChanged"), object: isFullScreen)
+    @objc private func fullScreenTapped() {
+        enterFullScreen()
+    }
 
-        if isFullScreen {
-            let screen = UIScreen.main.bounds
-            UIView.animate(withDuration: 0.3) {
-                self.view.transform = CGAffineTransform(rotationAngle: .pi / 2)
-                self.view.frame = CGRect(x: 0, y: 0, width: screen.height, height: screen.width)
-                self.view.layoutIfNeeded()
-            }
-        } else {
-            UIView.animate(withDuration: 0.3) {
-                self.view.transform = .identity
-                self.view.frame = self.originalFrame
-                self.view.layoutIfNeeded()
-            }
+    func enterFullScreen() {
+        guard landscapeVC == nil else { return }
+        let landscape = LandscapePlayerViewController(urlString: playURLString)
+        landscape.modalPresentationStyle = .fullScreen
+        landscape.onDismiss = { [weak self] in
+            self?.landscapeVC = nil
+        }
+        landscapeVC = landscape
+
+        present(landscape, animated: true) { [weak self] in
+            guard let self = self,
+                  let window = self.view.window,
+                  let landscapeView = landscape.view.superview else { return }
+            window.insertSubview(self.view, belowSubview: landscapeView)
         }
     }
 
-    @objc private func handleExitFullScreenRequest() {
-        guard isFullScreen else { return }
-        isFullScreen = false
-        speedButton?.isHidden = true
-        fullScreenTrailingConstraint?.constant = -12
-        NotificationCenter.default.post(name: NSNotification.Name("playerFullScreenStateChanged"), object: false)
-
-        UIView.animate(withDuration: 0.3) {
-            self.view.transform = .identity
-            self.view.frame = self.originalFrame
-            self.view.layoutIfNeeded()
+    func restartIfNeeded() {
+        guard playURLString != lastURLString else { return }
+        lastURLString = playURLString
+        if let url = URL(string: playURLString) {
+            playerManager?.assetURL = url
+            player?.playTheIndex(0)
         }
     }
 
@@ -332,7 +259,7 @@ final class ZFPlayerViewController: UIViewController {
 
         for rate in rates {
             let btn = UIButton(type: .system)
-            btn.setTitle("\(rate)x", for: .normal)
+            btn.setTitle("\\(rate)x", for: .normal)
             btn.setTitleColor(.white, for: .normal)
             btn.titleLabel?.font = .systemFont(ofSize: 15, weight: .medium)
             btn.tag = Int(rate * 100)
@@ -356,10 +283,12 @@ final class ZFPlayerViewController: UIViewController {
         view.addSubview(menu)
         view.bringSubviewToFront(menu)
 
-        NSLayoutConstraint.activate([
-            menu.trailingAnchor.constraint(equalTo: speedButton!.leadingAnchor, constant: -12),
-            menu.bottomAnchor.constraint(equalTo: speedButton!.topAnchor, constant: -8)
-        ])
+        if let speed = speedButton {
+            NSLayoutConstraint.activate([
+                menu.trailingAnchor.constraint(equalTo: speed.leadingAnchor, constant: -12),
+                menu.bottomAnchor.constraint(equalTo: speed.topAnchor, constant: -8)
+            ])
+        }
 
         speedMenuView = menu
     }
@@ -377,7 +306,7 @@ final class ZFPlayerViewController: UIViewController {
 
     private func setRate(_ rate: Float) {
         normalRate = rate
-        speedButton?.setTitle("\(rate)x", for: .normal)
+        speedButton?.setTitle("\\(rate)x", for: .normal)
         player?.currentPlayerManager.rate = rate
     }
 
@@ -399,15 +328,64 @@ final class ZFPlayerViewController: UIViewController {
             break
         }
     }
+}
 
-    func restartIfNeeded() {
-        guard playURLString != lastURLString else { return }
-        player?.stop()
-        setupPlayer()
+final class LandscapePlayerViewController: UIViewController {
+    let urlString: String
+    var onDismiss: (() -> Void)?
+    private var player: ZFPlayerController?
+
+    init(urlString: String) {
+        self.urlString = urlString
+        super.init(nibName: nil, bundle: nil)
     }
 
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
-        player?.stop()
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override var shouldAutorotate: Bool { false }
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .landscapeRight }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = .black
+        setupPlayer()
+        setupBackButton()
+    }
+
+    private func setupPlayer() {
+        let manager = ZFAVPlayerManager()
+        let player = ZFPlayerController(playerManager: manager, containerView: view)
+        let controlView = ZFPlayerControlView()
+        player.controlView = controlView
+        self.player = player
+        if let url = URL(string: urlString) {
+            manager.assetURL = url
+        }
+        player.playTheIndex(0)
+    }
+
+    private func setupBackButton() {
+        let button = UIButton(type: .system)
+        button.setImage(UIImage(systemName: "chevron.left"), for: .normal)
+        button.tintColor = .white
+        button.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        button.layer.cornerRadius = 18
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(backTapped), for: .touchUpInside)
+        view.addSubview(button)
+        NSLayoutConstraint.activate([
+            button.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
+            button.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 8),
+            button.widthAnchor.constraint(equalToConstant: 36),
+            button.heightAnchor.constraint(equalToConstant: 36)
+        ])
+    }
+
+    @objc private func backTapped() {
+        dismiss(animated: true) { [weak self] in
+            self?.onDismiss?()
+        }
     }
 }
