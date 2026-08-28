@@ -220,7 +220,7 @@ final class ZFPlayerViewController: UIViewController {
             self?.isFullScreen = false
         }
         fullVC.onExit = { [weak self] time in
-            self?.player?.seekToTime(time) { _ in }
+            self?.player?.seek(toTime: time) { _ in }
             self?.player?.currentPlayerManager.play()
         }
         present(fullVC, animated: false)
@@ -358,7 +358,7 @@ final class FullScreenPlayerViewController: UIViewController {
         }
         player.playTheIndex(0)
         if startTime > 0 {
-            player.seekToTime(startTime) { _ in }
+            player.seek(toTime: startTime) { _ in }
         }
     }
 
