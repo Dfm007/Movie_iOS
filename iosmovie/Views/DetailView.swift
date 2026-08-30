@@ -168,16 +168,31 @@ struct DetailView: View {
         VStack(alignment: .leading, spacing: 8) {
             ForEach(viewModel.sources) { source in
                 if source.episodes.isEmpty {
-                    Button(action: {
-                        playingSource = source
-                        playerPresented = true
-                    }) {
-                        Text(source.name)
-                            .font(.subheadline)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .background(Color.blue.opacity(0.15))
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                    HStack {
+                        Button(action: {
+                            playingSource = source
+                            playerPresented = true
+                        }) {
+                            Text(source.name)
+                                .font(.subheadline)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .background(Color.blue.opacity(0.15))
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                        }
+
+                        Spacer()
+
+                        Button(action: {
+                            DownloadManager.shared.startDownload(
+                                title: viewModel.movieTitle,
+                                episodeName: source.name,
+                                sourceURL: source.url
+                            )
+                        }) {
+                            Image(systemName: "arrow.down.circle")
+                                .font(.title3)
+                        }
                     }
                 } else {
                     Text(source.name)
@@ -186,19 +201,32 @@ struct DetailView: View {
 
                     LazyVGrid(columns: episodeColumns, spacing: 8) {
                         ForEach(source.episodes) { episode in
-                            Button(action: {
-                                playingSource = episode
-                                playerPresented = true
-                            }) {
-                                Text(episode.name)
-                                    .font(.caption)
-                                    .foregroundColor(.primary)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 8)
-                                    .background(Color.gray.opacity(0.15))
-                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                            HStack(spacing: 4) {
+                                Button(action: {
+                                    playingSource = episode
+                                    playerPresented = true
+                                }) {
+                                    Text(episode.name)
+                                        .font(.caption)
+                                        .foregroundColor(.primary)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 8)
+                                        .background(Color.gray.opacity(0.15))
+                                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                                }
+                                .buttonStyle(PlainButtonStyle())
+
+                                Button(action: {
+                                    DownloadManager.shared.startDownload(
+                                        title: viewModel.movieTitle,
+                                        episodeName: episode.name,
+                                        sourceURL: episode.url
+                                    )
+                                }) {
+                                    Image(systemName: "arrow.down.circle")
+                                        .font(.caption)
+                                }
                             }
-                            .buttonStyle(PlainButtonStyle())
                         }
                     }
                 }
@@ -207,6 +235,7 @@ struct DetailView: View {
         .padding(.horizontal)
     }
 }
+
 private struct SitePickerLabel: View {
     let site: CMSSite
     @ObservedObject var latencyManager: SiteLatencyManager

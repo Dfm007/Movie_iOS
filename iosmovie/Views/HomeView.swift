@@ -26,6 +26,10 @@ struct HomeView: View {
 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack(spacing: 16) {
+                        NavigationLink(destination: DownloadsView()) {
+                            Image(systemName: "arrow.down.circle")
+                        }
+
                         NavigationLink(destination: SearchPage()) {
                             Image(systemName: "magnifyingglass")
                         }
