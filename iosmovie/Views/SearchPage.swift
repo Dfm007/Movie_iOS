@@ -93,11 +93,6 @@ struct SearchPage: View {
                         .buttonStyle(PlainButtonStyle())
                     }
                 }
-                .onDelete { indexSet in
-                    let keywords = indexSet.map { history[$0] }
-                    keywords.forEach { SearchHistoryStore.remove($0) }
-                    history = SearchHistoryStore.all()
-                }
             } header: {
                 HStack {
                     Text("搜索历史")
