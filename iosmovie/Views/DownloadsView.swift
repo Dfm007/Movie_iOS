@@ -5,61 +5,66 @@ struct DownloadsView: View {
 
     var body: some View {
         List {
-            if !downloadManager.tasks.isEmpty {
-                Section("下载中") {
-                    ForEach(downloadManager.tasks) { task in
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("\(task.title) \(task.episodeName)")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-
-                            ProgressView(value: task.progress)
-                                .progressViewStyle(.linear)
-
-                            HStack {
-                                Text("\(Int(task.progress * 100))%")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-
-                                Spacer()
-
-                                statusText(for: task.status)
-                                    .font(.caption)
-                                    .foregroundColor(statusColor(for: task.status))
-                            }
-                        }
-                        .padding(.vertical, 4)
-                    }
-                }
-            }
-
-            Section("已下载") {
-                ForEach(downloadManager.downloadedMovies) { movie in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(movie.title)
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                        Text(movie.episodeName)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .swipeActions {
-                        Button(role: .destructive) {
-                            downloadManager.deleteMovie(movie)
-                        } label: {
-                            Image(systemName: "trash")
-                        }
-                    }
-                }
-            }
+            downloadSection
+            downloadedSection
         }
         .listStyle(.insetGrouped)
         .navigationTitle("我的下载")
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    private func statusText(for status: DownloadStatus) -> String {
-        switch status {
+    @ViewBuilder
+    private var downloadSection: some View {
+        if !downloadManager.tasks.isEmpty {
+            Section("下载中") {
+                ForEach(downloadManager.tasks) { task in
+                    DownloadTaskRow(task: task)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var downloadedSection: some View {
+        Section("已下载") {
+            ForEach(downloadManager.downloadedMovies) { movie in
+                DownloadedMovieRow(movie: movie) {
+                    downloadManager.deleteMovie(movie)
+                }
+            }
+        }
+    }
+}
+
+private struct DownloadTaskRow: View {
+    let task: DownloadTask
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("\(task.title) \(task.episodeName)")
+                .font(.subheadline)
+                .fontWeight(.medium)
+
+            ProgressView(value: task.progress)
+                .progressViewStyle(.linear)
+
+            HStack {
+                Text("\(Int(task.progress * 100))%")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Spacer()
+
+                Text(statusText)
+                    .font(.caption)
+                    .foregroundColor(statusColor)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var statusText: String {
+        switch task.status {
         case .downloading:
             return "下载中"
         case .paused:
@@ -71,8 +76,8 @@ struct DownloadsView: View {
         }
     }
 
-    private func statusColor(for status: DownloadStatus) -> Color {
-        switch status {
+    private var statusColor: Color {
+        switch task.status {
         case .downloading:
             return .blue
         case .paused:
@@ -81,6 +86,27 @@ struct DownloadsView: View {
             return .green
         case .failed:
             return .red
+        }
+    }
+}
+
+private struct DownloadedMovieRow: View {
+    let movie: DownloadedMovie
+    let onDelete: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(movie.title)
+                .font(.subheadline)
+                .fontWeight(.medium)
+            Text(movie.episodeName)
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .swipeActions {
+            Button(role: .destructive, action: onDelete) {
+                Image(systemName: "trash")
+            }
         }
     }
 }
