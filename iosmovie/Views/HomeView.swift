@@ -17,39 +17,25 @@ struct HomeView: View {
                 categoryBar
                 content
             }
-            NavigationView {
-    VStack(spacing: 0) {
-        categoryBar
-        content
-    }
-    .navigationBarTitleDisplayMode(.inline)
-    .toolbar {
-        ToolbarItem(placement: .navigationBarLeading) {
-            Text("影视王")
-                .font(.headline)
-        }
-
-        ToolbarItem(placement: .navigationBarTrailing) {
-            HStack(spacing: 16) {
-                NavigationLink(destination: SearchPage()) {
-                    Image(systemName: "magnifyingglass")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Text("影视王")
+                        .font(.headline)
                 }
 
-                NavigationLink(destination: SettingsView()) {
-                    Image(systemName: "gear")
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    HStack(spacing: 16) {
+                        NavigationLink(destination: SearchPage()) {
+                            Image(systemName: "magnifyingglass")
+                        }
+
+                        NavigationLink(destination: SettingsView()) {
+                            Image(systemName: "gear")
+                        }
+                    }
                 }
             }
-        }
-    }
-    .task {
-        await viewModel.loadInitial()
-    }
-    .onReceive(NotificationCenter.default.publisher(for: .defaultSourceDidChange)) { _ in
-        Task {
-            await viewModel.updateDefaultSource(to: CMSSite.selectedDefaultSite)
-        }
-    }
-}
             .task {
                 await viewModel.loadInitial()
             }
