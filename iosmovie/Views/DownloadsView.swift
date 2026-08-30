@@ -66,7 +66,7 @@ struct DownloadsView: View {
             id: movie.id,
             name: movie.episodeName,
             url: fileURL,
-            format: "mp4",
+            format: "m3u8",
             episodes: []
         )
     }

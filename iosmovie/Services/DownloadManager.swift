@@ -47,7 +47,7 @@ final class DownloadManager: ObservableObject {
 
         Task {
             do {
-                let url = try await downloadM3U8(
+                let localM3U8URL = try await downloadM3U8(
                     sourceURL: item.sourceURL,
                     title: item.title,
                     episodeName: item.episodeName
@@ -55,14 +55,14 @@ final class DownloadManager: ObservableObject {
                     self.tasks[index].progress = progress
                 }
 
-                let attr = try FileManager.default.attributesOfItem(atPath: url.path)
+                let attr = try FileManager.default.attributesOfItem(atPath: localM3U8URL.path)
                 let size = attr[.size] as? Int64 ?? 0
 
                 let movie = DownloadedMovie(
                     id: UUID().uuidString,
                     title: item.title,
                     episodeName: item.episodeName,
-                    fileURL: url.path,
+                    fileURL: localM3U8URL.path,
                     fileSize: size,
                     downloadDate: Date()
                 )
@@ -90,62 +90,63 @@ final class DownloadManager: ObservableObject {
             throw URLError(.cannotDecodeContentData)
         }
 
-        let tsURLs = try parseM3U8(m3u8Text, baseURL: sourceURL)
+        let safeTitle = safeFileName(title)
+        let safeEpisode = safeFileName(episodeName)
+        let folderName = "\(safeTitle)_\(safeEpisode)"
+        let folderURL = downloadsDir.appendingPathComponent(folderName, isDirectory: true)
+        try? FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
 
-        var localFiles: [URL] = []
-        for (index, tsURL) in tsURLs.enumerated() {
-            guard let tsDataURL = URL(string: tsURL) else { continue }
+        let tsURLs = try parseTSURLs(from: m3u8Text, baseURL: sourceURL)
+
+        var localM3U8Lines: [String] = []
+        let lines = m3u8Text.components(separatedBy: .newlines)
+
+        var tsIndex = 0
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty || trimmed.hasPrefix("#") {
+                localM3U8Lines.append(line)
+                continue
+            }
+
+            guard tsIndex < tsURLs.count else { continue }
+            let remoteURL = tsURLs[tsIndex]
+            let fileName = "segment_\(tsIndex).ts"
+            let localURL = folderURL.appendingPathComponent(fileName)
+
+            let tsDataURL = URL(string: remoteURL)!
             let (tsData, _) = try await URLSession.shared.data(from: tsDataURL)
-            let localURL = downloadsDir.appendingPathComponent("\(UUID().uuidString)_\(index).ts")
             try tsData.write(to: localURL)
-            localFiles.append(localURL)
-            let progress = Double(index + 1) / Double(tsURLs.count)
-            progressHandler(progress)
+
+            localM3U8Lines.append(fileName)
+            tsIndex += 1
+            progressHandler(Double(tsIndex) / Double(tsURLs.count))
         }
 
-        let mergedURL = downloadsDir.appendingPathComponent(
-            "\(safeFileName(title))_\(safeFileName(episodeName)).mp4"
-        )
-        try mergeTSFiles(localFiles, to: mergedURL)
+        let localM3U8URL = folderURL.appendingPathComponent("index.m3u8")
+        try localM3U8Lines.joined(separator: "\n").write(to: localM3U8URL, atomically: true, encoding: .utf8)
 
-        for file in localFiles {
-            try? FileManager.default.removeItem(at: file)
-        }
-
-        return mergedURL
+        return localM3U8URL
     }
 
-    private func parseM3U8(_ text: String, baseURL: String) throws -> [String] {
+    private func parseTSURLs(from text: String, baseURL: String) throws -> [String] {
         let lines = text.components(separatedBy: .newlines)
-        var tsURLs: [String] = []
+        var urls: [String] = []
 
         for line in lines {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             guard !trimmed.isEmpty, !trimmed.hasPrefix("#") else { continue }
 
             if trimmed.hasPrefix("http") {
-                tsURLs.append(trimmed)
+                urls.append(trimmed)
             } else if let base = URL(string: baseURL) {
                 let absolute = base.deletingLastPathComponent().appendingPathComponent(trimmed).absoluteString
-                tsURLs.append(absolute)
+                urls.append(absolute)
             }
         }
 
-        guard !tsURLs.isEmpty else { throw URLError(.cannotParseResponse) }
-        return tsURLs
-    }
-
-    private func mergeTSFiles(_ files: [URL], to outputURL: URL) throws {
-        try? FileManager.default.removeItem(at: outputURL)
-        FileManager.default.createFile(atPath: outputURL.path, contents: nil)
-        let handle = try FileHandle(forWritingTo: outputURL)
-
-        for file in files {
-            let data = try Data(contentsOf: file)
-            handle.write(data)
-        }
-
-        try handle.close()
+        guard !urls.isEmpty else { throw URLError(.cannotParseResponse) }
+        return urls
     }
 
     private func safeFileName(_ name: String) -> String {
@@ -154,8 +155,11 @@ final class DownloadManager: ObservableObject {
     }
 
     func deleteMovie(_ movie: DownloadedMovie) {
-        let url = URL(fileURLWithPath: movie.fileURL)
-        try? FileManager.default.removeItem(at: url)
+        let fileURL = URL(fileURLWithPath: movie.fileURL)
+        let folderURL = fileURL.deletingLastPathComponent()
+
+        try? FileManager.default.removeItem(at: folderURL)
+
         downloadedMovies.removeAll { $0.id == movie.id }
         persistMetadata()
     }
