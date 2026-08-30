@@ -2,6 +2,8 @@ import SwiftUI
 
 struct DownloadsView: View {
     @StateObject private var downloadManager = DownloadManager.shared
+    @State private var playingMovie: DownloadedMovie?
+    @State private var playerPresented = false
 
     var body: some View {
         List {
@@ -11,6 +13,19 @@ struct DownloadsView: View {
         .listStyle(.insetGrouped)
         .navigationTitle("我的下载")
         .navigationBarTitleDisplayMode(.inline)
+        .background(
+            PlayerPresenter(
+                source: playingMovie.map(localPlaySource) ?? PlaySource(
+                    id: "",
+                    name: "",
+                    url: "",
+                    format: "",
+                    episodes: []
+                ),
+                allSources: [],
+                isPresented: $playerPresented
+            )
+        )
     }
 
     @ViewBuilder
@@ -28,11 +43,32 @@ struct DownloadsView: View {
     private var downloadedSection: some View {
         Section("已下载") {
             ForEach(downloadManager.downloadedMovies) { movie in
-                DownloadedMovieRow(movie: movie) {
-                    downloadManager.deleteMovie(movie)
+                Button {
+                    playingMovie = movie
+                    playerPresented = true
+                } label: {
+                    DownloadedMovieRow(movie: movie)
+                }
+                .swipeActions {
+                    Button(role: .destructive) {
+                        downloadManager.deleteMovie(movie)
+                    } label: {
+                        Image(systemName: "trash")
+                    }
                 }
             }
         }
+    }
+
+    private func localPlaySource(for movie: DownloadedMovie) -> PlaySource {
+        let fileURL = URL(fileURLWithPath: movie.fileURL).absoluteString
+        return PlaySource(
+            id: movie.id,
+            name: movie.episodeName,
+            url: fileURL,
+            format: "mp4",
+            episodes: []
+        )
     }
 }
 
@@ -92,7 +128,6 @@ private struct DownloadTaskRow: View {
 
 private struct DownloadedMovieRow: View {
     let movie: DownloadedMovie
-    let onDelete: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -102,11 +137,6 @@ private struct DownloadedMovieRow: View {
             Text(movie.episodeName)
                 .font(.caption)
                 .foregroundColor(.secondary)
-        }
-        .swipeActions {
-            Button(role: .destructive, action: onDelete) {
-                Image(systemName: "trash")
-            }
         }
     }
 }
