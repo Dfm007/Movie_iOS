@@ -3,10 +3,7 @@
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
     @StateObject private var noticeManager = NoticeManager()
-    @State private var showSearchResult = false
-    @State private var searchKeyword = ""
     @State private var showNotice = false
-    @State private var searchHistory: [String] = SearchHistoryStore.all()
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
@@ -17,31 +14,23 @@ struct HomeView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                searchBar
-
-                if !searchHistory.isEmpty && viewModel.searchText.isEmpty {
-                    searchHistoryView
-                }
-
                 categoryBar
                 content
             }
             .navigationTitle("影视王")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: SettingsView()) {
-                        Image(systemName: "gear")
+                    HStack(spacing: 16) {
+                        NavigationLink(destination: SearchPage()) {
+                            Image(systemName: "magnifyingglass")
+                        }
+
+                        NavigationLink(destination: SettingsView()) {
+                            Image(systemName: "gear")
+                        }
                     }
                 }
             }
-            .background(
-                NavigationLink(
-                    destination: SearchResultView(keyword: searchKeyword),
-                    isActive: $showSearchResult
-                ) {
-                    EmptyView()
-                }
-            )
             .task {
                 await viewModel.loadInitial()
             }
@@ -69,93 +58,6 @@ struct HomeView: View {
                 showNotice = true
             }
         }
-    }
-
-    private var searchBar: some View {
-        HStack(spacing: 8) {
-            HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.secondary)
-
-                TextField("搜索影视", text: $viewModel.searchText)
-                    .textFieldStyle(PlainTextFieldStyle())
-                    .autocapitalization(.none)
-                    .disableAutocorrection(true)
-                    .onSubmit {
-                        submitSearch()
-                    }
-
-                if !viewModel.searchText.isEmpty {
-                    Button {
-                        viewModel.searchText = ""
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                }
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .background(Color(.systemGray6))
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-
-            Button("搜索") {
-                submitSearch()
-            }
-            .buttonStyle(PlainButtonStyle())
-            .foregroundColor(.blue)
-            .disabled(viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-    }
-
-    private var searchHistoryView: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("搜索历史")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.secondary)
-
-                Spacer()
-
-                Button("清空") {
-                    SearchHistoryStore.removeAll()
-                    searchHistory = []
-                }
-                .font(.caption)
-                .foregroundColor(.blue)
-            }
-
-            FlowLayout(spacing: 8) {
-                ForEach(searchHistory, id: \.self) { keyword in
-                    HStack(spacing: 4) {
-                        Button(keyword) {
-                            submitSearch(keyword)
-                        }
-                        .buttonStyle(PlainButtonStyle())
-
-                        Button {
-                            SearchHistoryStore.remove(keyword)
-                            searchHistory = SearchHistoryStore.all()
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color(.systemGray6))
-                    .clipShape(Capsule())
-                }
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.bottom, 4)
     }
 
     private var categoryBar: some View {
@@ -291,62 +193,5 @@ struct HomeView: View {
                         .foregroundColor(.white.opacity(0.6))
                 }
             )
-    }
-
-    private func submitSearch(_ keyword: String? = nil) {
-        let text = (keyword ?? viewModel.searchText).trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
-
-        viewModel.searchText = text
-        SearchHistoryStore.add(text)
-        searchHistory = SearchHistoryStore.all()
-        searchKeyword = text
-        showSearchResult = true
-    }
-}
-
-struct FlowLayout: Layout {
-    var spacing: CGFloat = 8
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let maxWidth = proposal.width ?? .infinity
-        var x: CGFloat = 0
-        var y: CGFloat = 0
-        var rowHeight: CGFloat = 0
-
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if x + size.width > maxWidth {
-                x = 0
-                y += rowHeight + spacing
-                rowHeight = 0
-            }
-            x += size.width + spacing
-            rowHeight = max(rowHeight, size.height)
-        }
-
-        y += rowHeight
-        return CGSize(width: maxWidth == .infinity ? x : maxWidth, height: y)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        var x = bounds.minX
-        var y = bounds.minY
-        var rowHeight: CGFloat = 0
-
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if x + size.width > bounds.maxX {
-                x = bounds.minX
-                y += rowHeight + spacing
-                rowHeight = 0
-            }
-            subview.place(
-                at: CGPoint(x: x, y: y),
-                proposal: ProposedViewSize(size)
-            )
-            x += size.width + spacing
-            rowHeight = max(rowHeight, size.height)
-        }
     }
 }
