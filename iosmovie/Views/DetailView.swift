@@ -7,8 +7,11 @@ struct DetailView: View {
     var detailMap: [String: String] = [:]
     @StateObject private var viewModel = DetailViewModel()
     @StateObject private var latencyManager = SiteLatencyManager.shared
+    @StateObject private var downloadManager = DownloadManager.shared
     @State private var playingSource: PlaySource?
     @State private var playerPresented = false
+    @State private var showDownloadPicker = false
+    @State private var pendingDownloadEpisodes: [PlaySource]?
 
     private let episodeColumns = [
         GridItem(.flexible(), spacing: 8),
@@ -80,6 +83,16 @@ struct DetailView: View {
                 isPresented: $playerPresented
             )
         )
+        .sheet(isPresented: $showDownloadPicker) {
+            if let episodes = pendingDownloadEpisodes {
+                DownloadPickerView(title: viewModel.movieTitle, episodes: episodes) { selected in
+                    createDownloadTasks(for: selected)
+                }
+            }
+        }
+        .alert(isPresented: $downloadManager.showAlert) {
+            Alert(title: Text(downloadManager.alertMessage))
+        }
     }
 
     private var headerView: some View {
@@ -184,55 +197,69 @@ struct DetailView: View {
                         Spacer()
 
                         Button(action: {
-                            DownloadManager.shared.startDownload(
-                                title: viewModel.movieTitle,
-                                episodeName: source.name,
-                                sourceURL: source.url
-                            )
+                            startSingleDownload(source)
                         }) {
                             Image(systemName: "arrow.down.circle")
                                 .font(.title3)
                         }
                     }
                 } else {
-                    Text(source.name)
+                    HStack {
+                        Text(source.name)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        Spacer()
+
+                        Button("下载") {
+                            showDownloadPicker(for: source.episodes)
+                        }
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.blue)
+                    }
 
                     LazyVGrid(columns: episodeColumns, spacing: 8) {
                         ForEach(source.episodes) { episode in
-                            HStack(spacing: 4) {
-                                Button(action: {
-                                    playingSource = episode
-                                    playerPresented = true
-                                }) {
-                                    Text(episode.name)
-                                        .font(.caption)
-                                        .foregroundColor(.primary)
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 8)
-                                        .background(Color.gray.opacity(0.15))
-                                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                                }
-                                .buttonStyle(PlainButtonStyle())
-
-                                Button(action: {
-                                    DownloadManager.shared.startDownload(
-                                        title: viewModel.movieTitle,
-                                        episodeName: episode.name,
-                                        sourceURL: episode.url
-                                    )
-                                }) {
-                                    Image(systemName: "arrow.down.circle")
-                                        .font(.caption)
-                                }
+                            Button(action: {
+                                playingSource = episode
+                                playerPresented = true
+                            }) {
+                                Text(episode.name)
+                                    .font(.caption)
+                                    .foregroundColor(.primary)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 8)
+                                    .background(Color.gray.opacity(0.15))
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
                             }
+                            .buttonStyle(PlainButtonStyle())
                         }
                     }
                 }
             }
         }
         .padding(.horizontal)
+    }
+
+    private func showDownloadPicker(for episodes: [PlaySource]) {
+        pendingDownloadEpisodes = episodes
+        showDownloadPicker = true
+    }
+
+    private func startSingleDownload(_ source: PlaySource) {
+        DownloadManager.shared.startDownloads(
+            items: [
+                (title: viewModel.movieTitle, episodeName: source.name, sourceURL: source.url)
+            ]
+        )
+    }
+
+    private func createDownloadTasks(for episodes: [PlaySource]) {
+        DownloadManager.shared.startDownloads(
+            items: episodes.map {
+                (title: viewModel.movieTitle, episodeName: $0.name, sourceURL: $0.url)
+            }
+        )
     }
 }
 

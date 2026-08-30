@@ -4,19 +4,36 @@ struct DownloadsView: View {
     @StateObject private var downloadManager = DownloadManager.shared
 
     var body: some View {
-        Group {
-            if downloadManager.isDownloading {
-                VStack(spacing: 12) {
-                    ProgressView(value: downloadManager.progress)
-                        .progressViewStyle(.linear)
-                    Text("下载中 \(Int(downloadManager.progress * 100))%")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+        List {
+            if !downloadManager.tasks.isEmpty {
+                Section("下载中") {
+                    ForEach(downloadManager.tasks) { task in
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("\(task.title) \(task.episodeName)")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+
+                            ProgressView(value: task.progress)
+                                .progressViewStyle(.linear)
+
+                            HStack {
+                                Text("\(Int(task.progress * 100))%")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+
+                                Spacer()
+
+                                statusText(for: task.status)
+                                    .font(.caption)
+                                    .foregroundColor(statusColor(for: task.status))
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
                 }
-                .padding()
             }
 
-            List {
+            Section("已下载") {
                 ForEach(downloadManager.downloadedMovies) { movie in
                     VStack(alignment: .leading, spacing: 4) {
                         Text(movie.title)
@@ -35,9 +52,35 @@ struct DownloadsView: View {
                     }
                 }
             }
-            .listStyle(.plain)
         }
+        .listStyle(.insetGrouped)
         .navigationTitle("我的下载")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func statusText(for status: DownloadStatus) -> String {
+        switch status {
+        case .downloading:
+            return "下载中"
+        case .paused:
+            return "已暂停"
+        case .completed:
+            return "已完成"
+        case .failed:
+            return "失败"
+        }
+    }
+
+    private func statusColor(for status: DownloadStatus) -> Color {
+        switch status {
+        case .downloading:
+            return .blue
+        case .paused:
+            return .orange
+        case .completed:
+            return .green
+        case .failed:
+            return .red
+        }
     }
 }
