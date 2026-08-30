@@ -5,8 +5,9 @@ final class DownloadManager: ObservableObject {
     static let shared = DownloadManager()
 
     @Published var downloadedMovies: [DownloadedMovie] = []
-    @Published var isDownloading = false
-    @Published var progress: Double = 0
+    @Published var tasks: [DownloadTask] = []
+    @Published var showAlert = false
+    @Published var alertMessage = ""
 
     private let metadataKey = "downloaded_movies_metadata"
     private let downloadsDir: URL
@@ -18,21 +19,49 @@ final class DownloadManager: ObservableObject {
         loadMetadata()
     }
 
-    func startDownload(title: String, episodeName: String, sourceURL: String) {
-        guard !isDownloading else { return }
-        isDownloading = true
-        progress = 0
+    func startDownloads(items: [(title: String, episodeName: String, sourceURL: String)]) {
+        guard !items.isEmpty else { return }
+
+        for item in items {
+            let task = DownloadTask(
+                id: UUID().uuidString,
+                title: item.title,
+                episodeName: item.episodeName,
+                sourceURL: item.sourceURL,
+                progress: 0,
+                status: .downloading
+            )
+            tasks.insert(task, at: 0)
+        }
+
+        alertMessage = "已创建 \(items.count) 个下载任务"
+        showAlert = true
+
+        for item in items {
+            processDownload(item)
+        }
+    }
+
+    private func processDownload(_ item: (title: String, episodeName: String, sourceURL: String)) {
+        guard let index = tasks.firstIndex(where: { $0.sourceURL == item.sourceURL && $0.episodeName == item.episodeName }) else { return }
 
         Task {
             do {
-                let url = try await downloadM3U8(sourceURL: sourceURL, title: title, episodeName: episodeName)
+                let url = try await downloadM3U8(
+                    sourceURL: item.sourceURL,
+                    title: item.title,
+                    episodeName: item.episodeName
+                ) { progress in
+                    self.tasks[index].progress = progress
+                }
+
                 let attr = try FileManager.default.attributesOfItem(atPath: url.path)
                 let size = attr[.size] as? Int64 ?? 0
 
                 let movie = DownloadedMovie(
                     id: UUID().uuidString,
-                    title: title,
-                    episodeName: episodeName,
+                    title: item.title,
+                    episodeName: item.episodeName,
                     fileURL: url.path,
                     fileSize: size,
                     downloadDate: Date()
@@ -40,16 +69,20 @@ final class DownloadManager: ObservableObject {
 
                 downloadedMovies.insert(movie, at: 0)
                 persistMetadata()
+                tasks[index].status = .completed
+                tasks[index].progress = 1
             } catch {
-                // 下载失败，这里可以加错误提示
+                tasks[index].status = .failed
             }
-
-            isDownloading = false
-            progress = 0
         }
     }
 
-    private func downloadM3U8(sourceURL: String, title: String, episodeName: String) async throws -> URL {
+    private func downloadM3U8(
+        sourceURL: String,
+        title: String,
+        episodeName: String,
+        progressHandler: @escaping (Double) -> Void
+    ) async throws -> URL {
         guard let url = URL(string: sourceURL) else { throw URLError(.badURL) }
 
         let (data, _) = try await URLSession.shared.data(from: url)
@@ -66,10 +99,13 @@ final class DownloadManager: ObservableObject {
             let localURL = downloadsDir.appendingPathComponent("\(UUID().uuidString)_\(index).ts")
             try tsData.write(to: localURL)
             localFiles.append(localURL)
-            progress = Double(index + 1) / Double(tsURLs.count)
+            let progress = Double(index + 1) / Double(tsURLs.count)
+            progressHandler(progress)
         }
 
-        let mergedURL = downloadsDir.appendingPathComponent("\(safeFileName(title))_\(safeFileName(episodeName)).mp4")
+        let mergedURL = downloadsDir.appendingPathComponent(
+            "\(safeFileName(title))_\(safeFileName(episodeName)).mp4"
+        )
         try mergeTSFiles(localFiles, to: mergedURL)
 
         for file in localFiles {
