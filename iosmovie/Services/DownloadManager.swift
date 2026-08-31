@@ -1,4 +1,5 @@
 import Foundation
+import CryptoSwift
 
 @MainActor
 final class DownloadManager: ObservableObject {
@@ -61,7 +62,6 @@ final class DownloadManager: ObservableObject {
         taskHandles[task.id]?.cancel()
         taskHandles[task.id] = nil
 
-        // 清理临时文件夹
         if let index = tasks.firstIndex(where: { $0.id == task.id }) {
             let t = tasks[index]
             let folderURL = folderURL(title: t.title, episodeName: t.episodeName)
@@ -75,6 +75,8 @@ final class DownloadManager: ObservableObject {
         setStatus(.downloading, for: task.id)
         setProgress(0, for: task.id)
         setCompletedSegments(0, for: task.id)
+        setTotalBytes(0, for: task.id)
+        setDownloadedBytes(0, for: task.id)
         startProcess(for: task.id)
     }
 
@@ -97,22 +99,24 @@ final class DownloadManager: ObservableObject {
         let task = tasks[index]
 
         do {
-            let localM3U8URL = try await downloadM3U8(taskID: taskID) { [weak self] progress in
+            let localM3U8URL = try await downloadM3U8(taskID: taskID) { [weak self] progress, downloadedBytes, totalBytes in
                 self?.setProgress(progress, for: taskID)
+                self?.setDownloadedBytes(downloadedBytes, for: taskID)
+                self?.setTotalBytes(totalBytes, for: taskID)
             }
 
-            // 检查是否被取消（暂停/取消都可能触发）
             try Task.checkCancellation()
 
-            let attr = try FileManager.default.attributesOfItem(atPath: localM3U8URL.path)
-            let size = attr[.size] as? Int64 ?? 0
+            // 计算总大小：整个文件夹所有 TS 的总和
+            let folderURL = localM3U8URL.deletingLastPathComponent()
+            let totalSize = Self.folderSize(at: folderURL)
 
             let movie = DownloadedMovie(
                 id: UUID().uuidString,
                 title: task.title,
                 episodeName: task.episodeName,
                 fileURL: localM3U8URL.path,
-                fileSize: size,
+                fileSize: totalSize,
                 downloadDate: Date()
             )
 
@@ -122,7 +126,6 @@ final class DownloadManager: ObservableObject {
             setProgress(1, for: taskID)
             taskHandles[taskID] = nil
         } catch is CancellationError {
-            // 正常取消，状态已由 pause/cancel 设置，不额外处理
             taskHandles[taskID] = nil
         } catch {
             setStatus(.failed, for: taskID)
@@ -130,11 +133,11 @@ final class DownloadManager: ObservableObject {
         }
     }
 
-    // MARK: - m3u8 + TS 下载（断点续传 + 嵌套 m3u8 + AES-128 密钥）
+    // MARK: - m3u8 + TS 下载（AES-128 解密 + 断点续传 + 嵌套 m3u8）
 
     private func downloadM3U8(
         taskID: String,
-        progressHandler: @escaping (Double) -> Void
+        progressHandler: @escaping (Double, Int64, Int64) -> Void
     ) async throws -> URL {
         guard let index = tasks.firstIndex(where: { $0.id == taskID }) else {
             throw URLError(.cancelled)
@@ -146,29 +149,35 @@ final class DownloadManager: ObservableObject {
         let folderURL = folderURL(title: task.title, episodeName: task.episodeName)
         try? FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
 
-        // 1. 下载第一层 m3u8 并解析最终的有效分片列表
+        // 1. 解析嵌套 m3u8
         let resolved = try await resolveEffectiveM3U8(from: sourceURL, taskID: taskID)
-
         let m3u8Text = resolved.text
         let effectiveBaseURL = resolved.baseURL
 
-        // 2. 下载 AES-128 密钥（如果有）
-        try await downloadEncKeyIfNeeded(from: m3u8Text, effectiveBaseURL: effectiveBaseURL, folderURL: folderURL)
+        // 2. 解析 AES-128 密钥（如果有）
+        let encInfo = try await parseEncryptionInfo(from: m3u8Text, effectiveBaseURL: effectiveBaseURL)
 
         // 3. 解析 TS 分片
         let tsURLs = try parseTSURLs(from: m3u8Text, baseURL: effectiveBaseURL)
 
-        // 4. 下载 TS 分片并改写本地 m3u8
+        // 4. 下载 TS 并生成本地 m3u8（明文 + 绝对路径 + 无 EXT-X-KEY）
         var localM3U8Lines: [String] = []
         let lines = m3u8Text.components(separatedBy: .newlines)
 
         let startSegment = task.completedSegments
         var tsIndex = 0
+        var totalBytes: Int64 = 0
 
         for line in lines {
             try Task.checkCancellation()
 
             let trimmed = line.trimmingCharacters(in: .whitespaces)
+
+            // 跳过 #EXT-X-KEY 行（因为 TS 已经是明文）
+            if trimmed.hasPrefix("#EXT-X-KEY") {
+                continue
+            }
+
             if trimmed.isEmpty || trimmed.hasPrefix("#") {
                 localM3U8Lines.append(line)
                 continue
@@ -179,28 +188,124 @@ final class DownloadManager: ObservableObject {
             let localURL = folderURL.appendingPathComponent(fileName)
 
             if tsIndex < startSegment {
-                // 已下载过的分片，直接复用
                 if FileManager.default.fileExists(atPath: localURL.path) {
-                    localM3U8Lines.append(fileName)
+                    localM3U8Lines.append(localURL.absoluteString)
+                    let size = (try? FileManager.default.attributesOfItem(atPath: localURL.path)[.size] as? Int64) ?? 0
+                    totalBytes += size ?? 0
                 } else {
-                    // 本地分片缺失，需要重下
-                    try await downloadTS(tsURLs[tsIndex], to: localURL)
-                    localM3U8Lines.append(fileName)
+                    let size = try await downloadAndDecryptTS(
+                        urlString: tsURLs[tsIndex],
+                        to: localURL,
+                        encInfo: encInfo
+                    )
+                    localM3U8Lines.append(localURL.absoluteString)
+                    totalBytes += size
+                    setDownloadedBytes(totalBytes, for: taskID)
                 }
             } else {
-                try await downloadTS(tsURLs[tsIndex], to: localURL)
-                localM3U8Lines.append(fileName)
+                let size = try await downloadAndDecryptTS(
+                    urlString: tsURLs[tsIndex],
+                    to: localURL,
+                    encInfo: encInfo
+                )
+                localM3U8Lines.append(localURL.absoluteString)
+                totalBytes += size
+                setDownloadedBytes(totalBytes, for: taskID)
                 setCompletedSegments(tsIndex + 1, for: taskID)
             }
 
             tsIndex += 1
-            progressHandler(Double(tsIndex) / Double(tsURLs.count))
+            progressHandler(Double(tsIndex) / Double(tsURLs.count), totalBytes, task.totalBytes)
         }
+
+        setTotalBytes(totalBytes, for: taskID)
 
         let localM3U8URL = folderURL.appendingPathComponent("index.m3u8")
         try localM3U8Lines.joined(separator: "\n").write(to: localM3U8URL, atomically: true, encoding: .utf8)
 
         return localM3U8URL
+    }
+
+    // MARK: - TS 下载 + AES-128 解密
+
+    private struct EncryptionInfo {
+        let key: [UInt8]
+        let iv: [UInt8]
+    }
+
+    private func parseEncryptionInfo(
+        from m3u8Text: String,
+        effectiveBaseURL: String
+    ) async throws -> EncryptionInfo? {
+        for line in m3u8Text.components(separatedBy: .newlines) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            guard trimmed.hasPrefix("#EXT-X-KEY"), trimmed.contains("AES-128") else { continue }
+
+            // 提取 URI
+            guard let uriRange = trimmed.range(of: "URI=\""),
+                  let uriEnd = trimmed[uriRange.upperBound...].range(of: "\"")?.lowerBound else {
+                return nil
+            }
+            let keyURI = String(trimmed[uriRange.upperBound..<uriEnd])
+
+            // 拼密钥绝对 URL
+            let keyURL: URL
+            if keyURI.hasPrefix("http") {
+                keyURL = URL(string: keyURI)!
+            } else if keyURI.hasPrefix("/") {
+                var comps = URLComponents(url: URL(string: effectiveBaseURL)!, resolvingAgainstBaseURL: false)!
+                comps.path = keyURI
+                keyURL = comps.url!
+            } else {
+                let base = URL(string: effectiveBaseURL)!
+                keyURL = base.deletingLastPathComponent().appendingPathComponent(keyURI)
+            }
+
+            // 下载密钥
+            let (keyData, _) = try await URLSession.shared.data(from: keyURL)
+            let keyBytes = [UInt8](keyData)
+
+            // 解析 IV
+            var iv: [UInt8] = Array(repeating: 0, count: 16)
+            if let ivRange = trimmed.range(of: "IV=0x") {
+                let hexStart = ivRange.upperBound
+                let hexEnd = trimmed.index(hexStart, offsetBy: 32, limitedBy: trimmed.endIndex) ?? trimmed.endIndex
+                let hexString = String(trimmed[hexStart..<hexEnd])
+                var hexIndex = 0
+                for i in 0..<16 {
+                    let start = hexString.index(hexString.startIndex, offsetBy: hexIndex)
+                    let end = hexString.index(start, offsetBy: 2)
+                    iv[i] = UInt8(hexString[start..<end], radix: 16) ?? 0
+                    hexIndex += 2
+                }
+            }
+
+            return EncryptionInfo(key: keyBytes, iv: iv)
+        }
+        return nil
+    }
+
+    private func downloadAndDecryptTS(
+        urlString: String,
+        to localURL: URL,
+        encInfo: EncryptionInfo?
+    ) async throws -> Int64 {
+        guard let url = URL(string: urlString) else { throw URLError(.badURL) }
+
+        let (tsData, _) = try await URLSession.shared.data(from: url)
+        try Task.checkCancellation()
+
+        var finalData = tsData
+
+        if let encInfo {
+            let encryptedBytes = [UInt8](tsData)
+            let aes = try AES(key: encInfo.key, blockMode: CBC(iv: encInfo.iv), padding: .noPadding)
+            let decryptedBytes = try aes.decrypt(encryptedBytes)
+            finalData = Data(decryptedBytes)
+        }
+
+        try finalData.write(to: localURL)
+        return Int64(finalData.count)
     }
 
     // MARK: - 嵌套 m3u8 解析
@@ -216,7 +321,6 @@ final class DownloadManager: ObservableObject {
             throw URLError(.cannotDecodeContentData)
         }
 
-        // 如果是 master playlist（含 #EXT-X-STREAM-INF），需要找子 m3u8
         if text.contains("#EXT-X-STREAM-INF") {
             let childPaths = text.components(separatedBy: .newlines)
                 .map { $0.trimmingCharacters(in: .whitespaces) }
@@ -237,67 +341,15 @@ final class DownloadManager: ObservableObject {
                 childURL = sourceURL.deletingLastPathComponent().appendingPathComponent(childPath)
             }
 
-            // 递归抓子 m3u8（最多一层，这里直接下载）
             let (childData, _) = try await URLSession.shared.data(from: childURL)
             guard let childText = String(data: childData, encoding: .utf8) else {
                 throw URLError(.cannotDecodeContentData)
             }
 
-            // 子 m3u8 里的相对 URI（如 enc.key）要用 childURL 来解析
             return ResolvedPlaylist(text: childText, baseURL: childURL.absoluteString)
         }
 
-        // 单级 m3u8，直接返回
         return ResolvedPlaylist(text: text, baseURL: sourceURL.absoluteString)
-    }
-
-    // MARK: - AES-128 密钥下载
-
-    private func downloadEncKeyIfNeeded(
-        from m3u8Text: String,
-        effectiveBaseURL: String,
-        folderURL: URL
-    ) async throws {
-        // 找 #EXT-X-KEY 行里的 URI
-        for line in m3u8Text.components(separatedBy: .newlines) {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            guard trimmed.hasPrefix("#EXT-X-KEY") else { continue }
-
-            // 提取 URI="xxx"
-            guard let uriRange = trimmed.range(of: "URI=\"") else { continue }
-            let uriStart = uriRange.upperBound
-            guard let uriEnd = trimmed[uriStart...].range(of: "\"")?.lowerBound else { continue }
-            let keyURI = String(trimmed[uriStart..<uriEnd])
-
-            // 拼绝对 URL
-            let keyURL: URL
-            if keyURI.hasPrefix("http") {
-                keyURL = URL(string: keyURI)!
-            } else if keyURI.hasPrefix("/") {
-                var comps = URLComponents(url: URL(string: effectiveBaseURL)!, resolvingAgainstBaseURL: false)!
-                comps.path = keyURI
-                keyURL = comps.url!
-            } else {
-                let base = URL(string: effectiveBaseURL)!
-                keyURL = base.deletingLastPathComponent().appendingPathComponent(keyURI)
-            }
-
-            // 下载密钥到本地 enc.key
-            let (keyData, _) = try await URLSession.shared.data(from: keyURL)
-            let localKeyURL = folderURL.appendingPathComponent("enc.key")
-            try keyData.write(to: localKeyURL)
-            break
-        }
-    }
-
-    // MARK: - TS 下载
-
-    private func downloadTS(_ urlString: String, to localURL: URL) async throws {
-        guard let url = URL(string: urlString) else { throw URLError(.badURL) }
-
-        let (tsData, _) = try await URLSession.shared.data(from: url)
-        try Task.checkCancellation()
-        try tsData.write(to: localURL)
     }
 
     // MARK: - 工具方法
@@ -332,6 +384,19 @@ final class DownloadManager: ObservableObject {
         return name.components(separatedBy: invalid).joined(separator: "_")
     }
 
+    private static func folderSize(at folderURL: URL) -> Int64 {
+        let fm = FileManager.default
+        guard let contents = try? fm.contentsOfDirectory(at: folderURL, includingPropertiesForKeys: [.fileSizeKey]) else {
+            return 0
+        }
+        var total: Int64 = 0
+        for fileURL in contents {
+            let size = (try? fm.attributesOfItem(atPath: fileURL.path)[.size] as? Int64) ?? 0
+            total += size ?? 0
+        }
+        return total
+    }
+
     // MARK: - 状态更新
 
     private func setStatus(_ status: DownloadStatus, for taskID: String) {
@@ -352,7 +417,61 @@ final class DownloadManager: ObservableObject {
         }
     }
 
-    // MARK: - 删除已下载
+    private func setTotalBytes(_ bytes: Int64, for taskID: String) {
+        if let index = tasks.firstIndex(where: { $0.id == taskID }) {
+            tasks[index].totalBytes = bytes
+        }
+    }
+
+    private func setDownloadedBytes(_ bytes: Int64, for taskID: String) {
+        if let index = tasks.firstIndex(where: { $0.id == taskID }) {
+            tasks[index].downloadedBytes = bytes
+        }
+    }
+
+    // MARK: - 扫描与删除
+
+    func scanDownloadsDirectory() {
+        let fm = FileManager.default
+        guard let contents = try? fm.contentsOfDirectory(at: downloadsDir, includingPropertiesForKeys: [.isDirectoryKey]) else { return }
+
+        var discovered: [DownloadedMovie] = []
+        var existingPaths = Set(downloadedMovies.map { $0.fileURL })
+
+        for folderURL in contents {
+            var isDir: ObjCBool = false
+            guard fm.fileExists(atPath: folderURL.path, isDirectory: &isDir), isDir.boolValue else { continue }
+
+            let m3u8URL = folderURL.appendingPathComponent("index.m3u8")
+            guard fm.fileExists(atPath: m3u8URL.path) else { continue }
+            guard !existingPaths.contains(m3u8URL.path) else { continue }
+
+            let folderName = folderURL.lastPathComponent
+            let parts = folderName.split(separator: "_", maxSplits: 1).map(String.init)
+            let title = parts.first ?? folderName
+            let episodeName = parts.count > 1 ? parts[1] : ""
+
+            let totalSize = Self.folderSize(at: folderURL)
+            let attr = try? fm.attributesOfItem(atPath: m3u8URL.path)
+            let date = attr?[.modificationDate] as? Date ?? Date()
+
+            let movie = DownloadedMovie(
+                id: UUID().uuidString,
+                title: title,
+                episodeName: episodeName,
+                fileURL: m3u8URL.path,
+                fileSize: totalSize,
+                downloadDate: date
+            )
+            discovered.append(movie)
+            existingPaths.insert(m3u8URL.path)
+        }
+
+        if !discovered.isEmpty {
+            downloadedMovies.insert(contentsOf: discovered, at: 0)
+            persistMetadata()
+        }
+    }
 
     func deleteMovie(_ movie: DownloadedMovie) {
         let fileURL = URL(fileURLWithPath: movie.fileURL)
@@ -375,53 +494,4 @@ final class DownloadManager: ObservableObject {
               let movies = try? JSONDecoder().decode([DownloadedMovie].self, from: data) else { return }
         downloadedMovies = movies.filter { FileManager.default.fileExists(atPath: $0.fileURL) }
     }
-	
-	func scanDownloadsDirectory() {
-    let fm = FileManager.default
-    guard let contents = try? fm.contentsOfDirectory(at: downloadsDir, includingPropertiesForKeys: [.isDirectoryKey]) else { return }
-
-    var discovered: [DownloadedMovie] = []
-    var existingPaths = Set(downloadedMovies.map { $0.fileURL })
-
-    for folderURL in contents {
-        var isDir: ObjCBool = false
-        guard fm.fileExists(atPath: folderURL.path, isDirectory: &isDir), isDir.boolValue else { continue }
-
-        let m3u8URL = folderURL.appendingPathComponent("index.m3u8")
-        guard fm.fileExists(atPath: m3u8URL.path) else { continue }
-
-        // 避免重复添加
-        guard !existingPaths.contains(m3u8URL.path) else { continue }
-
-        // 解析文件夹名：标题_集名
-        let folderName = folderURL.lastPathComponent
-        let parts = folderName.split(separator: "_", maxSplits: 1).map(String.init)
-        let title = parts.first ?? folderName
-        let episodeName = parts.count > 1 ? parts[1] : ""
-
-        // 计算文件大小（用 index.m3u8 的大小，或整个文件夹大小）
-        let attr = try? fm.attributesOfItem(atPath: m3u8URL.path)
-        let size = attr?[.size] as? Int64 ?? 0
-        let date = attr?[.modificationDate] as? Date ?? Date()
-
-        let movie = DownloadedMovie(
-            id: UUID().uuidString,
-            title: title,
-            episodeName: episodeName,
-            fileURL: m3u8URL.path,
-            fileSize: size,
-            downloadDate: date
-        )
-        discovered.append(movie)
-        existingPaths.insert(m3u8URL.path)
-    }
-
-    if !discovered.isEmpty {
-        downloadedMovies.insert(contentsOf: discovered, at: 0)
-        persistMetadata()
-    }
-}
-	
-	
-	
 }

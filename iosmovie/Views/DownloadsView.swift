@@ -31,7 +31,7 @@ struct DownloadsView: View {
                 isPresented: $playerPresented
             )
         )
-		.onAppear {
+        .onAppear {
             downloadManager.scanDownloadsDirectory()
         }
     }
@@ -116,6 +116,12 @@ private struct DownloadTaskRow: View {
 
                 Spacer()
 
+                if task.totalBytes > 0 {
+                    Text("\(Self.formatBytes(task.downloadedBytes)) / \(Self.formatBytes(task.totalBytes))")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
                 Text(task.status.displayText)
                     .font(.caption)
                     .foregroundColor(statusColor)
@@ -178,6 +184,12 @@ private struct DownloadTaskRow: View {
         case .failed:      return .red
         }
     }
+
+    private static func formatBytes(_ bytes: Int64) -> String {
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        return formatter.string(fromByteCount: bytes)
+    }
 }
 
 private struct DownloadedMovieRow: View {
@@ -191,6 +203,15 @@ private struct DownloadedMovieRow: View {
             Text(movie.episodeName)
                 .font(.caption)
                 .foregroundColor(.secondary)
+            Text(Self.formatBytes(movie.fileSize))
+                .font(.caption2)
+                .foregroundColor(.secondary)
         }
+    }
+
+    private static func formatBytes(_ bytes: Int64) -> String {
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        return formatter.string(fromByteCount: bytes)
     }
 }

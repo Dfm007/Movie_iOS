@@ -4,11 +4,18 @@ options:
   deploymentTarget:
     iOS: "15.0"
   createIntermediateGroups: true
+packages:
+  CryptoSwift:
+    url: https://github.com/krzyzanowskim/CryptoSwift.git
+    from: "1.8.0"
 targets:
   iosmovie:
     type: application
     platform: iOS
     deploymentTarget: "15.0"
+    dependencies:
+      - package: CryptoSwift
+        product: CryptoSwift
     sources:
       - path: iosmovie
         excludes:

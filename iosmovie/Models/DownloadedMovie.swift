@@ -33,4 +33,6 @@ struct DownloadTask: Identifiable, Equatable {
     var progress: Double
     var status: DownloadStatus
     var completedSegments: Int = 0
+    var totalBytes: Int64 = 0
+    var downloadedBytes: Int64 = 0
 }
