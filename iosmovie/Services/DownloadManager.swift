@@ -85,11 +85,12 @@ final class DownloadManager: ObservableObject {
     // MARK: - 下载流程
 
     private func startProcess(for taskID: String) {
-        let handle = Task { [weak self] in
-            await self?.processDownload(taskID: taskID)
-        }
-        taskHandles[taskID] = handle
+    let handle = Task { [weak self] in
+        guard let self else { return }
+        await self.processDownload(taskID: taskID)
     }
+    taskHandles[taskID] = handle
+}
 
     private func processDownload(taskID: String) async {
         guard let index = tasks.firstIndex(where: { $0.id == taskID }) else { return }
