@@ -129,6 +129,19 @@ final class ZFPlayerViewController: UIViewController {
     player.controlView = controlView
     controlView.portraitControlView.fullScreenBtn.isHidden = true
     self.player = player
+	
+	    // 播放失败弹窗
+    player.playerPlayFailed = { [weak self] _, error in
+        guard let self else { return }
+        let message = error?.localizedDescription ?? "未知错误"
+        let alert = UIAlertController(
+            title: "播放失败",
+            message: message,
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "好", style: .default))
+        self.present(alert, animated: true)
+    }
 
     // 修复本地 file:// 加载
     let assetURL: URL?
