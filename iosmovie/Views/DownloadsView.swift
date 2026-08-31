@@ -31,6 +31,9 @@ struct DownloadsView: View {
                 isPresented: $playerPresented
             )
         )
+		.onAppear {
+            downloadManager.scanDownloadsDirectory()
+        }
     }
 
     @ViewBuilder

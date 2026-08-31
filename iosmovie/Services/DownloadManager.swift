@@ -375,4 +375,53 @@ final class DownloadManager: ObservableObject {
               let movies = try? JSONDecoder().decode([DownloadedMovie].self, from: data) else { return }
         downloadedMovies = movies.filter { FileManager.default.fileExists(atPath: $0.fileURL) }
     }
+	
+	func scanDownloadsDirectory() {
+    let fm = FileManager.default
+    guard let contents = try? fm.contentsOfDirectory(at: downloadsDir, includingPropertiesForKeys: [.isDirectoryKey]) else { return }
+
+    var discovered: [DownloadedMovie] = []
+    var existingPaths = Set(downloadedMovies.map { $0.fileURL })
+
+    for folderURL in contents {
+        var isDir: ObjCBool = false
+        guard fm.fileExists(atPath: folderURL.path, isDirectory: &isDir), isDir.boolValue else { continue }
+
+        let m3u8URL = folderURL.appendingPathComponent("index.m3u8")
+        guard fm.fileExists(atPath: m3u8URL.path) else { continue }
+
+        // 避免重复添加
+        guard !existingPaths.contains(m3u8URL.path) else { continue }
+
+        // 解析文件夹名：标题_集名
+        let folderName = folderURL.lastPathComponent
+        let parts = folderName.split(separator: "_", maxSplits: 1).map(String.init)
+        let title = parts.first ?? folderName
+        let episodeName = parts.count > 1 ? parts[1] : ""
+
+        // 计算文件大小（用 index.m3u8 的大小，或整个文件夹大小）
+        let attr = try? fm.attributesOfItem(atPath: m3u8URL.path)
+        let size = attr?[.size] as? Int64 ?? 0
+        let date = attr?[.modificationDate] as? Date ?? Date()
+
+        let movie = DownloadedMovie(
+            id: UUID().uuidString,
+            title: title,
+            episodeName: episodeName,
+            fileURL: m3u8URL.path,
+            fileSize: size,
+            downloadDate: date
+        )
+        discovered.append(movie)
+        existingPaths.insert(m3u8URL.path)
+    }
+
+    if !discovered.isEmpty {
+        downloadedMovies.insert(contentsOf: discovered, at: 0)
+        persistMetadata()
+    }
+}
+	
+	
+	
 }
