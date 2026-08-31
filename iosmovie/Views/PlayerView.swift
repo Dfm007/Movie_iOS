@@ -121,22 +121,36 @@ final class ZFPlayerViewController: UIViewController {
     }
 
     private func setupPlayer() {
-        lastURLString = playURLString
-        let manager = ZFAVPlayerManager()
-        self.playerManager = manager
-        let player = ZFPlayerController(playerManager: manager, containerView: view)
-        let controlView = ZFPlayerControlView()
-        player.controlView = controlView
-        controlView.portraitControlView.fullScreenBtn.isHidden = true
-        self.player = player
+    lastURLString = playURLString
+    let manager = ZFAVPlayerManager()
+    self.playerManager = manager
+    let player = ZFPlayerController(playerManager: manager, containerView: view)
+    let controlView = ZFPlayerControlView()
+    player.controlView = controlView
+    controlView.portraitControlView.fullScreenBtn.isHidden = true
+    self.player = player
 
-        if let url = URL(string: playURLString) {
-            manager.assetURL = url
-        }
-        player.playTheIndex(0)
-
-        addLongPressSpeedGesture()
+    // 修复本地 file:// 加载
+    let assetURL: URL?
+    if playURLString.hasPrefix("file://") {
+        let path = String(playURLString.dropFirst("file://".count))
+        assetURL = URL(fileURLWithPath: path)
+    } else {
+        assetURL = URL(string: playURLString)
     }
+
+    if let url = assetURL {
+        manager.assetURL = url
+    }
+
+    // 延迟到视图完全就绪后再播放，确保本地 mp4 加载完成
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+        guard let self else { return }
+        self.player?.playTheIndex(0)
+    }
+
+    addLongPressSpeedGesture()
+}
 
     private func setupFullScreenButton() {
         let button = UIButton(type: .system)
@@ -272,13 +286,24 @@ final class ZFPlayerViewController: UIViewController {
     }
 
     func restartIfNeeded() {
-        guard playURLString != lastURLString else { return }
-        lastURLString = playURLString
-        if let url = URL(string: playURLString) {
-            playerManager?.assetURL = url
-            player?.playTheIndex(0)
+    guard playURLString != lastURLString else { return }
+    lastURLString = playURLString
+
+    let assetURL: URL?
+    if playURLString.hasPrefix("file://") {
+        let path = String(playURLString.dropFirst("file://".count))
+        assetURL = URL(fileURLWithPath: path)
+    } else {
+        assetURL = URL(string: playURLString)
+    }
+
+    if let url = assetURL {
+        playerManager?.assetURL = url
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.player?.playTheIndex(0)
         }
     }
+}
 
     @objc private func toggleSpeedMenu() {
         if speedMenuView != nil {

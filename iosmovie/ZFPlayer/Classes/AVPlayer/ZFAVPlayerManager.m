@@ -264,7 +264,17 @@ static NSString *const kPresentationSize         = @"presentationSize";
 }
 
 - (void)initializePlayer {
-    _asset = [AVURLAsset URLAssetWithURL:self.assetURL options:self.requestHeader];
+    NSURL *assetURL = self.assetURL;
+NSDictionary *options = self.requestHeader;
+
+
+if ([assetURL isFileURL]) {
+    assetURL = [NSURL fileURLWithPath:assetURL.path];
+
+    options = nil;
+}
+
+_asset = [AVURLAsset URLAssetWithURL:assetURL options:options];
     _playerItem = [AVPlayerItem playerItemWithAsset:_asset];
     _player = [AVPlayer playerWithPlayerItem:_playerItem];
     _imageGenerator = [AVAssetImageGenerator assetImageGeneratorWithAsset:_asset];
