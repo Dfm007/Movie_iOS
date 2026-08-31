@@ -85,12 +85,12 @@ final class DownloadManager: ObservableObject {
     // MARK: - 下载流程
 
     private func startProcess(for taskID: String) {
-    let handle = Task { [weak self] in
-        guard let self else { return }
-        await self.processDownload(taskID: taskID)
+        let handle = Task { [weak self] in
+            guard let self else { return }
+            await self.processDownload(taskID: taskID)
+        }
+        taskHandles[taskID] = handle
     }
-    taskHandles[taskID] = handle
-}
 
     private func processDownload(taskID: String) async {
         guard let index = tasks.firstIndex(where: { $0.id == taskID }) else { return }
@@ -130,7 +130,7 @@ final class DownloadManager: ObservableObject {
         }
     }
 
-    // MARK: - m3u8 + TS 下载（断点续传）
+    // MARK: - m3u8 + TS 下载（断点续传 + 嵌套 m3u8 + AES-128 密钥）
 
     private func downloadM3U8(
         taskID: String,
@@ -141,18 +141,24 @@ final class DownloadManager: ObservableObject {
         }
         let task = tasks[index]
 
-        guard let url = URL(string: task.sourceURL) else { throw URLError(.badURL) }
-
-        let (data, _) = try await URLSession.shared.data(from: url)
-        guard let m3u8Text = String(data: data, encoding: .utf8) else {
-            throw URLError(.cannotDecodeContentData)
-        }
+        guard let sourceURL = URL(string: task.sourceURL) else { throw URLError(.badURL) }
 
         let folderURL = folderURL(title: task.title, episodeName: task.episodeName)
         try? FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
 
-        let tsURLs = try parseTSURLs(from: m3u8Text, baseURL: task.sourceURL)
+        // 1. 下载第一层 m3u8 并解析最终的有效分片列表
+        let resolved = try await resolveEffectiveM3U8(from: sourceURL, taskID: taskID)
 
+        let m3u8Text = resolved.text
+        let effectiveBaseURL = resolved.baseURL
+
+        // 2. 下载 AES-128 密钥（如果有）
+        try await downloadEncKeyIfNeeded(from: m3u8Text, effectiveBaseURL: effectiveBaseURL, folderURL: folderURL)
+
+        // 3. 解析 TS 分片
+        let tsURLs = try parseTSURLs(from: m3u8Text, baseURL: effectiveBaseURL)
+
+        // 4. 下载 TS 分片并改写本地 m3u8
         var localM3U8Lines: [String] = []
         let lines = m3u8Text.components(separatedBy: .newlines)
 
@@ -196,6 +202,95 @@ final class DownloadManager: ObservableObject {
 
         return localM3U8URL
     }
+
+    // MARK: - 嵌套 m3u8 解析
+
+    private struct ResolvedPlaylist {
+        let text: String
+        let baseURL: String
+    }
+
+    private func resolveEffectiveM3U8(from sourceURL: URL, taskID: String) async throws -> ResolvedPlaylist {
+        let (data, _) = try await URLSession.shared.data(from: sourceURL)
+        guard let text = String(data: data, encoding: .utf8) else {
+            throw URLError(.cannotDecodeContentData)
+        }
+
+        // 如果是 master playlist（含 #EXT-X-STREAM-INF），需要找子 m3u8
+        if text.contains("#EXT-X-STREAM-INF") {
+            let childPaths = text.components(separatedBy: .newlines)
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty && !$0.hasPrefix("#") && $0.hasSuffix(".m3u8") }
+
+            guard let childPath = childPaths.first else {
+                throw URLError(.cannotParseResponse)
+            }
+
+            let childURL: URL
+            if childPath.hasPrefix("http") {
+                childURL = URL(string: childPath)!
+            } else if childPath.hasPrefix("/") {
+                var comps = URLComponents(url: sourceURL, resolvingAgainstBaseURL: false)!
+                comps.path = childPath
+                childURL = comps.url!
+            } else {
+                childURL = sourceURL.deletingLastPathComponent().appendingPathComponent(childPath)
+            }
+
+            // 递归抓子 m3u8（最多一层，这里直接下载）
+            let (childData, _) = try await URLSession.shared.data(from: childURL)
+            guard let childText = String(data: childData, encoding: .utf8) else {
+                throw URLError(.cannotDecodeContentData)
+            }
+
+            // 子 m3u8 里的相对 URI（如 enc.key）要用 childURL 来解析
+            return ResolvedPlaylist(text: childText, baseURL: childURL.absoluteString)
+        }
+
+        // 单级 m3u8，直接返回
+        return ResolvedPlaylist(text: text, baseURL: sourceURL.absoluteString)
+    }
+
+    // MARK: - AES-128 密钥下载
+
+    private func downloadEncKeyIfNeeded(
+        from m3u8Text: String,
+        effectiveBaseURL: String,
+        folderURL: URL
+    ) async throws {
+        // 找 #EXT-X-KEY 行里的 URI
+        for line in m3u8Text.components(separatedBy: .newlines) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            guard trimmed.hasPrefix("#EXT-X-KEY") else { continue }
+
+            // 提取 URI="xxx"
+            guard let uriRange = trimmed.range(of: "URI=\"") else { continue }
+            let uriStart = uriRange.upperBound
+            guard let uriEnd = trimmed[uriStart...].range(of: "\"")?.lowerBound else { continue }
+            let keyURI = String(trimmed[uriStart..<uriEnd])
+
+            // 拼绝对 URL
+            let keyURL: URL
+            if keyURI.hasPrefix("http") {
+                keyURL = URL(string: keyURI)!
+            } else if keyURI.hasPrefix("/") {
+                var comps = URLComponents(url: URL(string: effectiveBaseURL)!, resolvingAgainstBaseURL: false)!
+                comps.path = keyURI
+                keyURL = comps.url!
+            } else {
+                let base = URL(string: effectiveBaseURL)!
+                keyURL = base.deletingLastPathComponent().appendingPathComponent(keyURI)
+            }
+
+            // 下载密钥到本地 enc.key
+            let (keyData, _) = try await URLSession.shared.data(from: keyURL)
+            let localKeyURL = folderURL.appendingPathComponent("enc.key")
+            try keyData.write(to: localKeyURL)
+            break
+        }
+    }
+
+    // MARK: - TS 下载
 
     private func downloadTS(_ urlString: String, to localURL: URL) async throws {
         guard let url = URL(string: urlString) else { throw URLError(.badURL) }
