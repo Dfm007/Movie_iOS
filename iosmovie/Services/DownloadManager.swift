@@ -99,7 +99,7 @@ final class DownloadManager: ObservableObject {
         let task = tasks[index]
 
         do {
-            let localM3U8URL = try await downloadM3U8(taskID: taskID) { [weak self] progress, downloadedBytes, totalBytes in
+            let mp4URL = try await downloadAndMerge(taskID: taskID) { [weak self] progress, downloadedBytes, totalBytes in
                 self?.setProgress(progress, for: taskID)
                 self?.setDownloadedBytes(downloadedBytes, for: taskID)
                 self?.setTotalBytes(totalBytes, for: taskID)
@@ -107,16 +107,15 @@ final class DownloadManager: ObservableObject {
 
             try Task.checkCancellation()
 
-            // 计算总大小：整个文件夹所有 TS 的总和
-            let folderURL = localM3U8URL.deletingLastPathComponent()
-            let totalSize = Self.folderSize(at: folderURL)
+            let attr = try FileManager.default.attributesOfItem(atPath: mp4URL.path)
+            let size = attr[.size] as? Int64 ?? 0
 
             let movie = DownloadedMovie(
                 id: UUID().uuidString,
                 title: task.title,
                 episodeName: task.episodeName,
-                fileURL: localM3U8URL.path,
-                fileSize: totalSize,
+                fileURL: mp4URL.path,
+                fileSize: size,
                 downloadDate: Date()
             )
 
@@ -133,9 +132,9 @@ final class DownloadManager: ObservableObject {
         }
     }
 
-    // MARK: - m3u8 + TS 下载（AES-128 解密 + 断点续传 + 嵌套 m3u8）
+    // MARK: - 下载 TS 并合并 mp4
 
-    private func downloadM3U8(
+    private func downloadAndMerge(
         taskID: String,
         progressHandler: @escaping (Double, Int64, Int64) -> Void
     ) async throws -> URL {
@@ -150,7 +149,7 @@ final class DownloadManager: ObservableObject {
         try? FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
 
         // 1. 解析嵌套 m3u8
-        let resolved = try await resolveEffectiveM3U8(from: sourceURL, taskID: taskID)
+        let resolved = try await resolveEffectiveM3U8(from: sourceURL)
         let m3u8Text = resolved.text
         let effectiveBaseURL = resolved.baseURL
 
@@ -160,70 +159,57 @@ final class DownloadManager: ObservableObject {
         // 3. 解析 TS 分片
         let tsURLs = try parseTSURLs(from: m3u8Text, baseURL: effectiveBaseURL)
 
-        // 4. 下载 TS 并生成本地 m3u8（明文 + 绝对路径 + 无 EXT-X-KEY）
-        var localM3U8Lines: [String] = []
-        let lines = m3u8Text.components(separatedBy: .newlines)
-
+        // 4. 下载明文 TS 分片
         let startSegment = task.completedSegments
-        var tsIndex = 0
-        var totalBytes: Int64 = 0
+        var totalBytes = task.downloadedBytes
 
-        for line in lines {
+        for tsIndex in startSegment..<tsURLs.count {
             try Task.checkCancellation()
 
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-
-            // 跳过 #EXT-X-KEY 行（因为 TS 已经是明文）
-            if trimmed.hasPrefix("#EXT-X-KEY") {
-                continue
-            }
-
-            if trimmed.isEmpty || trimmed.hasPrefix("#") {
-                localM3U8Lines.append(line)
-                continue
-            }
-
-            guard tsIndex < tsURLs.count else { continue }
             let fileName = "segment_\(tsIndex).ts"
             let localURL = folderURL.appendingPathComponent(fileName)
 
-            if tsIndex < startSegment {
-                if FileManager.default.fileExists(atPath: localURL.path) {
-                    localM3U8Lines.append(localURL.absoluteString)
-                    let size = (try? FileManager.default.attributesOfItem(atPath: localURL.path)[.size] as? Int64) ?? 0
-                    totalBytes += size ?? 0
-                } else {
-                    let size = try await downloadAndDecryptTS(
-                        urlString: tsURLs[tsIndex],
-                        to: localURL,
-                        encInfo: encInfo
-                    )
-                    localM3U8Lines.append(localURL.absoluteString)
-                    totalBytes += size
-                    setDownloadedBytes(totalBytes, for: taskID)
-                }
-            } else {
+            // 如果文件不存在才下载（断点续传）
+            if !FileManager.default.fileExists(atPath: localURL.path) {
                 let size = try await downloadAndDecryptTS(
                     urlString: tsURLs[tsIndex],
                     to: localURL,
                     encInfo: encInfo
                 )
-                localM3U8Lines.append(localURL.absoluteString)
                 totalBytes += size
                 setDownloadedBytes(totalBytes, for: taskID)
-                setCompletedSegments(tsIndex + 1, for: taskID)
             }
 
-            tsIndex += 1
-            progressHandler(Double(tsIndex) / Double(tsURLs.count), totalBytes, task.totalBytes)
+            setCompletedSegments(tsIndex + 1, for: taskID)
+            setTotalBytes(totalBytes, for: taskID)
+            progressHandler(Double(tsIndex + 1) / Double(tsURLs.count), totalBytes, totalBytes)
         }
 
-        setTotalBytes(totalBytes, for: taskID)
+        // 5. 合并 TS 为 mp4
+        let mp4URL = folderURL.appendingPathComponent("output.mp4")
+        try mergeTSFiles(folderURL: folderURL, tsCount: tsURLs.count, outputURL: mp4URL)
 
-        let localM3U8URL = folderURL.appendingPathComponent("index.m3u8")
-        try localM3U8Lines.joined(separator: "\n").write(to: localM3U8URL, atomically: true, encoding: .utf8)
+        // 6. 删除临时 TS 文件
+        for tsIndex in 0..<tsURLs.count {
+            let tsURL = folderURL.appendingPathComponent("segment_\(tsIndex).ts")
+            try? FileManager.default.removeItem(at: tsURL)
+        }
 
-        return localM3U8URL
+        return mp4URL
+    }
+
+    private func mergeTSFiles(folderURL: URL, tsCount: Int, outputURL: URL) throws {
+        try? FileManager.default.removeItem(at: outputURL)
+        FileManager.default.createFile(atPath: outputURL.path, contents: nil)
+
+        let outputHandle = try FileHandle(forWritingTo: outputURL)
+        defer { try? outputHandle.close() }
+
+        for i in 0..<tsCount {
+            let tsURL = folderURL.appendingPathComponent("segment_\(i).ts")
+            guard let data = try? Data(contentsOf: tsURL) else { continue }
+            try outputHandle.write(contentsOf: data)
+        }
     }
 
     // MARK: - TS 下载 + AES-128 解密
@@ -241,14 +227,12 @@ final class DownloadManager: ObservableObject {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             guard trimmed.hasPrefix("#EXT-X-KEY"), trimmed.contains("AES-128") else { continue }
 
-            // 提取 URI
             guard let uriRange = trimmed.range(of: "URI=\""),
                   let uriEnd = trimmed[uriRange.upperBound...].range(of: "\"")?.lowerBound else {
                 return nil
             }
             let keyURI = String(trimmed[uriRange.upperBound..<uriEnd])
 
-            // 拼密钥绝对 URL
             let keyURL: URL
             if keyURI.hasPrefix("http") {
                 keyURL = URL(string: keyURI)!
@@ -261,11 +245,9 @@ final class DownloadManager: ObservableObject {
                 keyURL = base.deletingLastPathComponent().appendingPathComponent(keyURI)
             }
 
-            // 下载密钥
             let (keyData, _) = try await URLSession.shared.data(from: keyURL)
             let keyBytes = [UInt8](keyData)
 
-            // 解析 IV
             var iv: [UInt8] = Array(repeating: 0, count: 16)
             if let ivRange = trimmed.range(of: "IV=0x") {
                 let hexStart = ivRange.upperBound
@@ -315,7 +297,7 @@ final class DownloadManager: ObservableObject {
         let baseURL: String
     }
 
-    private func resolveEffectiveM3U8(from sourceURL: URL, taskID: String) async throws -> ResolvedPlaylist {
+    private func resolveEffectiveM3U8(from sourceURL: URL) async throws -> ResolvedPlaylist {
         let (data, _) = try await URLSession.shared.data(from: sourceURL)
         guard let text = String(data: data, encoding: .utf8) else {
             throw URLError(.cannotDecodeContentData)
@@ -384,19 +366,6 @@ final class DownloadManager: ObservableObject {
         return name.components(separatedBy: invalid).joined(separator: "_")
     }
 
-    private static func folderSize(at folderURL: URL) -> Int64 {
-        let fm = FileManager.default
-        guard let contents = try? fm.contentsOfDirectory(at: folderURL, includingPropertiesForKeys: [.fileSizeKey]) else {
-            return 0
-        }
-        var total: Int64 = 0
-        for fileURL in contents {
-            let size = (try? fm.attributesOfItem(atPath: fileURL.path)[.size] as? Int64) ?? 0
-            total += size ?? 0
-        }
-        return total
-    }
-
     // MARK: - 状态更新
 
     private func setStatus(_ status: DownloadStatus, for taskID: String) {
@@ -442,29 +411,29 @@ final class DownloadManager: ObservableObject {
             var isDir: ObjCBool = false
             guard fm.fileExists(atPath: folderURL.path, isDirectory: &isDir), isDir.boolValue else { continue }
 
-            let m3u8URL = folderURL.appendingPathComponent("index.m3u8")
-            guard fm.fileExists(atPath: m3u8URL.path) else { continue }
-            guard !existingPaths.contains(m3u8URL.path) else { continue }
+            let mp4URL = folderURL.appendingPathComponent("output.mp4")
+            guard fm.fileExists(atPath: mp4URL.path) else { continue }
+            guard !existingPaths.contains(mp4URL.path) else { continue }
 
             let folderName = folderURL.lastPathComponent
             let parts = folderName.split(separator: "_", maxSplits: 1).map(String.init)
             let title = parts.first ?? folderName
             let episodeName = parts.count > 1 ? parts[1] : ""
 
-            let totalSize = Self.folderSize(at: folderURL)
-            let attr = try? fm.attributesOfItem(atPath: m3u8URL.path)
+            let attr = try? fm.attributesOfItem(atPath: mp4URL.path)
+            let size = attr?[.size] as? Int64 ?? 0
             let date = attr?[.modificationDate] as? Date ?? Date()
 
             let movie = DownloadedMovie(
                 id: UUID().uuidString,
                 title: title,
                 episodeName: episodeName,
-                fileURL: m3u8URL.path,
-                fileSize: totalSize,
+                fileURL: mp4URL.path,
+                fileSize: size,
                 downloadDate: date
             )
             discovered.append(movie)
-            existingPaths.insert(m3u8URL.path)
+            existingPaths.insert(mp4URL.path)
         }
 
         if !discovered.isEmpty {

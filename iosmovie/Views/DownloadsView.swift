@@ -82,15 +82,15 @@ struct DownloadsView: View {
     }
 
     private func localPlaySource(for movie: DownloadedMovie) -> PlaySource {
-        let fileURL = URL(fileURLWithPath: movie.fileURL).absoluteString
-        return PlaySource(
-            id: movie.id,
-            name: movie.episodeName,
-            url: fileURL,
-            format: "m3u8",
-            episodes: []
-        )
-    }
+    let fileURL = URL(fileURLWithPath: movie.fileURL).absoluteString
+    return PlaySource(
+        id: movie.id,
+        name: movie.episodeName,
+        url: fileURL,
+        format: "mp4",
+        episodes: []
+    )
+}
 }
 
 private struct DownloadTaskRow: View {
