@@ -13,6 +13,11 @@ struct DownloadsView: View {
         .listStyle(.insetGrouped)
         .navigationTitle("我的下载")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("提示", isPresented: $downloadManager.showAlert) {
+            Button("好", role: .cancel) {}
+        } message: {
+            Text(downloadManager.alertMessage)
+        }
         .background(
             PlayerPresenter(
                 source: playingMovie.map(localPlaySource) ?? PlaySource(
@@ -33,7 +38,20 @@ struct DownloadsView: View {
         if !downloadManager.tasks.isEmpty {
             Section("下载中") {
                 ForEach(downloadManager.tasks) { task in
-                    DownloadTaskRow(task: task)
+                    DownloadTaskRow(
+                        task: task,
+                        onPause: { downloadManager.pauseTask(task) },
+                        onResume: { downloadManager.resumeTask(task) },
+                        onCancel: { downloadManager.cancelTask(task) },
+                        onRetry: { downloadManager.retryTask(task) }
+                    )
+                    .swipeActions {
+                        Button(role: .destructive) {
+                            downloadManager.cancelTask(task)
+                        } label: {
+                            Label("删除", systemImage: "trash")
+                        }
+                    }
                 }
             }
         }
@@ -74,6 +92,10 @@ struct DownloadsView: View {
 
 private struct DownloadTaskRow: View {
     let task: DownloadTask
+    let onPause: () -> Void
+    let onResume: () -> Void
+    let onCancel: () -> Void
+    let onRetry: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -91,37 +113,66 @@ private struct DownloadTaskRow: View {
 
                 Spacer()
 
-                Text(statusText)
+                Text(task.status.displayText)
                     .font(.caption)
                     .foregroundColor(statusColor)
+            }
+
+            HStack(spacing: 12) {
+                switch task.status {
+                case .downloading:
+                    Button(action: onPause) {
+                        Label("暂停", systemImage: "pause.circle")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.borderless)
+
+                    Button(role: .destructive, action: onCancel) {
+                        Label("取消", systemImage: "xmark.circle")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.borderless)
+
+                case .paused:
+                    Button(action: onResume) {
+                        Label("继续", systemImage: "play.circle")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.borderless)
+
+                    Button(role: .destructive, action: onCancel) {
+                        Label("取消", systemImage: "xmark.circle")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.borderless)
+
+                case .failed:
+                    Button(action: onRetry) {
+                        Label("重试", systemImage: "arrow.clockwise.circle")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.borderless)
+
+                    Button(role: .destructive, action: onCancel) {
+                        Label("删除", systemImage: "trash.circle")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.borderless)
+
+                case .completed:
+                    EmptyView()
+                }
             }
         }
         .padding(.vertical, 4)
     }
 
-    private var statusText: String {
-        switch task.status {
-        case .downloading:
-            return "下载中"
-        case .paused:
-            return "已暂停"
-        case .completed:
-            return "已完成"
-        case .failed:
-            return "失败"
-        }
-    }
-
     private var statusColor: Color {
         switch task.status {
-        case .downloading:
-            return .blue
-        case .paused:
-            return .orange
-        case .completed:
-            return .green
-        case .failed:
-            return .red
+        case .downloading: return .blue
+        case .paused:      return .orange
+        case .completed:   return .green
+        case .failed:      return .red
         }
     }
 }
