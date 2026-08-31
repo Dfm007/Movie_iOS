@@ -133,7 +133,7 @@ final class ZFPlayerViewController: UIViewController {
 	    // 播放失败弹窗
     player.playerPlayFailed = { [weak self] _, error in
         guard let self else { return }
-        let message = error?.localizedDescription ?? "未知错误"
+        let message = (error as? NSError)?.localizedDescription ?? String(describing: error)
         let alert = UIAlertController(
             title: "播放失败",
             message: message,
