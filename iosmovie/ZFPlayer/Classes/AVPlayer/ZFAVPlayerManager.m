@@ -406,6 +406,7 @@ _asset = [AVURLAsset URLAssetWithURL:assetURL options:options];
                 self.playState = ZFPlayerPlayStatePlayFailed;
                 self->_isPlaying = NO;
                 NSError *error = self.player.currentItem.error;
+				NSLog(@"[ZFAVPlayerManager] Load failed: %@", error);
                 if (self.playerPlayFailed) self.playerPlayFailed(self, error);
             }
         } else if ([keyPath isEqualToString:kPlaybackBufferEmpty]) {
