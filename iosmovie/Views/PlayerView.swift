@@ -100,6 +100,8 @@ final class ZFPlayerViewController: UIViewController {
     private var playerManager: ZFAVPlayerManager?
     private var player: ZFPlayerController?
     private var lastURLString: String = ""
+	private var closeButton: UIButton?
+	private var fullScreenButton: UIButton?
     private var speedButton: UIButton?
     private var normalRate: Float = 1.0
     private var speedHintLabel: UILabel?
@@ -166,40 +168,44 @@ final class ZFPlayerViewController: UIViewController {
 }
 
     private func setupFullScreenButton() {
-        let button = UIButton(type: .system)
-        button.setImage(UIImage(systemName: "arrow.up.left.and.arrow.down.right"), for: .normal)
-        button.tintColor = .white
-        button.backgroundColor = UIColor.black.withAlphaComponent(0.5)
-        button.layer.cornerRadius = 18
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.addTarget(self, action: #selector(fullScreenTapped), for: .touchUpInside)
-        view.addSubview(button)
-        NSLayoutConstraint.activate([
-            button.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
-            button.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -16),
-            button.widthAnchor.constraint(equalToConstant: 36),
-            button.heightAnchor.constraint(equalToConstant: 36)
-        ])
-    }
+    let button = UIButton(type: .system)
+    button.setImage(UIImage(systemName: "arrow.up.left.and.arrow.down.right"), for: .normal)
+    button.tintColor = .white
+    button.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+    button.layer.cornerRadius = 18
+    button.translatesAutoresizingMaskIntoConstraints = false
+    button.addTarget(self, action: #selector(fullScreenTapped), for: .touchUpInside)
+    view.addSubview(button)
+    view.bringSubviewToFront(button)
+    self.fullScreenButton = button
+
+    NSLayoutConstraint.activate([
+        button.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
+        button.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -16),
+        button.widthAnchor.constraint(equalToConstant: 36),
+        button.heightAnchor.constraint(equalToConstant: 36)
+    ])
+}
 
     private func setupCloseButton() {
-        let button = UIButton(type: .system)
-        button.setImage(UIImage(systemName: "chevron.left"), for: .normal)
-        button.tintColor = .white
-        button.backgroundColor = UIColor.black.withAlphaComponent(0.5)
-        button.layer.cornerRadius = 18
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
-        view.addSubview(button)
-        view.bringSubviewToFront(button)
+    let button = UIButton(type: .system)
+    button.setImage(UIImage(systemName: "chevron.left"), for: .normal)
+    button.tintColor = .white
+    button.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+    button.layer.cornerRadius = 18
+    button.translatesAutoresizingMaskIntoConstraints = false
+    button.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
+    view.addSubview(button)
+    view.bringSubviewToFront(button)
+    self.closeButton = button
 
-        NSLayoutConstraint.activate([
-            button.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 12),
-            button.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 12),
-            button.widthAnchor.constraint(equalToConstant: 36),
-            button.heightAnchor.constraint(equalToConstant: 36)
-        ])
-    }
+    NSLayoutConstraint.activate([
+        button.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 12),
+        button.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 12),
+        button.widthAnchor.constraint(equalToConstant: 36),
+        button.heightAnchor.constraint(equalToConstant: 36)
+    ])
+}
 
     private func setupSpeedButton() {
         let speed = UIButton(type: .system)
@@ -310,10 +316,21 @@ final class ZFPlayerViewController: UIViewController {
         assetURL = URL(string: playURLString)
     }
 
-    if let url = assetURL {
+        if let url = assetURL {
         playerManager?.assetURL = url
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            self?.player?.playTheIndex(0)
+            guard let self else { return }
+            self.player?.playTheIndex(0)
+            // 重新把控件提到最前
+            if let close = self.closeButton {
+                self.view.bringSubviewToFront(close)
+            }
+            if let fullScreen = self.fullScreenButton {
+                self.view.bringSubviewToFront(fullScreen)
+            }
+            if let speed = self.speedButton {
+                self.view.bringSubviewToFront(speed)
+            }
         }
     }
 }
