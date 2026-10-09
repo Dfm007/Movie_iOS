@@ -25,7 +25,6 @@
 #import "ZFReachabilityManager.h"
 #if !TARGET_OS_WATCH
 #import <netinet/in.h>
-#import <netinet6/in6.h>
 #import <arpa/inet.h>
 #import <ifaddrs.h>
 #import <netdb.h>
