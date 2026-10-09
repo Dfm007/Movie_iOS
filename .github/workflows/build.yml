@@ -48,3 +48,4 @@ jobs:
         with:
           name: unsigned-iosmovie-ipa
           path: unsigned.ipa
+          retention-days: 7
