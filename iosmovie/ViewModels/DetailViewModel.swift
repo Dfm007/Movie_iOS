@@ -21,6 +21,7 @@ final class DetailViewModel: ObservableObject {
 
     private var siteDetailMap: [String: String] = [:]
     private var currentMovieTitle = ""
+    private var lastFetchError: Error?
 
     func configure(availableSites: [CMSSite], detailMap: [String: String]) {
         let sourceSites = availableSites.isEmpty ? CMSSite.all : availableSites
@@ -48,34 +49,49 @@ final class DetailViewModel: ObservableObject {
         selectedSite = targetSite
         isLoading = true
         errorMessage = nil
+        lastFetchError = nil
 
         let source = makeSource(for: targetSite)
 
-        // 优先直接用 detailMap 里已算好的精确 vod_id（首页/搜索页进入时已按站点搜索+精确匹配算好）。
-        let directID = siteDetailMap[targetSite.id]
+        // 候选详情 id（按优先级）：detailMap 里该站点的精确 vod_id → 传入的 path。
+        // 逐个尝试，选第一个「带分集」的详情；若都无分集，保留第一个成功的详情兜底展示。
+        // 这样无论初次进入还是切换源，行为完全一致，不再依赖顺序或时序。
+        var candidates: [String] = []
+        if let id = siteDetailMap[targetSite.id], !id.isEmpty, !candidates.contains(id) {
+            candidates.append(id)
+        }
+        if !path.isEmpty, !candidates.contains(path) {
+            candidates.append(path)
+        }
 
-        if let directID = directID, !directID.isEmpty {
-            await loadDetailDirect(on: source, path: directID)
-            // 关键健壮性兜底：若该精确 id 拉出的详情没有可下载的分集（episodes 全空），
-            // 说明 id 命中了错误条目或该站未返回分集，改用标题 bestMatch 重搜一次。
-            if sources.contains(where: { !$0.episodes.isEmpty }) {
+        var fallback: MovieDetail?
+        for id in candidates {
+            if let detail = await fetchDetail(on: source, path: id) {
+                if detail.sources.contains(where: { !$0.episodes.isEmpty }) {
+                    apply(detail)
+                    isLoading = false
+                    return
+                }
+                if fallback == nil { fallback = detail }
+            }
+        }
+
+        // 标题搜索兜底：精确 id 未拿到分集（或该站点不在 detailMap 中）时，用原始标题重搜一次。
+        if !currentMovieTitle.isEmpty,
+           let matched = await bestMatch(in: source, for: currentMovieTitle),
+           let detail = await fetchDetail(on: source, path: matched.id) {
+            if detail.sources.contains(where: { !$0.episodes.isEmpty }) || fallback == nil {
+                apply(detail)
                 isLoading = false
                 return
             }
         }
 
-        // 用标题搜索兜底（初次 id 无分集、或切源到未预解析的站点时）
-        if !currentMovieTitle.isEmpty {
-            if let matched = await bestMatch(in: source, for: currentMovieTitle) {
-                await loadDetailDirect(on: source, path: matched.id)
-                isLoading = false
-                return
-            }
-        }
-
-        // 最后兜底：用传入的 path（初次进入时的 detailURL）
-        if !path.isEmpty && sources.isEmpty {
-            await loadDetailDirect(on: source, path: path)
+        // 所有候选都无分集：至少展示已拿到的详情；若连一次详情都没拿到，则给出错误提示（而非空白）。
+        if let fallback {
+            apply(fallback)
+        } else if let error = lastFetchError {
+            errorMessage = error.localizedDescription
         }
         isLoading = false
     }
@@ -150,24 +166,35 @@ final class DetailViewModel: ObservableObject {
         return 1.0 - (distance / Double(maxLen))
     }
 
-    private func loadDetailDirect(on source: MovieSourceProtocol, path: String) async {
-        do {
-            let detail = try await source.fetchMovieDetail(path: path)
-            movieTitle = detail.title
-            posterURL = detail.posterURL
-            year = detail.year
-            area = detail.area
-            className = detail.className
-            actors = detail.actors
-            director = detail.director
-            remarks = detail.remarks
-            intro = detail.intro
-            sources = detail.sources
-            // 注意：不要在这里覆盖 currentMovieTitle。它应始终保留「用户想找的原始标题」
-            // （来自 setInitialTitle），供 bestMatch 兜底搜索使用。若被详情返回的标题覆盖，
-            // 一旦直连加载到同名但错误的条目，bestMatch 就会用错误标题搜索，永远匹配不到正确分集。
-        } catch {
-            errorMessage = error.localizedDescription
+    /// 拉取详情（带一次重试，抵御首次请求冷启动失败）。
+    private func fetchDetail(on source: MovieSourceProtocol, path: String) async -> MovieDetail? {
+        for attempt in 0..<2 {
+            do {
+                return try await source.fetchMovieDetail(path: path)
+            } catch {
+                lastFetchError = error
+                if attempt == 0 {
+                    try? await Task.sleep(nanoseconds: 400_000_000)
+                }
+            }
         }
+        return nil
+    }
+
+    private func apply(_ detail: MovieDetail) {
+        movieTitle = detail.title
+        posterURL = detail.posterURL
+        year = detail.year
+        area = detail.area
+        className = detail.className
+        actors = detail.actors
+        director = detail.director
+        remarks = detail.remarks
+        intro = detail.intro
+        sources = detail.sources
+        errorMessage = nil
+        // 注意：不覆盖 currentMovieTitle。它应始终保留「用户想找的原始标题」（来自
+        // setInitialTitle），供 bestMatch 兜底搜索；若被详情返回的同名错误标题覆盖，
+        // 兜底搜索就会用错标题，永远匹配不到正确分集。
     }
 }

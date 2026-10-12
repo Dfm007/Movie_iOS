@@ -10,8 +10,7 @@ struct DetailView: View {
     @StateObject private var downloadManager = DownloadManager.shared
     @State private var playingSource: PlaySource?
     @State private var playerPresented = false
-    @State private var showDownloadPicker = false
-    @State private var pendingDownloadEpisodes: [PlaySource]?
+    @State private var downloadPayload: DownloadPickerPayload?
 
     private let episodeColumns = [
         GridItem(.flexible(), spacing: 8),
@@ -75,8 +74,11 @@ struct DetailView: View {
             if let sites = availableSites {
                 viewModel.configure(availableSites: sites, detailMap: detailMap)
             }
-            await latencyManager.measureAll(sites: viewModel.sites)
+            // 先加载详情（用户最关心的内容），站点测速放在其后执行。
+            // 之前是「先 await measureAll（每站最多 3s）再 loadDetail」，其间
+            // isLoading 仍为 false、sources 为空 → 页面出现一段空白，若测速卡住会一直空。
             await viewModel.loadDetail(path: detailURL)
+            await latencyManager.measureAll(sites: viewModel.sites)
         }
         .background(
             PlayerPresenter(
@@ -85,11 +87,9 @@ struct DetailView: View {
                 isPresented: $playerPresented
             )
         )
-        .sheet(isPresented: $showDownloadPicker) {
-            if let episodes = pendingDownloadEpisodes {
-                DownloadPickerView(title: viewModel.movieTitle, episodes: episodes) { selected in
-                    createDownloadTasks(for: selected)
-                }
+        .sheet(item: $downloadPayload) { payload in
+            DownloadPickerView(title: viewModel.movieTitle, episodes: payload.episodes) { selected in
+                createDownloadTasks(for: selected)
             }
         }
         .alert(isPresented: $downloadManager.showAlert) {
@@ -181,6 +181,9 @@ struct DetailView: View {
 
     private var episodeSection: some View {
         VStack(alignment: .leading, spacing: 8) {
+            if viewModel.sources.isEmpty {
+                emptyEpisodesHint
+            }
             ForEach(viewModel.sources) { source in
                 if source.episodes.isEmpty {
                     HStack {
@@ -243,9 +246,29 @@ struct DetailView: View {
         .padding(.horizontal)
     }
 
+    private var emptyEpisodesHint: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "film.stack")
+                .font(.title2)
+                .foregroundColor(.secondary)
+            Text("当前采集站暂无可用播放源")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            Text("可尝试切换上方采集站，或点击重试")
+                .font(.caption)
+                .foregroundColor(.secondary)
+            Button("重试") {
+                Task { await viewModel.loadDetail(path: detailURL) }
+            }
+            .font(.caption)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal)
+        .padding(.vertical, 24)
+    }
+
     private func showDownloadPicker(for episodes: [PlaySource]) {
-        pendingDownloadEpisodes = episodes
-        showDownloadPicker = true
+        downloadPayload = DownloadPickerPayload(episodes: episodes)
     }
 
     private func startSingleDownload(_ source: PlaySource) {
@@ -263,6 +286,11 @@ struct DetailView: View {
             }
         )
     }
+}
+
+private struct DownloadPickerPayload: Identifiable {
+    let id = UUID()
+    let episodes: [PlaySource]
 }
 
 private struct SitePickerLabel: View {
