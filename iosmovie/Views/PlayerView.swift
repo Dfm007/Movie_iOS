@@ -100,14 +100,16 @@ final class ZFPlayerViewController: UIViewController {
     private var playerManager: ZFAVPlayerManager?
     private var player: ZFPlayerController?
     private var lastURLString: String = ""
-	private var closeButton: UIButton?
-	private var fullScreenButton: UIButton?
+    private var closeButton: UIButton?
+    private var fullScreenButton: UIButton?
     private var speedButton: UIButton?
     private var normalRate: Float = 1.0
     private var speedHintLabel: UILabel?
     private var speedMenuView: UIView?
     private var isFullScreen = false
     private weak var fullScreenVC: FullScreenPlayerViewController?
+    private var didBecomeReady = false
+    private var loadWatchdog: DispatchWorkItem?
 
     override var shouldAutorotate: Bool { false }
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .portrait }
@@ -122,90 +124,134 @@ final class ZFPlayerViewController: UIViewController {
         setupSpeedHintLabel()
     }
 
+    deinit {
+        loadWatchdog?.cancel()
+    }
+
+    // MARK: - URL 构造
+
+    /// 本地缓存文件走 file://，网络地址走 http(s)://
+    /// 关键：不能把 absoluteString 去掉 scheme 再用 fileURLWithPath 还原，
+    /// 中文/空格会被百分号编码两次导致文件找不到（黑屏元凶之一）。
+    static func assetURL(from string: String) -> URL? {
+        let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return nil }
+
+        if trimmed.hasPrefix("file://") {
+            return URL(string: trimmed)
+        }
+        if let url = URL(string: trimmed) { return url }
+        if let encoded = trimmed.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+           let url = URL(string: encoded) { return url }
+        return URL(fileURLWithPath: trimmed)
+    }
+
+    // MARK: - 播放器
+
     private func setupPlayer() {
-    lastURLString = playURLString
-    let manager = ZFAVPlayerManager()
-    self.playerManager = manager
-    let player = ZFPlayerController(playerManager: manager, containerView: view)
-    let controlView = ZFPlayerControlView()
-    player.controlView = controlView
-    controlView.portraitControlView.fullScreenBtn.isHidden = true
-    self.player = player
-	
-	    // 播放失败弹窗
-    player.playerPlayFailed = { [weak self] _, error in
-        guard let self else { return }
-        let message = (error as? NSError)?.localizedDescription ?? String(describing: error)
+        lastURLString = playURLString
+        let manager = ZFAVPlayerManager()
+        self.playerManager = manager
+        let player = ZFPlayerController(playerManager: manager, containerView: view)
+        let controlView = ZFPlayerControlView()
+        player.controlView = controlView
+        controlView.portraitControlView.fullScreenBtn.isHidden = true
+        self.player = player
+
+        // 加载成功：撤销看门狗
+        player.playerReadyToPlay = { [weak self] _, _ in
+            guard let self else { return }
+            self.didBecomeReady = true
+            self.loadWatchdog?.cancel()
+            self.loadWatchdog = nil
+        }
+
+        // 播放失败：弹出真实错误，而不是黑屏无反馈
+        player.playerPlayFailed = { [weak self] _, error in
+            guard let self else { return }
+            self.loadWatchdog?.cancel()
+            self.loadWatchdog = nil
+            let message = (error as? NSError)?.localizedDescription ?? String(describing: error)
+            self.showPlaybackFailure(message: message)
+        }
+
+        guard let assetURL = Self.assetURL(from: playURLString) else {
+            showPlaybackFailure(message: "播放地址无效：\(playURLString)")
+            return
+        }
+
+        // 设置 assetURL 会触发 prepareToPlay → initializePlayer → 自动播放
+        manager.assetURL = assetURL
+        scheduleLoadWatchdog()
+
+        addLongPressSpeedGesture()
+    }
+
+    /// 20 秒仍未 ready 且没有失败回调时给出明确提示（旧实现这里只有黑屏）
+    private func scheduleLoadWatchdog() {
+        loadWatchdog?.cancel()
+        didBecomeReady = false
+        let work = DispatchWorkItem { [weak self] in
+            guard let self, !self.didBecomeReady else { return }
+            guard self.presentedViewController == nil else { return }
+            self.showPlaybackFailure(
+                message: "视频长时间未能加载。缓存文件可能不完整，建议删除后重新下载。"
+            )
+        }
+        loadWatchdog = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 20, execute: work)
+    }
+
+    private func showPlaybackFailure(message: String) {
+        guard presentedViewController == nil else { return }
         let alert = UIAlertController(
             title: "播放失败",
             message: message,
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "好", style: .default))
-        self.present(alert, animated: true)
+        present(alert, animated: true)
     }
-
-    // 修复本地 file:// 加载
-    let assetURL: URL?
-    if playURLString.hasPrefix("file://") {
-        let path = String(playURLString.dropFirst("file://".count))
-        assetURL = URL(fileURLWithPath: path)
-    } else {
-        assetURL = URL(string: playURLString)
-    }
-
-    if let url = assetURL {
-        manager.assetURL = url
-    }
-
-    // 延迟到视图完全就绪后再播放，确保本地 mp4 加载完成
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-        guard let self else { return }
-        self.player?.playTheIndex(0)
-    }
-
-    addLongPressSpeedGesture()
-}
 
     private func setupFullScreenButton() {
-    let button = UIButton(type: .system)
-    button.setImage(UIImage(systemName: "arrow.up.left.and.arrow.down.right"), for: .normal)
-    button.tintColor = .white
-    button.backgroundColor = UIColor.black.withAlphaComponent(0.5)
-    button.layer.cornerRadius = 18
-    button.translatesAutoresizingMaskIntoConstraints = false
-    button.addTarget(self, action: #selector(fullScreenTapped), for: .touchUpInside)
-    view.addSubview(button)
-    view.bringSubviewToFront(button)
-    self.fullScreenButton = button
+        let button = UIButton(type: .system)
+        button.setImage(UIImage(systemName: "arrow.up.left.and.arrow.down.right"), for: .normal)
+        button.tintColor = .white
+        button.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        button.layer.cornerRadius = 18
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(fullScreenTapped), for: .touchUpInside)
+        view.addSubview(button)
+        view.bringSubviewToFront(button)
+        self.fullScreenButton = button
 
-    NSLayoutConstraint.activate([
-        button.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
-        button.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -16),
-        button.widthAnchor.constraint(equalToConstant: 36),
-        button.heightAnchor.constraint(equalToConstant: 36)
-    ])
-}
+        NSLayoutConstraint.activate([
+            button.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
+            button.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -16),
+            button.widthAnchor.constraint(equalToConstant: 36),
+            button.heightAnchor.constraint(equalToConstant: 36)
+        ])
+    }
 
     private func setupCloseButton() {
-    let button = UIButton(type: .system)
-    button.setImage(UIImage(systemName: "chevron.left"), for: .normal)
-    button.tintColor = .white
-    button.backgroundColor = UIColor.black.withAlphaComponent(0.5)
-    button.layer.cornerRadius = 18
-    button.translatesAutoresizingMaskIntoConstraints = false
-    button.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
-    view.addSubview(button)
-    view.bringSubviewToFront(button)
-    self.closeButton = button
+        let button = UIButton(type: .system)
+        button.setImage(UIImage(systemName: "chevron.left"), for: .normal)
+        button.tintColor = .white
+        button.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        button.layer.cornerRadius = 18
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
+        view.addSubview(button)
+        view.bringSubviewToFront(button)
+        self.closeButton = button
 
-    NSLayoutConstraint.activate([
-        button.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 12),
-        button.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 12),
-        button.widthAnchor.constraint(equalToConstant: 36),
-        button.heightAnchor.constraint(equalToConstant: 36)
-    ])
-}
+        NSLayoutConstraint.activate([
+            button.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 12),
+            button.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 12),
+            button.widthAnchor.constraint(equalToConstant: 36),
+            button.heightAnchor.constraint(equalToConstant: 36)
+        ])
+    }
 
     private func setupSpeedButton() {
         let speed = UIButton(type: .system)
@@ -305,35 +351,28 @@ final class ZFPlayerViewController: UIViewController {
     }
 
     func restartIfNeeded() {
-    guard playURLString != lastURLString else { return }
-    lastURLString = playURLString
+        guard playURLString != lastURLString else { return }
+        lastURLString = playURLString
 
-    let assetURL: URL?
-    if playURLString.hasPrefix("file://") {
-        let path = String(playURLString.dropFirst("file://".count))
-        assetURL = URL(fileURLWithPath: path)
-    } else {
-        assetURL = URL(string: playURLString)
-    }
+        guard let assetURL = Self.assetURL(from: playURLString) else {
+            showPlaybackFailure(message: "播放地址无效：\(playURLString)")
+            return
+        }
 
-        if let url = assetURL {
-        playerManager?.assetURL = url
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            guard let self else { return }
-            self.player?.playTheIndex(0)
-            // 重新把控件提到最前
-            if let close = self.closeButton {
-                self.view.bringSubviewToFront(close)
-            }
-            if let fullScreen = self.fullScreenButton {
-                self.view.bringSubviewToFront(fullScreen)
-            }
-            if let speed = self.speedButton {
-                self.view.bringSubviewToFront(speed)
-            }
+        playerManager?.assetURL = assetURL
+        scheduleLoadWatchdog()
+
+        // 重新把控件提到最前
+        if let close = closeButton {
+            view.bringSubviewToFront(close)
+        }
+        if let fullScreen = fullScreenButton {
+            view.bringSubviewToFront(fullScreen)
+        }
+        if let speed = speedButton {
+            view.bringSubviewToFront(speed)
         }
     }
-}
 
     @objc private func toggleSpeedMenu() {
         if speedMenuView != nil {

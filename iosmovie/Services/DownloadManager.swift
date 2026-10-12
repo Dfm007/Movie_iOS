@@ -1,6 +1,465 @@
 import Foundation
 import CryptoSwift
 
+// MARK: - 持久化记录
+
+struct DownloadTaskRecord: Codable {
+    var id: String
+    var title: String
+    var episodeName: String
+    var sourceURL: String
+    var folderID: String
+    var status: DownloadStatus
+    var progress: Double
+    var completedSegments: Int
+    var totalSegments: Int
+    var totalBytes: Int64
+    var downloadedBytes: Int64
+    var errorMessage: String?
+}
+
+/// 每个下载目录内的信息文件，用于重启后还原标题/剧集
+struct DownloadedInfo: Codable {
+    let title: String
+    let episodeName: String
+    let format: String
+    let completedAt: Date
+}
+
+// MARK: - 引擎回调
+
+struct DownloadProgress: Sendable {
+    var completedSegments: Int
+    var totalSegments: Int
+    var downloadedBytes: Int64
+    var estimatedTotalBytes: Int64
+}
+
+struct DownloadOutput: Sendable {
+    let fileURL: URL
+    let fileSize: Int64
+    /// "ts" 或 "mp4"，由播放列表内容决定
+    let format: String
+}
+
+enum DownloadFailure: Error, Sendable {
+    case cancelled
+    case message(String)
+
+    var message: String {
+        switch self {
+        case .cancelled: return "已取消"
+        case .message(let text): return text
+        }
+    }
+}
+
+// MARK: - 任务状态持久化
+
+final class DownloadStore: @unchecked Sendable {
+    private let fileURL: URL
+    private let queue = DispatchQueue(label: "com.iosmovie.download-store")
+
+    init(directory: URL) {
+        fileURL = directory.appendingPathComponent("download_state.json")
+    }
+
+    func load() -> [DownloadTaskRecord] {
+        queue.sync {
+            guard let data = try? Data(contentsOf: fileURL),
+                  let records = try? JSONDecoder().decode([DownloadTaskRecord].self, from: data) else {
+                return []
+            }
+            return records
+        }
+    }
+
+    func save(_ records: [DownloadTaskRecord]) {
+        queue.async { [fileURL] in
+            guard let data = try? JSONEncoder().encode(records) else { return }
+            try? data.write(to: fileURL, options: .atomic)
+        }
+    }
+}
+
+// MARK: - 全局并发闸门（轮询实现，取消时不会挂起）
+
+actor DownloadThrottle {
+    private var active = 0
+    private let limit: Int
+
+    init(limit: Int) {
+        self.limit = max(limit, 1)
+    }
+
+    func acquire() async throws {
+        while active >= limit {
+            try Task.checkCancellation()
+            try await Task.sleep(nanoseconds: 100_000_000)
+        }
+        active += 1
+    }
+
+    func release() {
+        active = max(active - 1, 0)
+    }
+}
+
+// MARK: - 下载引擎
+
+actor DownloadEngine {
+    private let session: URLSession
+    private let throttle = DownloadThrottle(limit: 4)
+    private var keyCache: [String: [UInt8]] = [:]
+
+    /// 单个任务内的分片并发数
+    private let batchSize = 3
+    /// 单个分片重试次数
+    private let maxAttempts = 3
+
+    init() {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30
+        config.timeoutIntervalForResource = 600
+        config.httpMaximumConnectionsPerHost = 4
+        config.waitsForConnectivity = true
+        session = URLSession(configuration: config)
+    }
+
+    // MARK: - 入口
+
+    func run(
+        folder: URL,
+        sourceURL: URL,
+        progress: @escaping @Sendable (DownloadProgress) -> Void
+    ) async -> Result<DownloadOutput, DownloadFailure> {
+        do {
+            let output = try await perform(folder: folder, sourceURL: sourceURL, progress: progress)
+            return .success(output)
+        } catch {
+            return .failure(Self.wrap(error))
+        }
+    }
+
+    private static func wrap(_ error: Error) -> DownloadFailure {
+        if error is CancellationError { return .cancelled }
+        if let failure = error as? DownloadFailure { return failure }
+        if let urlError = error as? URLError, urlError.code == .cancelled { return .cancelled }
+        return .message(error.localizedDescription)
+    }
+
+    // MARK: - 主流程
+
+    private func perform(
+        folder: URL,
+        sourceURL: URL,
+        progress: @escaping @Sendable (DownloadProgress) -> Void
+    ) async throws -> DownloadOutput {
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        Self.removePartFiles(in: folder)
+
+        let playlist = try await M3U8Parser.resolve(
+            from: sourceURL,
+            fetcher: M3U8HTTPFetcher(session: session)
+        )
+
+        let items = Self.items(for: playlist)
+        guard !items.isEmpty else { throw DownloadFailure.message("播放列表中没有视频分片") }
+
+        let existing = Self.existingItems(in: folder, items: items)
+        var completed = existing.count
+        var downloadedBytes = Self.totalSize(of: existing, in: folder)
+
+        progress(DownloadProgress(
+            completedSegments: completed,
+            totalSegments: items.count,
+            downloadedBytes: downloadedBytes,
+            estimatedTotalBytes: downloadedBytes
+        ))
+
+        try Task.checkCancellation()
+
+        let pending = items.filter { !existing.contains($0.fileName) }
+        var cursor = 0
+
+        while cursor < pending.count {
+            try Task.checkCancellation()
+            let end = min(cursor + batchSize, pending.count)
+            let batch = Array(pending[cursor..<end])
+
+            try await withTaskGroup(
+                of: Result<(String, Int64), Error>?.self
+            ) { group in
+                for item in batch {
+                    group.addTask { [weak self] in
+                        guard let self else { return nil }
+                        do {
+                            try await self.throttle.acquire()
+                        } catch {
+                            return .failure(error)
+                        }
+                        do {
+                            let bytes = try await self.downloadItem(item, folder: folder)
+                            await self.throttle.release()
+                            return .success((item.fileName, bytes))
+                        } catch {
+                            await self.throttle.release()
+                            return .failure(error)
+                        }
+                    }
+                }
+
+                for await result in group {
+                    guard let result else { continue }
+                    switch result {
+                    case .success(let (_, bytes)):
+                        completed += 1
+                        downloadedBytes += bytes
+                        let average = downloadedBytes / Int64(max(completed, 1))
+                        let remaining = Int64(items.count - completed)
+                        progress(DownloadProgress(
+                            completedSegments: completed,
+                            totalSegments: items.count,
+                            downloadedBytes: downloadedBytes,
+                            estimatedTotalBytes: downloadedBytes + remaining * average
+                        ))
+                    case .failure(let error):
+                        group.cancelAll()
+                        throw Self.wrap(error)
+                    }
+                }
+            }
+
+            cursor = end
+        }
+
+        let merged = try merge(folder: folder, playlist: playlist)
+        return DownloadOutput(fileURL: merged.url, fileSize: merged.size, format: merged.format)
+    }
+
+    // MARK: - 单个分片下载（含重试）
+
+    private func downloadItem(_ item: DownloadItem, folder: URL) async throws -> Int64 {
+        let destination = folder.appendingPathComponent(item.fileName)
+        let temporary = folder.appendingPathComponent(item.fileName + ".part")
+
+        var attempt = 0
+        while true {
+            try Task.checkCancellation()
+            do {
+                let bytes = try await fetchAndStore(item, to: temporary)
+                try? FileManager.default.removeItem(at: destination)
+                try FileManager.moveItem(at: temporary, to: destination)
+                return bytes
+            } catch {
+                let failure = Self.wrap(error)
+                if case .cancelled = failure { throw failure }
+                attempt += 1
+                if attempt >= maxAttempts { throw failure }
+                try await Task.sleep(nanoseconds: UInt64(attempt) * 500_000_000)
+            }
+        }
+    }
+
+    private func fetchAndStore(_ item: DownloadItem, to temporary: URL) async throws -> Int64 {
+        var request = URLRequest(url: item.url)
+        request.timeoutInterval = 30
+        for (field, value) in MovieRequestHeaders.headers(for: item.url) {
+            request.setValue(value, forHTTPHeaderField: field)
+        }
+
+        let (tempURL, response) = try await session.download(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            let code = (response as? HTTPURLResponse)?.statusCode ?? -1
+            throw DownloadFailure.message("分片下载失败（HTTP \(code)）")
+        }
+
+        guard let raw = try? Data(contentsOf: tempURL), !raw.isEmpty else {
+            throw DownloadFailure.message("分片内容为空")
+        }
+
+        var payload = raw
+
+        // 1. 字节范围切片（加密在切片之后进行）
+        if let length = item.byteRangeLength {
+            let offset = item.byteRangeOffset ?? 0
+            let start = Int(min(max(offset, 0), Int64(raw.count)))
+            let end = Int(min(offset + length, Int64(raw.count)))
+            guard end > start else { throw DownloadFailure.message("分片字节范围无效") }
+            payload = raw.subdata(in: start..<end)
+        }
+
+        // 2. AES-128 解密（HLS 使用 PKCS#7 填充）
+        if let keyURL = item.keyURL {
+            guard payload.count % 16 == 0 else {
+                throw DownloadFailure.message("加密分片长度异常")
+            }
+            let key = try await cachedKey(for: keyURL)
+            let iv = item.iv ?? M3U8Parser.defaultIV(for: item.sequenceNumber)
+            do {
+                let aes = try AES(key: key, blockMode: CBC(iv: iv), padding: .pkcs7)
+                let decrypted = try aes.decrypt([UInt8](payload))
+                payload = Data(decrypted)
+            } catch {
+                throw DownloadFailure.message("分片解密失败（密钥或 IV 不匹配）")
+            }
+        }
+
+        guard !payload.isEmpty else { throw DownloadFailure.message("分片内容为空") }
+
+        try? FileManager.default.removeItem(at: temporary)
+        try payload.write(to: temporary)
+        return Int64(payload.count)
+    }
+
+    private func cachedKey(for urlString: String) async throws -> [UInt8] {
+        if let cached = keyCache[urlString] { return cached }
+        guard let url = URL(string: urlString) else {
+            throw DownloadFailure.message("密钥地址无效")
+        }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 20
+        for (field, value) in MovieRequestHeaders.headers(for: url) {
+            request.setValue(value, forHTTPHeaderField: field)
+        }
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            let code = (response as? HTTPURLResponse)?.statusCode ?? -1
+            throw DownloadFailure.message("密钥下载失败（HTTP \(code)）")
+        }
+        guard data.count == 16 else {
+            throw DownloadFailure.message("密钥长度不是 16 字节")
+        }
+        let bytes = [UInt8](data)
+        keyCache[urlString] = bytes
+        return bytes
+    }
+
+    // MARK: - 合并
+
+    private func merge(folder: URL, playlist: M3U8Playlist) throws -> (url: URL, size: Int64, format: String) {
+        let isFragmentedMP4 = playlist.isFragmentedMP4
+        let fileName = isFragmentedMP4 ? "movie.mp4" : "movie.ts"
+        let outputURL = folder.appendingPathComponent(fileName)
+        let partURL = folder.appendingPathComponent(fileName + ".part")
+
+        try? FileManager.default.removeItem(at: partURL)
+        guard FileManager.default.createFile(atPath: partURL.path, contents: nil) else {
+            throw DownloadFailure.message("无法创建输出文件")
+        }
+
+        let handle = try FileHandle(forWritingTo: partURL)
+        var total: Int64 = 0
+        let chunkSize = 1024 * 1024
+
+        func append(_ url: URL) throws {
+            guard let input = try? FileHandle(forReadingFrom: url) else { return }
+            defer { try? input.close() }
+            while true {
+                guard let data = try? input.read(upToCount: chunkSize) else { break }
+                if data.isEmpty { break }
+                try handle.write(contentsOf: data)
+                total += Int64(data.count)
+            }
+        }
+
+        do {
+            // items(for:) 已保证 seg_init 在最前，随后按序追加各分片
+            for item in Self.items(for: playlist) {
+                try Task.checkCancellation()
+                try append(folder.appendingPathComponent(item.fileName))
+            }
+            try handle.close()
+        } catch {
+            try? handle.close()
+            try? FileManager.default.removeItem(at: partURL)
+            throw error
+        }
+
+        try? FileManager.default.removeItem(at: outputURL)
+        try FileManager.moveItem(at: partURL, to: outputURL)
+
+        // 合并成功后清理分片，释放空间
+        for item in Self.items(for: playlist) {
+            try? FileManager.default.removeItem(at: folder.appendingPathComponent(item.fileName))
+        }
+
+        return (outputURL, total, isFragmentedMP4 ? "mp4" : "ts")
+    }
+
+    // MARK: - 播放列表 → 下载项
+
+    private struct DownloadItem {
+        let fileName: String
+        let url: URL
+        let keyURL: String?
+        let iv: [UInt8]?
+        let byteRangeLength: Int64?
+        let byteRangeOffset: Int64?
+        let sequenceNumber: Int
+    }
+
+    static func items(for playlist: M3U8Playlist) -> [DownloadItem] {
+        var result: [DownloadItem] = []
+        if let initSegment = playlist.initSegment {
+            result.append(DownloadItem(
+                fileName: "seg_init",
+                url: initSegment.url,
+                keyURL: initSegment.keyURL,
+                iv: initSegment.iv,
+                byteRangeLength: initSegment.byteRangeLength,
+                byteRangeOffset: initSegment.byteRangeOffset,
+                sequenceNumber: 0
+            ))
+        }
+        for segment in playlist.segments {
+            result.append(DownloadItem(
+                fileName: String(format: "seg_%06d", segment.index),
+                url: segment.url,
+                keyURL: segment.keyURL,
+                iv: segment.iv,
+                byteRangeLength: segment.byteRangeLength,
+                byteRangeOffset: segment.byteRangeOffset,
+                sequenceNumber: segment.sequenceNumber
+            ))
+        }
+        return result
+    }
+
+    private static func existingItems(in folder: URL, items: [DownloadItem]) -> Set<String> {
+        var result: Set<String> = []
+        for item in items {
+            if FileManager.default.fileExists(atPath: folder.appendingPathComponent(item.fileName).path) {
+                result.insert(item.fileName)
+            }
+        }
+        return result
+    }
+
+    private static func totalSize(of fileNames: Set<String>, in folder: URL) -> Int64 {
+        var total: Int64 = 0
+        for name in fileNames {
+            let attributes = try? FileManager.default.attributesOfItem(
+                atPath: folder.appendingPathComponent(name).path
+            )
+            total += (attributes?[.size] as? Int64) ?? 0
+        }
+        return total
+    }
+
+    private static func removePartFiles(in folder: URL) {
+        guard let contents = try? FileManager.default.contentsOfDirectory(
+            at: folder,
+            includingPropertiesForKeys: nil
+        ) else { return }
+        for url in contents where url.pathExtension == "part" {
+            try? FileManager.default.removeItem(at: url)
+        }
+    }
+}
+
+// MARK: - 对外门面（UI 只与这一层交互）
+
 @MainActor
 final class DownloadManager: ObservableObject {
     static let shared = DownloadManager()
@@ -12,12 +471,17 @@ final class DownloadManager: ObservableObject {
 
     private let metadataKey = "downloaded_movies_metadata"
     private let downloadsDir: URL
+    private let store: DownloadStore
+    private let engine: DownloadEngine
     private var taskHandles: [String: Task<Void, Never>] = [:]
 
     private init() {
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         downloadsDir = documents.appendingPathComponent("Downloads", isDirectory: true)
         try? FileManager.default.createDirectory(at: downloadsDir, withIntermediateDirectories: true)
+        store = DownloadStore(directory: downloadsDir)
+        engine = DownloadEngine()
+        loadTasks()
         loadMetadata()
     }
 
@@ -26,414 +490,263 @@ final class DownloadManager: ObservableObject {
     func startDownloads(items: [(title: String, episodeName: String, sourceURL: String)]) {
         guard !items.isEmpty else { return }
 
+        var created = 0
+        var skipped = 0
+
         for item in items {
+            let folderID = Self.folderID(title: item.title, episodeName: item.episodeName)
+
+            // 同一集不重复下载
+            if tasks.contains(where: { $0.folderID == folderID }) {
+                skipped += 1
+                continue
+            }
+            if downloadedMovies.contains(where: { $0.folderID == folderID }) {
+                skipped += 1
+                continue
+            }
+
             let task = DownloadTask(
                 id: UUID().uuidString,
                 title: item.title,
                 episodeName: item.episodeName,
                 sourceURL: item.sourceURL,
+                folderID: folderID,
                 progress: 0,
                 status: .downloading
             )
             tasks.insert(task, at: 0)
-            startProcess(for: task.id)
+            created += 1
+            launch(task)
         }
 
-        alertMessage = "已创建 \(items.count) 个下载任务"
-        showAlert = true
+        persistTasks()
+
+        if created > 0 {
+            alertMessage = skipped > 0
+                ? "已创建 \(created) 个下载任务，\(skipped) 个已在列表中"
+                : "已创建 \(created) 个下载任务"
+            showAlert = true
+        } else if skipped > 0 {
+            alertMessage = "所选剧集已在下载列表或已完成"
+            showAlert = true
+        }
     }
 
     // MARK: - 暂停 / 继续 / 取消 / 重试
 
     func pauseTask(_ task: DownloadTask) {
         guard task.status == .downloading else { return }
-        setStatus(.paused, for: task.id)
         taskHandles[task.id]?.cancel()
         taskHandles[task.id] = nil
+        update(task.id) { $0.status = .paused }
+        persistTasks()
     }
 
     func resumeTask(_ task: DownloadTask) {
-        guard task.status == .paused else { return }
-        setStatus(.downloading, for: task.id)
-        startProcess(for: task.id)
+        guard task.status == .paused || task.status == .failed else { return }
+        update(task.id) {
+            $0.status = .downloading
+            $0.errorMessage = nil
+        }
+        persistTasks()
+        guard let refreshed = tasks.first(where: { $0.id == task.id }) else { return }
+        launch(refreshed)
     }
 
     func cancelTask(_ task: DownloadTask) {
         taskHandles[task.id]?.cancel()
         taskHandles[task.id] = nil
-
-        if let index = tasks.firstIndex(where: { $0.id == task.id }) {
-            let t = tasks[index]
-            let folderURL = folderURL(title: t.title, episodeName: t.episodeName)
-            try? FileManager.default.removeItem(at: folderURL)
-            tasks.remove(at: index)
-        }
+        let folder = downloadsDir.appendingPathComponent(task.folderID, isDirectory: true)
+        try? FileManager.default.removeItem(at: folder)
+        tasks.removeAll { $0.id == task.id }
+        persistTasks()
     }
 
+    /// 重试会保留已下载完成的分片，只补缺失部分
     func retryTask(_ task: DownloadTask) {
-        guard task.status == .failed else { return }
-        setStatus(.downloading, for: task.id)
-        setProgress(0, for: task.id)
-        setCompletedSegments(0, for: task.id)
-        setTotalBytes(0, for: task.id)
-        setDownloadedBytes(0, for: task.id)
-        startProcess(for: task.id)
+        resumeTask(task)
     }
 
     func deleteTask(_ task: DownloadTask) {
         cancelTask(task)
     }
 
-    // MARK: - 下载流程
-
-    private func startProcess(for taskID: String) {
-        let handle = Task { [weak self] in
-            guard let self else { return }
-            await self.processDownload(taskID: taskID)
+    func pauseAllTasks() {
+        for task in tasks where task.status == .downloading {
+            pauseTask(task)
         }
-        taskHandles[taskID] = handle
     }
 
-    private func processDownload(taskID: String) async {
+    func resumeAllTasks() {
+        for task in tasks where task.status == .paused {
+            resumeTask(task)
+        }
+    }
+
+    // MARK: - 任务执行
+
+    private func launch(_ task: DownloadTask) {
+        taskHandles[task.id]?.cancel()
+        let handle = Task { [weak self] in
+            await self?.execute(taskID: task.id)
+        }
+        taskHandles[task.id] = handle
+    }
+
+    private func execute(taskID: String) async {
+        guard let task = tasks.first(where: { $0.id == taskID }) else { return }
+
+        guard let sourceURL = URL(string: task.sourceURL) else {
+            fail(taskID, message: "播放地址无效")
+            return
+        }
+
+        let folder = downloadsDir.appendingPathComponent(task.folderID, isDirectory: true)
+
+        let result = await engine.run(folder: folder, sourceURL: sourceURL) { progress in
+            // DownloadManager 是 @MainActor 单例，本身即可跨线程传递
+            Task { @MainActor in
+                self.applyProgress(progress, taskID: taskID)
+            }
+        }
+
+        switch result {
+        case .success(let output):
+            complete(taskID: taskID, folder: folder, output: output)
+        case .failure(let failure):
+            if case .cancelled = failure {
+                update(taskID) { $0.status = .paused }
+            } else {
+                fail(taskID, message: failure.message)
+            }
+            taskHandles[taskID] = nil
+            persistTasks()
+        }
+    }
+
+    private func applyProgress(_ progress: DownloadProgress, taskID: String) {
+        update(taskID) {
+            $0.completedSegments = progress.completedSegments
+            $0.totalSegments = progress.totalSegments
+            $0.downloadedBytes = progress.downloadedBytes
+            $0.totalBytes = progress.estimatedTotalBytes
+            $0.progress = progress.totalSegments > 0
+                ? Double(progress.completedSegments) / Double(progress.totalSegments)
+                : 0
+        }
+    }
+
+    private func complete(taskID: String, folder: URL, output: DownloadOutput) {
         guard let index = tasks.firstIndex(where: { $0.id == taskID }) else { return }
         let task = tasks[index]
 
-        do {
-            let mp4URL = try await downloadAndMerge(taskID: taskID) { [weak self] progress, downloadedBytes, totalBytes in
-                self?.setProgress(progress, for: taskID)
-                self?.setDownloadedBytes(downloadedBytes, for: taskID)
-                self?.setTotalBytes(totalBytes, for: taskID)
-            }
-
-            try Task.checkCancellation()
-
-            let attr = try FileManager.default.attributesOfItem(atPath: mp4URL.path)
-            let size = attr[.size] as? Int64 ?? 0
-
-            let movie = DownloadedMovie(
-                id: UUID().uuidString,
-                title: task.title,
-                episodeName: task.episodeName,
-                fileURL: mp4URL.path,
-                fileSize: size,
-                downloadDate: Date()
-            )
-
-            downloadedMovies.insert(movie, at: 0)
-            persistMetadata()
-            setStatus(.completed, for: taskID)
-            setProgress(1, for: taskID)
-            taskHandles[taskID] = nil
-        } catch is CancellationError {
-            taskHandles[taskID] = nil
-        } catch {
-            setStatus(.failed, for: taskID)
-            taskHandles[taskID] = nil
-        }
-    }
-
-    // MARK: - 下载 TS 并合并 mp4
-
-    private func downloadAndMerge(
-        taskID: String,
-        progressHandler: @escaping (Double, Int64, Int64) -> Void
-    ) async throws -> URL {
-        guard let index = tasks.firstIndex(where: { $0.id == taskID }) else {
-            throw URLError(.cancelled)
-        }
-        let task = tasks[index]
-
-        guard let sourceURL = URL(string: task.sourceURL) else { throw URLError(.badURL) }
-
-        let folderURL = folderURL(title: task.title, episodeName: task.episodeName)
-        try? FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
-
-        // 1. 解析嵌套 m3u8
-        let resolved = try await resolveEffectiveM3U8(from: sourceURL)
-        let m3u8Text = resolved.text
-        let effectiveBaseURL = resolved.baseURL
-
-        // 2. 解析 AES-128 密钥（如果有）
-        let encInfo = try await parseEncryptionInfo(from: m3u8Text, effectiveBaseURL: effectiveBaseURL)
-
-        // 3. 解析 TS 分片
-        let tsURLs = try parseTSURLs(from: m3u8Text, baseURL: effectiveBaseURL)
-
-        // 4. 下载明文 TS 分片
-        let startSegment = task.completedSegments
-        var totalBytes = task.downloadedBytes
-
-        for tsIndex in startSegment..<tsURLs.count {
-            try Task.checkCancellation()
-
-            let fileName = "segment_\(tsIndex).ts"
-            let localURL = folderURL.appendingPathComponent(fileName)
-
-            // 如果文件不存在才下载（断点续传）
-            if !FileManager.default.fileExists(atPath: localURL.path) {
-                let size = try await downloadAndDecryptTS(
-                    urlString: tsURLs[tsIndex],
-                    to: localURL,
-                    encInfo: encInfo
-                )
-                totalBytes += size
-                setDownloadedBytes(totalBytes, for: taskID)
-            }
-
-            setCompletedSegments(tsIndex + 1, for: taskID)
-            setTotalBytes(totalBytes, for: taskID)
-            progressHandler(Double(tsIndex + 1) / Double(tsURLs.count), totalBytes, totalBytes)
+        let info = DownloadedInfo(
+            title: task.title,
+            episodeName: task.episodeName,
+            format: output.format,
+            completedAt: Date()
+        )
+        if let data = try? JSONEncoder().encode(info) {
+            try? data.write(to: folder.appendingPathComponent("info.json"))
         }
 
-        // 5. 合并 TS 为 mp4
-        let mp4URL = folderURL.appendingPathComponent("output.mp4")
-        try mergeTSFiles(folderURL: folderURL, tsCount: tsURLs.count, outputURL: mp4URL)
+        let movie = DownloadedMovie(
+            id: UUID().uuidString,
+            title: task.title,
+            episodeName: task.episodeName,
+            fileURL: output.fileURL.path,
+            fileSize: output.fileSize,
+            downloadDate: Date(),
+            folderID: task.folderID,
+            format: output.format
+        )
+        downloadedMovies.insert(movie, at: 0)
+        tasks.remove(at: index)
+        taskHandles[taskID] = nil
+        persistMetadata()
+        persistTasks()
+    }
 
-        // 6. 删除临时 TS 文件
-        for tsIndex in 0..<tsURLs.count {
-            let tsURL = folderURL.appendingPathComponent("segment_\(tsIndex).ts")
-            try? FileManager.default.removeItem(at: tsURL)
+    private func fail(_ taskID: String, message: String) {
+        update(taskID) {
+            $0.status = .failed
+            $0.errorMessage = message
         }
-
-        return mp4URL
+        taskHandles[taskID] = nil
+        persistTasks()
     }
 
-    private func mergeTSFiles(folderURL: URL, tsCount: Int, outputURL: URL) throws {
-        try? FileManager.default.removeItem(at: outputURL)
-        FileManager.default.createFile(atPath: outputURL.path, contents: nil)
-
-        let outputHandle = try FileHandle(forWritingTo: outputURL)
-        defer { try? outputHandle.close() }
-
-        for i in 0..<tsCount {
-            let tsURL = folderURL.appendingPathComponent("segment_\(i).ts")
-            guard let data = try? Data(contentsOf: tsURL) else { continue }
-            try outputHandle.write(contentsOf: data)
-        }
+    private func update(_ taskID: String, _ mutate: (inout DownloadTask) -> Void) {
+        guard let index = tasks.firstIndex(where: { $0.id == taskID }) else { return }
+        mutate(&tasks[index])
     }
 
-    // MARK: - TS 下载 + AES-128 解密
-
-    private struct EncryptionInfo {
-        let key: [UInt8]
-        let iv: [UInt8]
-    }
-
-    private func parseEncryptionInfo(
-        from m3u8Text: String,
-        effectiveBaseURL: String
-    ) async throws -> EncryptionInfo? {
-        for line in m3u8Text.components(separatedBy: .newlines) {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            guard trimmed.hasPrefix("#EXT-X-KEY"), trimmed.contains("AES-128") else { continue }
-
-            guard let uriRange = trimmed.range(of: "URI=\""),
-                  let uriEnd = trimmed[uriRange.upperBound...].range(of: "\"")?.lowerBound else {
-                return nil
-            }
-            let keyURI = String(trimmed[uriRange.upperBound..<uriEnd])
-
-            let keyURL: URL
-            if keyURI.hasPrefix("http") {
-                keyURL = URL(string: keyURI)!
-            } else if keyURI.hasPrefix("/") {
-                var comps = URLComponents(url: URL(string: effectiveBaseURL)!, resolvingAgainstBaseURL: false)!
-                comps.path = keyURI
-                keyURL = comps.url!
-            } else {
-                let base = URL(string: effectiveBaseURL)!
-                keyURL = base.deletingLastPathComponent().appendingPathComponent(keyURI)
-            }
-
-            let (keyData, _) = try await URLSession.shared.data(from: keyURL)
-            let keyBytes = [UInt8](keyData)
-
-            var iv: [UInt8] = Array(repeating: 0, count: 16)
-            if let ivRange = trimmed.range(of: "IV=0x") {
-                let hexStart = ivRange.upperBound
-                let hexEnd = trimmed.index(hexStart, offsetBy: 32, limitedBy: trimmed.endIndex) ?? trimmed.endIndex
-                let hexString = String(trimmed[hexStart..<hexEnd])
-                var hexIndex = 0
-                for i in 0..<16 {
-                    let start = hexString.index(hexString.startIndex, offsetBy: hexIndex)
-                    let end = hexString.index(start, offsetBy: 2)
-                    iv[i] = UInt8(hexString[start..<end], radix: 16) ?? 0
-                    hexIndex += 2
-                }
-            }
-
-            return EncryptionInfo(key: keyBytes, iv: iv)
-        }
-        return nil
-    }
-
-    private func downloadAndDecryptTS(
-        urlString: String,
-        to localURL: URL,
-        encInfo: EncryptionInfo?
-    ) async throws -> Int64 {
-        guard let url = URL(string: urlString) else { throw URLError(.badURL) }
-
-        let (tsData, _) = try await URLSession.shared.data(from: url)
-        try Task.checkCancellation()
-
-        var finalData = tsData
-
-        if let encInfo {
-            let encryptedBytes = [UInt8](tsData)
-            let aes = try AES(key: encInfo.key, blockMode: CBC(iv: encInfo.iv), padding: .noPadding)
-            let decryptedBytes = try aes.decrypt(encryptedBytes)
-            finalData = Data(decryptedBytes)
-        }
-
-        try finalData.write(to: localURL)
-        return Int64(finalData.count)
-    }
-
-    // MARK: - 嵌套 m3u8 解析
-
-    private struct ResolvedPlaylist {
-        let text: String
-        let baseURL: String
-    }
-
-    private func resolveEffectiveM3U8(from sourceURL: URL) async throws -> ResolvedPlaylist {
-        let (data, _) = try await URLSession.shared.data(from: sourceURL)
-        guard let text = String(data: data, encoding: .utf8) else {
-            throw URLError(.cannotDecodeContentData)
-        }
-
-        if text.contains("#EXT-X-STREAM-INF") {
-            let childPaths = text.components(separatedBy: .newlines)
-                .map { $0.trimmingCharacters(in: .whitespaces) }
-                .filter { !$0.isEmpty && !$0.hasPrefix("#") && $0.hasSuffix(".m3u8") }
-
-            guard let childPath = childPaths.first else {
-                throw URLError(.cannotParseResponse)
-            }
-
-            let childURL: URL
-            if childPath.hasPrefix("http") {
-                childURL = URL(string: childPath)!
-            } else if childPath.hasPrefix("/") {
-                var comps = URLComponents(url: sourceURL, resolvingAgainstBaseURL: false)!
-                comps.path = childPath
-                childURL = comps.url!
-            } else {
-                childURL = sourceURL.deletingLastPathComponent().appendingPathComponent(childPath)
-            }
-
-            let (childData, _) = try await URLSession.shared.data(from: childURL)
-            guard let childText = String(data: childData, encoding: .utf8) else {
-                throw URLError(.cannotDecodeContentData)
-            }
-
-            return ResolvedPlaylist(text: childText, baseURL: childURL.absoluteString)
-        }
-
-        return ResolvedPlaylist(text: text, baseURL: sourceURL.absoluteString)
-    }
-
-    // MARK: - 工具方法
-
-    private func folderURL(title: String, episodeName: String) -> URL {
-        let folderName = "\(safeFileName(title))_\(safeFileName(episodeName))"
-        return downloadsDir.appendingPathComponent(folderName, isDirectory: true)
-    }
-
-    private func parseTSURLs(from text: String, baseURL: String) throws -> [String] {
-        let lines = text.components(separatedBy: .newlines)
-        var urls: [String] = []
-
-        for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            guard !trimmed.isEmpty, !trimmed.hasPrefix("#") else { continue }
-
-            if trimmed.hasPrefix("http") {
-                urls.append(trimmed)
-            } else if let base = URL(string: baseURL) {
-                let absolute = base.deletingLastPathComponent().appendingPathComponent(trimmed).absoluteString
-                urls.append(absolute)
-            }
-        }
-
-        guard !urls.isEmpty else { throw URLError(.cannotParseResponse) }
-        return urls
-    }
-
-    private func safeFileName(_ name: String) -> String {
-        let invalid = CharacterSet(charactersIn: "/\\?%*|\"<>")
-        return name.components(separatedBy: invalid).joined(separator: "_")
-    }
-
-    // MARK: - 状态更新
-
-    private func setStatus(_ status: DownloadStatus, for taskID: String) {
-        if let index = tasks.firstIndex(where: { $0.id == taskID }) {
-            tasks[index].status = status
-        }
-    }
-
-    private func setProgress(_ progress: Double, for taskID: String) {
-        if let index = tasks.firstIndex(where: { $0.id == taskID }) {
-            tasks[index].progress = progress
-        }
-    }
-
-    private func setCompletedSegments(_ count: Int, for taskID: String) {
-        if let index = tasks.firstIndex(where: { $0.id == taskID }) {
-            tasks[index].completedSegments = count
-        }
-    }
-
-    private func setTotalBytes(_ bytes: Int64, for taskID: String) {
-        if let index = tasks.firstIndex(where: { $0.id == taskID }) {
-            tasks[index].totalBytes = bytes
-        }
-    }
-
-    private func setDownloadedBytes(_ bytes: Int64, for taskID: String) {
-        if let index = tasks.firstIndex(where: { $0.id == taskID }) {
-            tasks[index].downloadedBytes = bytes
-        }
-    }
-
-    // MARK: - 扫描与删除
+    // MARK: - 已下载列表
 
     func scanDownloadsDirectory() {
-        let fm = FileManager.default
-        guard let contents = try? fm.contentsOfDirectory(at: downloadsDir, includingPropertiesForKeys: [.isDirectoryKey]) else { return }
+        let fileManager = FileManager.default
+        guard let contents = try? fileManager.contentsOfDirectory(
+            at: downloadsDir,
+            includingPropertiesForKeys: nil
+        ) else { return }
 
         var discovered: [DownloadedMovie] = []
-        var existingPaths = Set(downloadedMovies.map { $0.fileURL })
+        var knownFolders = Set(downloadedMovies.map { $0.folderID })
 
-        for folderURL in contents {
-            var isDir: ObjCBool = false
-            guard fm.fileExists(atPath: folderURL.path, isDirectory: &isDir), isDir.boolValue else { continue }
+        for folder in contents {
+            var isDirectory: ObjCBool = false
+            guard fileManager.fileExists(atPath: folder.path, isDirectory: &isDirectory),
+                  isDirectory.boolValue else { continue }
 
-            let mp4URL = folderURL.appendingPathComponent("output.mp4")
-            guard fm.fileExists(atPath: mp4URL.path) else { continue }
-            guard !existingPaths.contains(mp4URL.path) else { continue }
+            let folderID = folder.lastPathComponent
+            guard !knownFolders.contains(folderID) else { continue }
 
-            let folderName = folderURL.lastPathComponent
-            let parts = folderName.split(separator: "_", maxSplits: 1).map(String.init)
-            let title = parts.first ?? folderName
-            let episodeName = parts.count > 1 ? parts[1] : ""
+            var title = ""
+            var episodeName = ""
+            var format = ""
+            var date = Date()
 
-            let attr = try? fm.attributesOfItem(atPath: mp4URL.path)
-            let size = attr?[.size] as? Int64 ?? 0
-            let date = attr?[.modificationDate] as? Date ?? Date()
+            if let data = try? Data(contentsOf: folder.appendingPathComponent("info.json")),
+               let info = try? JSONDecoder().decode(DownloadedInfo.self, from: data) {
+                title = info.title
+                episodeName = info.episodeName
+                format = info.format
+                date = info.completedAt
+            } else {
+                // 兼容旧目录命名：标题_剧集
+                let parts = folderID.split(separator: "_", maxSplits: 1).map(String.init)
+                title = parts.first ?? folderID
+                episodeName = parts.count > 1 ? parts[1] : ""
+            }
+
+            let candidates = ["movie.ts", "movie.mp4", "output.mp4"]
+            guard let movieURL = candidates
+                .map { folder.appendingPathComponent($0) }
+                .first(where: { fileManager.fileExists(atPath: $0.path) }) else { continue }
+
+            if format.isEmpty {
+                format = movieURL.pathExtension
+            }
+
+            let attributes = try? fileManager.attributesOfItem(atPath: movieURL.path)
+            let size = (attributes?[.size] as? Int64) ?? 0
+            if let modificationDate = attributes?[.modificationDate] as? Date {
+                date = modificationDate
+            }
 
             let movie = DownloadedMovie(
                 id: UUID().uuidString,
                 title: title,
                 episodeName: episodeName,
-                fileURL: mp4URL.path,
+                fileURL: movieURL.path,
                 fileSize: size,
-                downloadDate: date
+                downloadDate: date,
+                folderID: folderID,
+                format: format
             )
             discovered.append(movie)
-            existingPaths.insert(mp4URL.path)
+            knownFolders.insert(folderID)
         }
 
         if !discovered.isEmpty {
@@ -443,14 +756,19 @@ final class DownloadManager: ObservableObject {
     }
 
     func deleteMovie(_ movie: DownloadedMovie) {
-        let fileURL = URL(fileURLWithPath: movie.fileURL)
-        let folderURL = fileURL.deletingLastPathComponent()
-
-        try? FileManager.default.removeItem(at: folderURL)
+        let folder: URL
+        if !movie.folderID.isEmpty {
+            folder = downloadsDir.appendingPathComponent(movie.folderID, isDirectory: true)
+        } else {
+            folder = URL(fileURLWithPath: movie.fileURL).deletingLastPathComponent()
+        }
+        try? FileManager.default.removeItem(at: folder)
 
         downloadedMovies.removeAll { $0.id == movie.id }
         persistMetadata()
     }
+
+    // MARK: - 持久化
 
     private func persistMetadata() {
         if let data = try? JSONEncoder().encode(downloadedMovies) {
@@ -462,5 +780,80 @@ final class DownloadManager: ObservableObject {
         guard let data = UserDefaults.standard.data(forKey: metadataKey),
               let movies = try? JSONDecoder().decode([DownloadedMovie].self, from: data) else { return }
         downloadedMovies = movies.filter { FileManager.default.fileExists(atPath: $0.fileURL) }
+    }
+
+    private func persistTasks() {
+        let records = tasks.map { task in
+            DownloadTaskRecord(
+                id: task.id,
+                title: task.title,
+                episodeName: task.episodeName,
+                sourceURL: task.sourceURL,
+                folderID: task.folderID,
+                status: task.status,
+                progress: task.progress,
+                completedSegments: task.completedSegments,
+                totalSegments: task.totalSegments,
+                totalBytes: task.totalBytes,
+                downloadedBytes: task.downloadedBytes,
+                errorMessage: task.errorMessage
+            )
+        }
+        store.save(records)
+    }
+
+    private func loadTasks() {
+        let records = store.load()
+        tasks = records.map { record in
+            DownloadTask(
+                id: record.id,
+                title: record.title,
+                episodeName: record.episodeName,
+                sourceURL: record.sourceURL,
+                folderID: record.folderID,
+                progress: record.progress,
+                // 被杀掉的"下载中"任务恢复为暂停，用户可手动继续
+                status: record.status == .downloading ? .paused : record.status,
+                completedSegments: record.completedSegments,
+                totalSegments: record.totalSegments,
+                totalBytes: record.totalBytes,
+                downloadedBytes: record.downloadedBytes,
+                errorMessage: record.errorMessage
+            )
+        }
+        // 目录已被删掉的任务直接丢弃
+        tasks.removeAll { task in
+            !FileManager.default.fileExists(
+                atPath: downloadsDir.appendingPathComponent(task.folderID, isDirectory: true).path
+            )
+        }
+    }
+
+    // MARK: - 目录名
+
+    /// 可读前缀 + 稳定哈希，避免标题中的下划线/特殊字符导致同名或超长
+    static func folderID(title: String, episodeName: String) -> String {
+        let raw = "\(title)|\(episodeName)"
+        let prefix = safeFileName("\(title)-\(episodeName)")
+        let trimmed = prefix.count > 40 ? String(prefix.prefix(40)) : prefix
+        return "\(trimmed)_\(stableHash(raw))"
+    }
+
+    private static func safeFileName(_ name: String) -> String {
+        let invalid = CharacterSet(charactersIn: "/\\?%*|\"<>:")
+            .union(.whitespacesAndNewlines)
+            .union(.controlCharacters)
+        let cleaned = name.components(separatedBy: invalid).joined(separator: "_")
+        return cleaned.isEmpty ? "untitled" : cleaned
+    }
+
+    /// FNV-1a，跨进程稳定（String.hashValue 每次启动都不同）
+    private static func stableHash(_ string: String) -> String {
+        var hash: UInt64 = 14695981039346656037
+        for byte in string.utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 1099511628211
+        }
+        return String(hash, radix: 36)
     }
 }

@@ -13,6 +13,21 @@ struct DownloadsView: View {
         .listStyle(.insetGrouped)
         .navigationTitle("我的下载")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Menu {
+                    Button("全部暂停") {
+                        downloadManager.pauseAllTasks()
+                    }
+                    Button("全部继续") {
+                        downloadManager.resumeAllTasks()
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .disabled(downloadManager.tasks.isEmpty)
+            }
+        }
         .alert("提示", isPresented: $downloadManager.showAlert) {
             Button("好", role: .cancel) {}
         } message: {
@@ -82,15 +97,16 @@ struct DownloadsView: View {
     }
 
     private func localPlaySource(for movie: DownloadedMovie) -> PlaySource {
-    let fileURL = URL(fileURLWithPath: movie.fileURL).absoluteString
-    return PlaySource(
-        id: movie.id,
-        name: movie.episodeName,
-        url: fileURL,
-        format: "mp4",
-        episodes: []
-    )
-}
+        // absoluteString 会做百分号编码，播放端用 URL(string:) 解析即可正确还原中文路径
+        let fileURL = URL(fileURLWithPath: movie.fileURL).absoluteString
+        return PlaySource(
+            id: movie.id,
+            name: movie.episodeName,
+            url: fileURL,
+            format: movie.format,
+            episodes: []
+        )
+    }
 }
 
 private struct DownloadTaskRow: View {
@@ -116,8 +132,14 @@ private struct DownloadTaskRow: View {
 
                 Spacer()
 
+                if task.totalSegments > 0 {
+                    Text("\(task.completedSegments)/\(task.totalSegments) 分片")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
                 if task.totalBytes > 0 {
-                    Text("\(Self.formatBytes(task.downloadedBytes)) / \(Self.formatBytes(task.totalBytes))")
+                    Text("\(Self.formatBytes(task.downloadedBytes)) / 约 \(Self.formatBytes(task.totalBytes))")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -125,6 +147,13 @@ private struct DownloadTaskRow: View {
                 Text(task.status.displayText)
                     .font(.caption)
                     .foregroundColor(statusColor)
+            }
+
+            if let error = task.errorMessage, !error.isEmpty {
+                Text(error)
+                    .font(.caption2)
+                    .foregroundColor(.red)
+                    .lineLimit(3)
             }
 
             HStack(spacing: 12) {
@@ -203,7 +232,7 @@ private struct DownloadedMovieRow: View {
             Text(movie.episodeName)
                 .font(.caption)
                 .foregroundColor(.secondary)
-            Text(Self.formatBytes(movie.fileSize))
+            Text("\(Self.formatBytes(movie.fileSize)) · \(movie.format.uppercased())")
                 .font(.caption2)
                 .foregroundColor(.secondary)
         }
