@@ -443,7 +443,7 @@ private struct DownloadTaskCard: View {
                         destructiveButton("取消", systemImage: "xmark.circle", action: onCancel)
 
                     case .failed:
-                        actionButton("重试", systemImage: "arrow.clockwise.circle", action: onRetry)
+                        warningButton("重试", systemImage: "arrow.clockwise.circle", action: onRetry)
                         destructiveButton("删除", systemImage: "trash.circle", action: onCancel)
 
                     case .completed:
@@ -484,12 +484,16 @@ private struct DownloadTaskCard: View {
 
     private func actionButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            // 不用 Label：它自带的图标/文字间距偏大，HStack 才能把两者贴紧
-            HStack(spacing: 3) {
-                Image(systemName: systemImage)
-                Text(title)
-            }
-            .font(.caption)
+            buttonLabel(title, systemImage: systemImage)
+        }
+        .buttonStyle(.borderless)
+    }
+
+    /// 失败后的重试：用橙色和红色删除区分开
+    private func warningButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            buttonLabel(title, systemImage: systemImage)
+                .foregroundColor(.orange)
         }
         .buttonStyle(.borderless)
     }
@@ -498,14 +502,20 @@ private struct DownloadTaskCard: View {
         Button(role: .destructive, action: action) {
             // role: .destructive 只会把文字染红，图标仍吃 tint（蓝色），
             // 所以这里显式给整组上红色
-            HStack(spacing: 3) {
-                Image(systemName: systemImage)
-                Text(title)
-            }
-            .font(.caption)
-            .foregroundColor(.red)
+            buttonLabel(title, systemImage: systemImage)
+                .foregroundColor(.red)
         }
         .buttonStyle(.borderless)
+    }
+
+    /// 不用 Label：它自带的图标/文字间距偏大且不可调。
+    /// 5pt 比 Label 默认值紧，又不至于挤在一起。
+    private func buttonLabel(_ title: String, systemImage: String) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: systemImage)
+            Text(title)
+        }
+        .font(.caption)
     }
 }
 
