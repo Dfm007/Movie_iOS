@@ -484,16 +484,26 @@ private struct DownloadTaskCard: View {
 
     private func actionButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Label(title, systemImage: systemImage)
-                .font(.caption)
+            // 不用 Label：它自带的图标/文字间距偏大，HStack 才能把两者贴紧
+            HStack(spacing: 3) {
+                Image(systemName: systemImage)
+                Text(title)
+            }
+            .font(.caption)
         }
         .buttonStyle(.borderless)
     }
 
     private func destructiveButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
         Button(role: .destructive, action: action) {
-            Label(title, systemImage: systemImage)
-                .font(.caption)
+            // role: .destructive 只会把文字染红，图标仍吃 tint（蓝色），
+            // 所以这里显式给整组上红色
+            HStack(spacing: 3) {
+                Image(systemName: systemImage)
+                Text(title)
+            }
+            .font(.caption)
+            .foregroundColor(.red)
         }
         .buttonStyle(.borderless)
     }
