@@ -5,7 +5,9 @@ struct DownloadedMovie: Identifiable, Codable {
     let title: String
     let episodeName: String
     let fileURL: String
-    let fileSize: Int64
+    /// 真实内容体积；TS 为分片总和（不是 movie.m3u8 入口文件的大小）。
+    /// 扫描目录重建或旧元数据自愈时会就地修正，故为 var。
+    var fileSize: Int64
     let downloadDate: Date
     /// 所属下载目录名，删除/去重都依赖它
     var folderID: String

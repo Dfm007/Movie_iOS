@@ -34,6 +34,9 @@ struct DownloadedInfo: Codable {
     let completedAt: Date
     /// 旧版 info.json 没有该字段
     var posterURL: String? = nil
+    /// 真实内容体积（TS 是分片总和，不是 movie.m3u8 入口文件的大小）。
+    /// 旧版 info.json 没有该字段，扫描时回退到按分片累加。
+    var fileSize: Int64? = nil
 }
 
 // MARK: - 引擎回调
@@ -800,7 +803,8 @@ final class DownloadManager: ObservableObject {
             episodeName: task.episodeName,
             format: output.format,
             completedAt: Date(),
-            posterURL: task.posterURL
+            posterURL: task.posterURL,
+            fileSize: output.fileSize
         )
         if let data = try? JSONEncoder().encode(info) {
             try? data.write(to: folder.appendingPathComponent("info.json"))
@@ -842,6 +846,24 @@ final class DownloadManager: ObservableObject {
     private func update(_ taskID: String, _ mutate: (inout DownloadTask) -> Void) {
         guard let index = tasks.firstIndex(where: { $0.id == taskID }) else { return }
         mutate(&tasks[index])
+    }
+
+    // MARK: - 目录体积
+
+    /// 累加下载目录里的分片体积（seg_* 文件）。
+    /// TS 内容的 movie.m3u8 只是播放入口，真实体积在分片上。
+    private static func segmentBytes(in folder: URL) -> Int64 {
+        guard let contents = try? FileManager.default.contentsOfDirectory(
+            at: folder,
+            includingPropertiesForKeys: [.fileSizeKey]
+        ) else { return 0 }
+
+        var total: Int64 = 0
+        for url in contents where url.lastPathComponent.hasPrefix("seg_") {
+            let values = try? url.resourceValues(forKeys: [.fileSizeKey])
+            total += Int64(values?.fileSize ?? 0)
+        }
+        return total
     }
 
     // MARK: - 海报缓存
@@ -920,6 +942,7 @@ final class DownloadManager: ObservableObject {
             var format = ""
             var date = Date()
             var posterURLString: String?
+            var recordedSize: Int64?
 
             if let data = try? Data(contentsOf: folder.appendingPathComponent("info.json")),
                let info = try? JSONDecoder().decode(DownloadedInfo.self, from: data) {
@@ -928,6 +951,7 @@ final class DownloadManager: ObservableObject {
                 format = info.format
                 date = info.completedAt
                 posterURLString = info.posterURL
+                recordedSize = info.fileSize
             } else {
                 // 兼容旧目录命名：标题_剧集
                 let parts = folderID.split(separator: "_", maxSplits: 1).map(String.init)
@@ -949,9 +973,19 @@ final class DownloadManager: ObservableObject {
             }
 
             let attributes: [FileAttributeKey: Any]? = try? fileManager.attributesOfItem(atPath: movieURL.path)
-            let size = (attributes?[.size] as? Int64) ?? 0
             if let modificationDate = attributes?[.modificationDate] as? Date {
                 date = modificationDate
+            }
+
+            // 体积绝不能取入口文件：TS 的 movie.m3u8 只有几十 KB，
+            // 真实体积在 seg_* 分片上（否则重装后会显示成 24KB）
+            let size: Int64
+            if let recordedSize, recordedSize > 0 {
+                size = recordedSize
+            } else if movieURL.pathExtension == "m3u8" {
+                size = Self.segmentBytes(in: folder)
+            } else {
+                size = (attributes?[.size] as? Int64) ?? 0
             }
 
             let movie = DownloadedMovie(
@@ -1022,6 +1056,19 @@ final class DownloadManager: ObservableObject {
             let folder = downloadsDir.appendingPathComponent(folderID, isDirectory: true)
             downloadedMovies[index].posterPath = Self.posterPathIfExists(in: folder)
         }
+
+        // 自愈：早期版本把 movie.m3u8 入口文件的大小当成了整集体积（TS 只有几十 KB），
+        // 对这类明显偏小的条目按分片重新累加，否则会一直显示 24KB
+        for index in downloadedMovies.indices {
+            let movie = downloadedMovies[index]
+            guard movie.fileURL.hasSuffix(".m3u8"), movie.fileSize < 1_000_000 else { continue }
+            let folder = URL(fileURLWithPath: movie.fileURL).deletingLastPathComponent()
+            let recalculated = Self.segmentBytes(in: folder)
+            if recalculated > 0 {
+                downloadedMovies[index].fileSize = recalculated
+            }
+        }
+
         persistMetadata()
     }
 
