@@ -45,17 +45,26 @@ final class DetailViewModel: ObservableObject {
 
     func loadDetail(path: String, site: CMSSite? = nil) async {
         let targetSite = site ?? selectedSite
-        let isSiteSwitch = site != nil && site?.id != selectedSite.id
         selectedSite = targetSite
         isLoading = true
         errorMessage = nil
 
         let source = makeSource(for: targetSite)
 
-        // 初始加载（非切换源）也走标题匹配，与切换源行为完全一致：
-        // 用 currentMovieTitle 在当前 selectedSite 重新搜索匹配，确保取到该站点的正确剧集
-        // （含 episodes）。否则只依赖 detailMap[selectedSite.id] 直连，一旦该 vod_id 在站点
-        // 解析不出分集，初始源 episodes 就会为空，导致下载选择器白屏、必须切换源才正常。
+        // 优先直接用 detailMap 里已算好的精确 vod_id（首页/搜索页进入时已按站点搜索+精确匹配算好）。
+        let directID = siteDetailMap[targetSite.id]
+
+        if let directID = directID, !directID.isEmpty {
+            await loadDetailDirect(on: source, path: directID)
+            // 关键健壮性兜底：若该精确 id 拉出的详情没有可下载的分集（episodes 全空），
+            // 说明 id 命中了错误条目或该站未返回分集，改用标题 bestMatch 重搜一次。
+            if sources.contains(where: { !$0.episodes.isEmpty }) {
+                isLoading = false
+                return
+            }
+        }
+
+        // 用标题搜索兜底（初次 id 无分集、或切源到未预解析的站点时）
         if !currentMovieTitle.isEmpty {
             if let matched = await bestMatch(in: source, for: currentMovieTitle) {
                 await loadDetailDirect(on: source, path: matched.id)
@@ -64,14 +73,10 @@ final class DetailViewModel: ObservableObject {
             }
         }
 
-        let actualPath: String
-        if !path.isEmpty && (path.hasPrefix("http") || !siteDetailMap.isEmpty) {
-            actualPath = siteDetailMap[targetSite.id] ?? path
-        } else {
-            actualPath = path
+        // 最后兜底：用传入的 path（初次进入时的 detailURL）
+        if !path.isEmpty && sources.isEmpty {
+            await loadDetailDirect(on: source, path: path)
         }
-
-        await loadDetailDirect(on: source, path: actualPath)
         isLoading = false
     }
 
@@ -158,7 +163,9 @@ final class DetailViewModel: ObservableObject {
             remarks = detail.remarks
             intro = detail.intro
             sources = detail.sources
-            currentMovieTitle = detail.title
+            // 注意：不要在这里覆盖 currentMovieTitle。它应始终保留「用户想找的原始标题」
+            // （来自 setInitialTitle），供 bestMatch 兜底搜索使用。若被详情返回的标题覆盖，
+            // 一旦直连加载到同名但错误的条目，bestMatch 就会用错误标题搜索，永远匹配不到正确分集。
         } catch {
             errorMessage = error.localizedDescription
         }

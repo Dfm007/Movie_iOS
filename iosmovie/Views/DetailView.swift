@@ -69,8 +69,10 @@ struct DetailView: View {
         .navigationTitle(viewModel.movieTitle)
         .task {
             guard !viewModel.hasConfigured else { return }
+            // setInitialTitle 必须无条件执行，确保 currentMovieTitle 始终有值，
+            // 供 loadDetail 里的 bestMatch 兜底搜索使用（即使 availableSites 为 nil）。
+            viewModel.setInitialTitle(initialTitle)
             if let sites = availableSites {
-                viewModel.setInitialTitle(initialTitle)
                 viewModel.configure(availableSites: sites, detailMap: detailMap)
             }
             await latencyManager.measureAll(sites: viewModel.sites)
