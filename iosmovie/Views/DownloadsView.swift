@@ -459,8 +459,7 @@ private struct DownloadGroupHeader: View {
                 Spacer(minLength: 4)
 
                 Image(systemName: "chevron.down")
-                    .font(.caption)
-                    .fontWeight(.semibold)
+                    .font(.caption.weight(.semibold))
                     .foregroundColor(.secondary)
                     .rotationEffect(.degrees(isExpanded ? 0 : -90))
             }
