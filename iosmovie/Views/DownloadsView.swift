@@ -97,7 +97,28 @@ struct DownloadsView: View {
     }
 
     private func localPlaySource(for movie: DownloadedMovie) -> PlaySource {
-        // absoluteString 会做百分号编码，播放端用 URL(string:) 解析即可正确还原中文路径
+        // TS 内容以 movie.m3u8 入口、配合 seg_* 分片本地保存。
+        // iOS 的 AVPlayer 不支持从本地文件系统直接播放 HLS(m3u8)（CoreMedia -12865），
+        // 因此必须通过本地 HTTP 服务器以 http://127.0.0.1 提供。
+        // fMP4 / 旧版 mp4 为单个文件，本地 file:// 可直接播放。
+        let isHLS = movie.format == "ts"
+        if isHLS, !movie.folderID.isEmpty {
+            LocalMediaServer.shared.start()
+            if let base = LocalMediaServer.shared.baseURL {
+                let url = base
+                    .appendingPathComponent(movie.folderID)
+                    .appendingPathComponent("movie.m3u8")
+                return PlaySource(
+                    id: movie.id,
+                    name: movie.episodeName,
+                    url: url.absoluteString,
+                    format: movie.format,
+                    episodes: []
+                )
+            }
+            // 兜底：服务器尚未就绪（极少发生），退回 file://（会触发 -12865，便于排查）
+        }
+
         let fileURL = URL(fileURLWithPath: movie.fileURL).absoluteString
         return PlaySource(
             id: movie.id,
