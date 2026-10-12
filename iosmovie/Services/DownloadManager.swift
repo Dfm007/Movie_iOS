@@ -187,7 +187,7 @@ actor DownloadEngine {
             let end = min(cursor + batchSize, pending.count)
             let batch = Array(pending[cursor..<end])
 
-            try await withTaskGroup(
+            try await withThrowingTaskGroup(
                 of: Result<(String, Int64), Error>?.self
             ) { group in
                 for item in batch {
@@ -249,7 +249,7 @@ actor DownloadEngine {
             do {
                 let bytes = try await fetchAndStore(item, to: temporary)
                 try? FileManager.default.removeItem(at: destination)
-                try FileManager.moveItem(at: temporary, to: destination)
+                try FileManager.default.moveItem(at: temporary, to: destination)
                 return bytes
             } catch {
                 let failure = Self.wrap(error)
@@ -377,7 +377,7 @@ actor DownloadEngine {
         }
 
         try? FileManager.default.removeItem(at: outputURL)
-        try FileManager.moveItem(at: partURL, to: outputURL)
+        try FileManager.default.moveItem(at: partURL, to: outputURL)
 
         // 合并成功后清理分片，释放空间
         for item in Self.items(for: playlist) {
@@ -399,7 +399,7 @@ actor DownloadEngine {
         let sequenceNumber: Int
     }
 
-    static func items(for playlist: M3U8Playlist) -> [DownloadItem] {
+    private static func items(for playlist: M3U8Playlist) -> [DownloadItem] {
         var result: [DownloadItem] = []
         if let initSegment = playlist.initSegment {
             result.append(DownloadItem(
@@ -589,7 +589,8 @@ final class DownloadManager: ObservableObject {
     private func launch(_ task: DownloadTask) {
         taskHandles[task.id]?.cancel()
         let handle = Task { [weak self] in
-            await self?.execute(taskID: task.id)
+            guard let self else { return }
+            await self.execute(taskID: task.id)
         }
         taskHandles[task.id] = handle
     }
@@ -721,15 +722,16 @@ final class DownloadManager: ObservableObject {
             }
 
             let candidates = ["movie.ts", "movie.mp4", "output.mp4"]
-            guard let movieURL = candidates
+            let foundURL: URL? = candidates
                 .map { folder.appendingPathComponent($0) }
-                .first(where: { fileManager.fileExists(atPath: $0.path) }) else { continue }
+                .first { fileManager.fileExists(atPath: $0.path) }
+            guard let movieURL = foundURL else { continue }
 
             if format.isEmpty {
                 format = movieURL.pathExtension
             }
 
-            let attributes = try? fileManager.attributesOfItem(atPath: movieURL.path)
+            let attributes: [FileAttributeKey: Any]? = try? fileManager.attributesOfItem(atPath: movieURL.path)
             let size = (attributes?[.size] as? Int64) ?? 0
             if let modificationDate = attributes?[.modificationDate] as? Date {
                 date = modificationDate
