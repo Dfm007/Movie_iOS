@@ -839,9 +839,9 @@ final class DownloadManager: ObservableObject {
             // 旧版合并出的裸 .ts 无法被本地 AVPlayer 播放，且已无对应 movie.m3u8，
             // 自动移除以免误点（其所在的下载目录可手动删除释放空间）
             if movie.fileURL.hasSuffix(".ts") {
-                let m3u8 = (movie.fileURL as NSString).deletingLastPathComponent
-                    .appendingPathComponent("movie.m3u8")
-                return FileManager.default.fileExists(atPath: m3u8)
+                let dir = URL(fileURLWithPath: movie.fileURL).deletingLastPathComponent()
+                let m3u8 = dir.appendingPathComponent("movie.m3u8")
+                return FileManager.default.fileExists(atPath: m3u8.path)
             }
             return true
         }
