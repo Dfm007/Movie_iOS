@@ -1,10 +1,14 @@
-﻿import SwiftUI
+import SwiftUI
 import UIKit
 
 struct PlayerPresenter: UIViewControllerRepresentable {
     let source: PlaySource
     let allSources: [PlaySource]
     @Binding var isPresented: Bool
+    /// 起播位置（秒），0 = 从头播
+    var startAt: Double = 0
+    /// 关闭时回报 (播放位置, 总时长)，供续播记录使用
+    var onProgress: (Double, Double) -> Void = { _, _ in }
 
     func makeUIViewController(context: Context) -> UIViewController {
         let host = UIViewController()
@@ -14,7 +18,12 @@ struct PlayerPresenter: UIViewControllerRepresentable {
 
     func updateUIViewController(_ host: UIViewController, context: Context) {
         if isPresented {
-            PlayerWindowPresenter.shared.present(source: source, allSources: allSources) {
+            PlayerWindowPresenter.shared.present(
+                source: source,
+                allSources: allSources,
+                startAt: startAt,
+                onProgress: onProgress
+            ) {
                 isPresented = false
             }
         }
@@ -25,11 +34,22 @@ final class PlayerWindowPresenter {
     static let shared = PlayerWindowPresenter()
     private var playerVC: PlayerHostingController?
 
-    func present(source: PlaySource, allSources: [PlaySource], onClose: @escaping () -> Void) {
+    func present(
+        source: PlaySource,
+        allSources: [PlaySource],
+        startAt: Double = 0,
+        onProgress: @escaping (Double, Double) -> Void = { _, _ in },
+        onClose: @escaping () -> Void
+    ) {
         guard playerVC == nil else { return }
         guard let top = Self.topViewController() else { return }
 
-        let vc = PlayerHostingController(source: source, allSources: allSources) { [weak self] in
+        let vc = PlayerHostingController(
+            source: source,
+            allSources: allSources,
+            startAt: startAt,
+            onProgress: onProgress
+        ) { [weak self] in
             self?.dismiss()
             onClose()
         }
@@ -72,8 +92,22 @@ final class PlayerWindowPresenter {
 }
 
 final class PlayerHostingController: UIHostingController<PlayerView> {
-    init(source: PlaySource, allSources: [PlaySource], onClose: @escaping () -> Void) {
-        super.init(rootView: PlayerView(source: source, allSources: allSources, onClose: onClose))
+    init(
+        source: PlaySource,
+        allSources: [PlaySource],
+        startAt: Double = 0,
+        onProgress: @escaping (Double, Double) -> Void,
+        onClose: @escaping () -> Void
+    ) {
+        super.init(
+            rootView: PlayerView(
+                source: source,
+                allSources: allSources,
+                startAt: startAt,
+                onProgress: onProgress,
+                onClose: onClose
+            )
+        )
     }
 
     @MainActor required dynamic init?(coder aDecoder: NSCoder) {

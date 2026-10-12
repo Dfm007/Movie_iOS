@@ -1,5 +1,11 @@
 import Foundation
+import UIKit
 import CryptoSwift
+
+/// 每个下载目录内缓存的海报文件名。
+/// 放在文件作用域：DownloadManager 是 @MainActor，而海报下载函数是 nonisolated，
+/// 用全局常量可以两边都安全访问。
+private let downloadPosterFileName = "poster.jpg"
 
 // MARK: - 持久化记录
 
@@ -16,6 +22,8 @@ struct DownloadTaskRecord: Codable {
     var totalBytes: Int64
     var downloadedBytes: Int64
     var errorMessage: String?
+    /// 旧版 state.json 没有该字段，optional 保证能正常解码
+    var posterURL: String? = nil
 }
 
 /// 每个下载目录内的信息文件，用于重启后还原标题/剧集
@@ -24,6 +32,8 @@ struct DownloadedInfo: Codable {
     let episodeName: String
     let format: String
     let completedAt: Date
+    /// 旧版 info.json 没有该字段
+    var posterURL: String? = nil
 }
 
 // MARK: - 引擎回调
@@ -525,6 +535,23 @@ final class DownloadManager: ObservableObject {
     private let engine: DownloadEngine
     private var taskHandles: [String: Task<Void, Never>] = [:]
 
+    // MARK: - 速度 / 剩余时间采样
+    //
+    // 进度回调只在"每个分片下载完成"时触发一次，所以这里做分片级采样：
+    // 每次回调记录 (时间, 已下载字节)，只用最近 speedWindow 秒内的样本算速度，
+    // 避免全程平均导致速度反应迟钝。
+
+    private struct SpeedSample {
+        let timestamp: Date
+        let bytes: Int64
+    }
+
+    private var speedSamples: [String: [SpeedSample]] = [:]
+    private var smoothedSpeed: [String: Double] = [:]
+    private let speedWindow: TimeInterval = 10
+    /// 指数平滑系数，越小越平滑
+    private let speedSmoothing = 0.4
+
     private init() {
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         downloadsDir = documents.appendingPathComponent("Downloads", isDirectory: true)
@@ -537,13 +564,13 @@ final class DownloadManager: ObservableObject {
 
     // MARK: - 创建任务
 
-    func startDownloads(items: [(title: String, episodeName: String, sourceURL: String)]) {
-        guard !items.isEmpty else { return }
+    func startDownloads(requests: [DownloadRequest]) {
+        guard !requests.isEmpty else { return }
 
         var created = 0
         var skipped = 0
 
-        for item in items {
+        for item in requests {
             let folderID = Self.folderID(title: item.title, episodeName: item.episodeName)
 
             // 同一集不重复下载
@@ -563,7 +590,8 @@ final class DownloadManager: ObservableObject {
                 sourceURL: item.sourceURL,
                 folderID: folderID,
                 progress: 0,
-                status: .downloading
+                status: .downloading,
+                posterURL: item.posterURL
             )
             tasks.insert(task, at: 0)
             created += 1
@@ -589,15 +617,23 @@ final class DownloadManager: ObservableObject {
         guard task.status == .downloading else { return }
         taskHandles[task.id]?.cancel()
         taskHandles[task.id] = nil
-        update(task.id) { $0.status = .paused }
+        resetSpeed(taskID: task.id)
+        update(task.id) {
+            $0.status = .paused
+            $0.speed = 0
+            $0.remainingSeconds = 0
+        }
         persistTasks()
     }
 
     func resumeTask(_ task: DownloadTask) {
         guard task.status == .paused || task.status == .failed else { return }
+        resetSpeed(taskID: task.id)
         update(task.id) {
             $0.status = .downloading
             $0.errorMessage = nil
+            $0.speed = 0
+            $0.remainingSeconds = 0
         }
         persistTasks()
         guard let refreshed = tasks.first(where: { $0.id == task.id }) else { return }
@@ -607,6 +643,7 @@ final class DownloadManager: ObservableObject {
     func cancelTask(_ task: DownloadTask) {
         taskHandles[task.id]?.cancel()
         taskHandles[task.id] = nil
+        resetSpeed(taskID: task.id)
         let folder = downloadsDir.appendingPathComponent(task.folderID, isDirectory: true)
         try? FileManager.default.removeItem(at: folder)
         tasks.removeAll { $0.id == task.id }
@@ -655,6 +692,15 @@ final class DownloadManager: ObservableObject {
 
         let folder = downloadsDir.appendingPathComponent(task.folderID, isDirectory: true)
 
+        // 海报与视频分片并行缓存；失败静默，绝不影响下载本身
+        let posterURLString = task.posterURL
+        let folderID = task.folderID
+        Task { [weak self] in
+            guard let self else { return }
+            guard let path = await self.cachePoster(urlString: posterURLString, folder: folder) else { return }
+            self.applyPosterPath(path, folderID: folderID)
+        }
+
         let result = await engine.run(folder: folder, sourceURL: sourceURL) { progress in
             // DownloadManager 是 @MainActor 单例，本身即可跨线程传递
             Task { @MainActor in
@@ -667,7 +713,12 @@ final class DownloadManager: ObservableObject {
             complete(taskID: taskID, folder: folder, output: output)
         case .failure(let failure):
             if case .cancelled = failure {
-                update(taskID) { $0.status = .paused }
+                resetSpeed(taskID: taskID)
+                update(taskID) {
+                    $0.status = .paused
+                    $0.speed = 0
+                    $0.remainingSeconds = 0
+                }
             } else {
                 fail(taskID, message: failure.message)
             }
@@ -677,6 +728,11 @@ final class DownloadManager: ObservableObject {
     }
 
     private func applyProgress(_ progress: DownloadProgress, taskID: String) {
+        let (speed, remainingSeconds) = updateSpeed(
+            taskID: taskID,
+            downloadedBytes: progress.downloadedBytes,
+            estimatedTotalBytes: progress.estimatedTotalBytes
+        )
         update(taskID) {
             $0.completedSegments = progress.completedSegments
             $0.totalSegments = progress.totalSegments
@@ -685,7 +741,54 @@ final class DownloadManager: ObservableObject {
             $0.progress = progress.totalSegments > 0
                 ? Double(progress.completedSegments) / Double(progress.totalSegments)
                 : 0
+            $0.speed = speed
+            $0.remainingSeconds = remainingSeconds
         }
+    }
+
+    /// 分片级速度采样：滑动窗口内取字节差 / 时间差，再做指数平滑。
+    /// 返回 (速度 字节/秒, 预计剩余秒数)。
+    private func updateSpeed(
+        taskID: String,
+        downloadedBytes: Int64,
+        estimatedTotalBytes: Int64
+    ) -> (Double, Double) {
+        let now = Date()
+        var samples = speedSamples[taskID] ?? []
+        samples.append(SpeedSample(timestamp: now, bytes: downloadedBytes))
+        // 丢掉窗口外的旧样本，但至少留两个用于求差
+        while samples.count > 2,
+              let first = samples.first,
+              now.timeIntervalSince(first.timestamp) > speedWindow {
+            samples.removeFirst()
+        }
+        speedSamples[taskID] = samples
+
+        guard let first = samples.first,
+              let last = samples.last,
+              samples.count > 1 else {
+            return (smoothedSpeed[taskID] ?? 0, 0)
+        }
+
+        let elapsed = last.timestamp.timeIntervalSince(first.timestamp)
+        let deltaBytes = last.bytes - first.bytes
+        guard elapsed > 0.5, deltaBytes > 0 else {
+            return (smoothedSpeed[taskID] ?? 0, 0)
+        }
+
+        let instant = Double(deltaBytes) / elapsed
+        let previous = smoothedSpeed[taskID] ?? instant
+        let smoothed = previous + speedSmoothing * (instant - previous)
+        smoothedSpeed[taskID] = smoothed
+
+        let remainingBytes = max(estimatedTotalBytes - downloadedBytes, 0)
+        let remainingSeconds = smoothed > 0 ? Double(remainingBytes) / smoothed : 0
+        return (smoothed, remainingSeconds)
+    }
+
+    private func resetSpeed(taskID: String) {
+        speedSamples[taskID] = nil
+        smoothedSpeed[taskID] = nil
     }
 
     private func complete(taskID: String, folder: URL, output: DownloadOutput) {
@@ -696,7 +799,8 @@ final class DownloadManager: ObservableObject {
             title: task.title,
             episodeName: task.episodeName,
             format: output.format,
-            completedAt: Date()
+            completedAt: Date(),
+            posterURL: task.posterURL
         )
         if let data = try? JSONEncoder().encode(info) {
             try? data.write(to: folder.appendingPathComponent("info.json"))
@@ -710,19 +814,26 @@ final class DownloadManager: ObservableObject {
             fileSize: output.fileSize,
             downloadDate: Date(),
             folderID: task.folderID,
-            format: output.format
+            format: output.format,
+            posterURL: task.posterURL,
+            // 海报可能比视频后到，这里先从磁盘兜一次底
+            posterPath: task.posterPath ?? Self.posterPathIfExists(in: folder)
         )
         downloadedMovies.insert(movie, at: 0)
         tasks.remove(at: index)
         taskHandles[taskID] = nil
+        resetSpeed(taskID: taskID)
         persistMetadata()
         persistTasks()
     }
 
     private func fail(_ taskID: String, message: String) {
+        resetSpeed(taskID: taskID)
         update(taskID) {
             $0.status = .failed
             $0.errorMessage = message
+            $0.speed = 0
+            $0.remainingSeconds = 0
         }
         taskHandles[taskID] = nil
         persistTasks()
@@ -731,6 +842,57 @@ final class DownloadManager: ObservableObject {
     private func update(_ taskID: String, _ mutate: (inout DownloadTask) -> Void) {
         guard let index = tasks.firstIndex(where: { $0.id == taskID }) else { return }
         mutate(&tasks[index])
+    }
+
+    // MARK: - 海报缓存
+
+    /// 下载目录里已存在的海报路径，没有则 nil
+    private static func posterPathIfExists(in folder: URL) -> String? {
+        let url = folder.appendingPathComponent(downloadPosterFileName)
+        return FileManager.default.fileExists(atPath: url.path) ? url.path : nil
+    }
+
+    /// 把海报下载到任务目录，供列表离线显示。
+    /// 失败一律静默：海报拿不到不影响视频下载。
+    nonisolated private func cachePoster(urlString: String?, folder: URL) async -> String? {
+        guard let urlString,
+              !urlString.isEmpty,
+              let url = URL(string: urlString) else { return nil }
+
+        let destination = folder.appendingPathComponent(downloadPosterFileName)
+        if FileManager.default.fileExists(atPath: destination.path) { return destination.path }
+
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 15
+        for (field, value) in MovieRequestHeaders.headers(for: url) {
+            request.setValue(value, forHTTPHeaderField: field)
+        }
+
+        do {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return nil }
+            // 海报不该有几个 MB；过大说明多半不是图片，宁可不要
+            guard !data.isEmpty, data.count <= 5 * 1024 * 1024 else { return nil }
+            // 采集站出错时会返回 HTML 错误页，用 UIImage 解一下确保真的是图片
+            guard UIImage(data: data) != nil else { return nil }
+            try data.write(to: destination, options: .atomic)
+            return destination.path
+        } catch {
+            return nil
+        }
+    }
+
+    /// 海报是异步缓存的，落盘时任务可能已经完成（变成已下载条目），两边都要认
+    private func applyPosterPath(_ path: String, folderID: String) {
+        if let index = tasks.firstIndex(where: { $0.folderID == folderID }) {
+            tasks[index].posterPath = path
+            return
+        }
+        if let index = downloadedMovies.firstIndex(where: { $0.folderID == folderID }) {
+            downloadedMovies[index].posterPath = path
+            persistMetadata()
+        }
     }
 
     // MARK: - 已下载列表
@@ -757,6 +919,7 @@ final class DownloadManager: ObservableObject {
             var episodeName = ""
             var format = ""
             var date = Date()
+            var posterURLString: String?
 
             if let data = try? Data(contentsOf: folder.appendingPathComponent("info.json")),
                let info = try? JSONDecoder().decode(DownloadedInfo.self, from: data) {
@@ -764,6 +927,7 @@ final class DownloadManager: ObservableObject {
                 episodeName = info.episodeName
                 format = info.format
                 date = info.completedAt
+                posterURLString = info.posterURL
             } else {
                 // 兼容旧目录命名：标题_剧集
                 let parts = folderID.split(separator: "_", maxSplits: 1).map(String.init)
@@ -798,7 +962,9 @@ final class DownloadManager: ObservableObject {
                 fileSize: size,
                 downloadDate: date,
                 folderID: folderID,
-                format: format
+                format: format,
+                posterURL: posterURLString,
+                posterPath: Self.posterPathIfExists(in: folder)
             )
             discovered.append(movie)
             knownFolders.insert(folderID)
@@ -818,6 +984,9 @@ final class DownloadManager: ObservableObject {
             folder = URL(fileURLWithPath: movie.fileURL).deletingLastPathComponent()
         }
         try? FileManager.default.removeItem(at: folder)
+
+        // 文件没了，续播进度也一并清掉，避免以后下到同一集时莫名其妙跳到中间
+        PlaybackProgressStore.shared.clear(folderID: movie.folderID)
 
         downloadedMovies.removeAll { $0.id == movie.id }
         persistMetadata()
@@ -845,6 +1014,15 @@ final class DownloadManager: ObservableObject {
             }
             return true
         }
+
+        // 旧元数据没有 posterPath；也可能海报文件被清掉了，这里统一按磁盘实际情况校正
+        for index in downloadedMovies.indices {
+            let folderID = downloadedMovies[index].folderID
+            guard !folderID.isEmpty else { continue }
+            let folder = downloadsDir.appendingPathComponent(folderID, isDirectory: true)
+            downloadedMovies[index].posterPath = Self.posterPathIfExists(in: folder)
+        }
+        persistMetadata()
     }
 
     private func persistTasks() {
@@ -861,7 +1039,8 @@ final class DownloadManager: ObservableObject {
                 totalSegments: task.totalSegments,
                 totalBytes: task.totalBytes,
                 downloadedBytes: task.downloadedBytes,
-                errorMessage: task.errorMessage
+                errorMessage: task.errorMessage,
+                posterURL: task.posterURL
             )
         }
         store.save(records)
@@ -870,7 +1049,7 @@ final class DownloadManager: ObservableObject {
     private func loadTasks() {
         let records = store.load()
         tasks = records.map { record in
-            DownloadTask(
+            var task = DownloadTask(
                 id: record.id,
                 title: record.title,
                 episodeName: record.episodeName,
@@ -883,8 +1062,13 @@ final class DownloadManager: ObservableObject {
                 totalSegments: record.totalSegments,
                 totalBytes: record.totalBytes,
                 downloadedBytes: record.downloadedBytes,
-                errorMessage: record.errorMessage
+                errorMessage: record.errorMessage,
+                posterURL: record.posterURL
             )
+            task.posterPath = Self.posterPathIfExists(
+                in: downloadsDir.appendingPathComponent(record.folderID, isDirectory: true)
+            )
+            return task
         }
         // 目录已被删掉的任务直接丢弃
         tasks.removeAll { task in

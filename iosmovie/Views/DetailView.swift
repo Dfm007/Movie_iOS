@@ -272,19 +272,27 @@ struct DetailView: View {
     }
 
     private func startSingleDownload(_ source: PlaySource) {
-        DownloadManager.shared.startDownloads(
-            items: [
-                (title: viewModel.movieTitle, episodeName: source.name, sourceURL: source.url)
-            ]
-        )
+        DownloadManager.shared.startDownloads(requests: [
+            DownloadRequest(
+                title: viewModel.movieTitle,
+                episodeName: source.name,
+                sourceURL: source.url,
+                posterURL: viewModel.posterURL
+            )
+        ])
     }
 
     private func createDownloadTasks(for episodes: [PlaySource]) {
-        DownloadManager.shared.startDownloads(
-            items: episodes.map {
-                (title: viewModel.movieTitle, episodeName: $0.name, sourceURL: $0.url)
-            }
-        )
+        // 海报地址在下载期间保持一致，先取出来再进 map
+        let posterURL = viewModel.posterURL
+        DownloadManager.shared.startDownloads(requests: episodes.map {
+            DownloadRequest(
+                title: viewModel.movieTitle,
+                episodeName: $0.name,
+                sourceURL: $0.url,
+                posterURL: posterURL
+            )
+        })
     }
 }
 

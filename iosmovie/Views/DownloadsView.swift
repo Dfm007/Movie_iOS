@@ -1,37 +1,87 @@
 import SwiftUI
+import UIKit
 
 struct DownloadsView: View {
     @StateObject private var downloadManager = DownloadManager.shared
+    @StateObject private var viewModel = DownloadsViewModel()
+
     @State private var playingMovie: DownloadedMovie?
+    @State private var playStartAt: Double = 0
     @State private var playerPresented = false
+
+    /// 待二次确认的删除目标
+    @State private var pendingTaskCancel: DownloadTask?
+    @State private var pendingMovieDelete: DownloadedMovie?
+    /// 有待续播记录的条目，先问一句再播
+    @State private var pendingResume: DownloadedMovie?
+
+    private var groups: [DownloadGroup] {
+        viewModel.groups(from: downloadManager.downloadedMovies)
+    }
 
     var body: some View {
         List {
             downloadSection
             downloadedSection
+            emptySection
         }
         .listStyle(.insetGrouped)
         .navigationTitle("我的下载")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Menu {
-                    Button("全部暂停") {
-                        downloadManager.pauseAllTasks()
-                    }
-                    Button("全部继续") {
-                        downloadManager.resumeAllTasks()
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                }
-                .disabled(downloadManager.tasks.isEmpty)
-            }
-        }
+        .toolbar { toolbarMenu }
         .alert("提示", isPresented: $downloadManager.showAlert) {
             Button("好", role: .cancel) {}
         } message: {
             Text(downloadManager.alertMessage)
+        }
+        .confirmationDialog(
+            "取消下载",
+            isPresented: confirmBinding($pendingTaskCancel),
+            titleVisibility: .visible,
+            presenting: pendingTaskCancel
+        ) { task in
+            Button("删除任务并清除已下载分片", role: .destructive) {
+                downloadManager.cancelTask(task)
+                pendingTaskCancel = nil
+            }
+            Button("取消", role: .cancel) { pendingTaskCancel = nil }
+        } message: { task in
+            Text("《\(task.title)》\(task.episodeName)")
+        }
+        .confirmationDialog(
+            "删除已下载内容",
+            isPresented: confirmBinding($pendingMovieDelete),
+            titleVisibility: .visible,
+            presenting: pendingMovieDelete
+        ) { movie in
+            Button("删除", role: .destructive) {
+                downloadManager.deleteMovie(movie)
+                viewModel.forget(movie.title)
+                pendingMovieDelete = nil
+            }
+            Button("取消", role: .cancel) { pendingMovieDelete = nil }
+        } message: { movie in
+            Text("《\(movie.title)》\(movie.episodeName) · 将释放 \(DownloadFormat.size(movie.fileSize)) 空间")
+        }
+        .confirmationDialog(
+            "继续观看",
+            isPresented: confirmBinding($pendingResume),
+            titleVisibility: .visible,
+            presenting: pendingResume
+        ) { movie in
+            Button("继续观看（从 \(resumePositionText(for: movie)) 开始）") {
+                let position = PlaybackProgressStore.shared.record(for: movie.folderID)?.position ?? 0
+                pendingResume = nil
+                startPlayback(movie, from: position, delayed: true)
+            }
+            Button("从头播放") {
+                PlaybackProgressStore.shared.clear(folderID: movie.folderID)
+                pendingResume = nil
+                startPlayback(movie, from: 0, delayed: true)
+            }
+            Button("取消", role: .cancel) { pendingResume = nil }
+        } message: { movie in
+            Text("《\(movie.title)》\(movie.episodeName)")
         }
         .background(
             PlayerPresenter(
@@ -43,7 +93,16 @@ struct DownloadsView: View {
                     episodes: []
                 ),
                 allSources: [],
-                isPresented: $playerPresented
+                isPresented: $playerPresented,
+                startAt: playStartAt,
+                onProgress: { position, duration in
+                    guard let movie = playingMovie else { return }
+                    PlaybackProgressStore.shared.save(
+                        folderID: movie.folderID,
+                        position: position,
+                        duration: duration
+                    )
+                }
             )
         )
         .onAppear {
@@ -51,21 +110,45 @@ struct DownloadsView: View {
         }
     }
 
+    // MARK: - 工具栏
+
+    @ToolbarContentBuilder
+    private var toolbarMenu: some ToolbarContent {
+        ToolbarItem(placement: .navigationBarTrailing) {
+            Menu {
+                if !downloadManager.tasks.isEmpty {
+                    Button("全部暂停") { downloadManager.pauseAllTasks() }
+                    Button("全部继续") { downloadManager.resumeAllTasks() }
+                }
+                if !groups.isEmpty {
+                    Button("展开全部") { viewModel.expandAll(groups) }
+                    Button("折叠全部") { viewModel.collapseAll(groups) }
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+            }
+            .disabled(downloadManager.tasks.isEmpty && groups.isEmpty)
+        }
+    }
+
+    // MARK: - 下载中
+
     @ViewBuilder
     private var downloadSection: some View {
         if !downloadManager.tasks.isEmpty {
             Section("下载中") {
                 ForEach(downloadManager.tasks) { task in
-                    DownloadTaskRow(
+                    DownloadTaskCard(
                         task: task,
                         onPause: { downloadManager.pauseTask(task) },
                         onResume: { downloadManager.resumeTask(task) },
-                        onCancel: { downloadManager.cancelTask(task) },
-                        onRetry: { downloadManager.retryTask(task) }
+                        onRetry: { downloadManager.retryTask(task) },
+                        onCancel: { pendingTaskCancel = task }
                     )
+                    .cardRow()
                     .swipeActions {
                         Button(role: .destructive) {
-                            downloadManager.cancelTask(task)
+                            pendingTaskCancel = task
                         } label: {
                             Label("删除", systemImage: "trash")
                         }
@@ -75,25 +158,103 @@ struct DownloadsView: View {
         }
     }
 
+    // MARK: - 已下载（按剧名分组）
+
     @ViewBuilder
     private var downloadedSection: some View {
-        Section("已下载") {
-            ForEach(downloadManager.downloadedMovies) { movie in
-                Button {
-                    playingMovie = movie
-                    playerPresented = true
-                } label: {
-                    DownloadedMovieRow(movie: movie)
-                }
-                .swipeActions {
-                    Button(role: .destructive) {
-                        downloadManager.deleteMovie(movie)
-                    } label: {
-                        Image(systemName: "trash")
+        if !groups.isEmpty {
+            Section("已下载") {
+                ForEach(groups) { group in
+                    let isExpanded = viewModel.isExpanded(group, groupCount: groups.count)
+
+                    DownloadGroupHeader(
+                        group: group,
+                        isExpanded: isExpanded,
+                        onToggle: {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                viewModel.toggle(group, groupCount: groups.count)
+                            }
+                        }
+                    )
+                    .cardRow(leading: 16, trailing: 16, top: 6, bottom: 6)
+
+                    if isExpanded {
+                        ForEach(group.episodes) { movie in
+                            Button {
+                                requestPlayback(movie)
+                            } label: {
+                                DownloadedEpisodeRow(movie: movie)
+                            }
+                            .buttonStyle(.plain)
+                            .cardRow(leading: 32, trailing: 24, top: 3, bottom: 3)
+                            .swipeActions {
+                                Button(role: .destructive) {
+                                    pendingMovieDelete = movie
+                                } label: {
+                                    Label("删除", systemImage: "trash")
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
+    }
+
+    // MARK: - 空状态
+
+    @ViewBuilder
+    private var emptySection: some View {
+        if downloadManager.tasks.isEmpty && groups.isEmpty {
+            Section {
+                VStack(spacing: 10) {
+                    Image(systemName: "arrow.down.circle")
+                        .font(.largeTitle)
+                        .foregroundColor(.secondary)
+                    Text("还没有下载内容")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    Text("在影视详情页选择剧集即可离线缓存，下载完成后在这里播放")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 28)
+                .listRowBackground(Color.clear)
+            }
+        }
+    }
+
+    // MARK: - 播放
+
+    private func requestPlayback(_ movie: DownloadedMovie) {
+        if let record = PlaybackProgressStore.shared.record(for: movie.folderID), record.position > 1 {
+            pendingResume = movie
+        } else {
+            startPlayback(movie, from: 0, delayed: false)
+        }
+    }
+
+    /// 从弹窗里点"继续观看/从头播放"时，confirmationDialog 还在收起动画中；
+    /// 若立刻 present，PlayerWindowPresenter 会把播放器挂到还没消失的弹窗上，
+    /// 导致播放器一闪而过，所以延后一拍再起播。
+    private func startPlayback(_ movie: DownloadedMovie, from position: Double, delayed: Bool) {
+        let start = {
+            playStartAt = position
+            playingMovie = movie
+            playerPresented = true
+        }
+        if delayed {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45, execute: start)
+        } else {
+            start()
+        }
+    }
+
+    private func resumePositionText(for movie: DownloadedMovie) -> String {
+        let position = PlaybackProgressStore.shared.record(for: movie.folderID)?.position ?? 0
+        return PlaybackProgressStore.displayTime(position)
     }
 
     private func localPlaySource(for movie: DownloadedMovie) -> PlaySource {
@@ -128,102 +289,117 @@ struct DownloadsView: View {
             episodes: []
         )
     }
+
+    /// 可选状态 → isPresented 绑定：单一数据源，避免"双状态"导致弹窗空白
+    private func confirmBinding<T>(_ value: Binding<T?>) -> Binding<Bool> {
+        Binding(
+            get: { value.wrappedValue != nil },
+            set: { if !$0 { value.wrappedValue = nil } }
+        )
+    }
 }
 
-private struct DownloadTaskRow: View {
+// MARK: - 下载中卡片
+
+private struct DownloadTaskCard: View {
     let task: DownloadTask
     let onPause: () -> Void
     let onResume: () -> Void
-    let onCancel: () -> Void
     let onRetry: () -> Void
+    let onCancel: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("\(task.title) \(task.episodeName)")
-                .font(.subheadline)
-                .fontWeight(.medium)
+        HStack(alignment: .top, spacing: 12) {
+            PosterThumb(localPath: task.posterPath, remoteURL: task.posterURL, width: 54, height: 80)
 
-            ProgressView(value: task.progress)
-                .progressViewStyle(.linear)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(task.title)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .lineLimit(2)
 
-            HStack {
-                Text("\(Int(task.progress * 100))%")
+                Text(task.episodeName)
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .lineLimit(1)
 
-                Spacer()
+                ProgressView(value: min(max(task.progress, 0), 1))
+                    .progressViewStyle(.linear)
+                    .tint(statusColor)
 
-                if task.totalSegments > 0 {
-                    Text("\(task.completedSegments)/\(task.totalSegments) 分片")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                HStack(spacing: 6) {
+                    Text("\(Int(task.progress * 100))%")
+                        .foregroundColor(statusColor)
+
+                    if task.status == .downloading, task.speed > 0 {
+                        Text("·")
+                        Text(DownloadFormat.speed(task.speed))
+                        if task.remainingSeconds > 1 {
+                            Text("·")
+                            Text("剩 \(DownloadFormat.remaining(task.remainingSeconds))")
+                        }
+                    }
+
+                    Spacer()
+
+                    Text(task.status.displayText)
+                        .foregroundColor(statusColor)
                 }
+                .font(.caption2)
+                .foregroundColor(.secondary)
+                .lineLimit(1)
 
-                if task.totalBytes > 0 {
-                    Text("\(Self.formatBytes(task.downloadedBytes)) / 约 \(Self.formatBytes(task.totalBytes))")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-
-                Text(task.status.displayText)
-                    .font(.caption)
-                    .foregroundColor(statusColor)
-            }
-
-            if let error = task.errorMessage, !error.isEmpty {
-                Text(error)
+                Text(progressDetail)
                     .font(.caption2)
-                    .foregroundColor(.red)
-                    .lineLimit(3)
-            }
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
 
-            HStack(spacing: 12) {
-                switch task.status {
-                case .downloading:
-                    Button(action: onPause) {
-                        Label("暂停", systemImage: "pause.circle")
-                            .font(.caption)
-                    }
-                    .buttonStyle(.borderless)
-
-                    Button(role: .destructive, action: onCancel) {
-                        Label("取消", systemImage: "xmark.circle")
-                            .font(.caption)
-                    }
-                    .buttonStyle(.borderless)
-
-                case .paused:
-                    Button(action: onResume) {
-                        Label("继续", systemImage: "play.circle")
-                            .font(.caption)
-                    }
-                    .buttonStyle(.borderless)
-
-                    Button(role: .destructive, action: onCancel) {
-                        Label("取消", systemImage: "xmark.circle")
-                            .font(.caption)
-                    }
-                    .buttonStyle(.borderless)
-
-                case .failed:
-                    Button(action: onRetry) {
-                        Label("重试", systemImage: "arrow.clockwise.circle")
-                            .font(.caption)
-                    }
-                    .buttonStyle(.borderless)
-
-                    Button(role: .destructive, action: onCancel) {
-                        Label("删除", systemImage: "trash.circle")
-                            .font(.caption)
-                    }
-                    .buttonStyle(.borderless)
-
-                case .completed:
-                    EmptyView()
+                if let error = task.errorMessage, !error.isEmpty {
+                    Text(error)
+                        .font(.caption2)
+                        .foregroundColor(.red)
+                        .lineLimit(3)
                 }
+
+                HStack(spacing: 16) {
+                    switch task.status {
+                    case .downloading:
+                        actionButton("暂停", systemImage: "pause.circle", action: onPause)
+                        destructiveButton("取消", systemImage: "xmark.circle", action: onCancel)
+
+                    case .paused:
+                        actionButton("继续", systemImage: "play.circle", action: onResume)
+                        destructiveButton("取消", systemImage: "xmark.circle", action: onCancel)
+
+                    case .failed:
+                        actionButton("重试", systemImage: "arrow.clockwise.circle", action: onRetry)
+                        destructiveButton("删除", systemImage: "trash.circle", action: onCancel)
+
+                    case .completed:
+                        EmptyView()
+                    }
+                }
+                .padding(.top, 2)
             }
         }
-        .padding(.vertical, 4)
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color(.secondarySystemGroupedBackground))
+        )
+    }
+
+    private var progressDetail: String {
+        var parts: [String] = []
+        if task.totalSegments > 0 {
+            parts.append("\(task.completedSegments)/\(task.totalSegments) 分片")
+        }
+        if task.totalBytes > 0 {
+            parts.append("\(DownloadFormat.size(task.downloadedBytes)) / 约 \(DownloadFormat.size(task.totalBytes))")
+        } else if task.downloadedBytes > 0 {
+            parts.append(DownloadFormat.size(task.downloadedBytes))
+        }
+        return parts.isEmpty ? "准备中…" : parts.joined(separator: " · ")
     }
 
     private var statusColor: Color {
@@ -235,33 +411,231 @@ private struct DownloadTaskRow: View {
         }
     }
 
-    private static func formatBytes(_ bytes: Int64) -> String {
-        let formatter = ByteCountFormatter()
-        formatter.countStyle = .file
-        return formatter.string(fromByteCount: bytes)
+    private func actionButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .font(.caption)
+        }
+        .buttonStyle(.borderless)
+    }
+
+    private func destructiveButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(role: .destructive, action: action) {
+            Label(title, systemImage: systemImage)
+                .font(.caption)
+        }
+        .buttonStyle(.borderless)
     }
 }
 
-private struct DownloadedMovieRow: View {
+// MARK: - 剧集分组头
+
+private struct DownloadGroupHeader: View {
+    let group: DownloadGroup
+    let isExpanded: Bool
+    let onToggle: () -> Void
+
+    var body: some View {
+        Button(action: onToggle) {
+            HStack(spacing: 12) {
+                PosterThumb(localPath: group.posterPath, remoteURL: group.posterURL, width: 56, height: 84)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(group.title)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                        .lineLimit(2)
+
+                    Text("\(group.episodeCount) 集 · 共 \(DownloadFormat.size(group.totalSize))")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    Text("最近下载 \(DownloadFormat.date(group.latestDate))")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer(minLength: 4)
+
+                Image(systemName: "chevron.down")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.secondary)
+                    .rotationEffect(.degrees(isExpanded ? 0 : -90))
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color(.secondarySystemGroupedBackground))
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - 已下载单集
+
+private struct DownloadedEpisodeRow: View {
     let movie: DownloadedMovie
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(movie.title)
-                .font(.subheadline)
-                .fontWeight(.medium)
-            Text(movie.episodeName)
-                .font(.caption)
-                .foregroundColor(.secondary)
-            Text("\(Self.formatBytes(movie.fileSize)) · \(movie.format.uppercased())")
+        HStack(spacing: 10) {
+            Image(systemName: "play.circle.fill")
+                .font(.title3)
+                .foregroundColor(.accentColor)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(movie.episodeName.isEmpty ? "正片" : movie.episodeName)
+                    .font(.subheadline)
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+
+                Text("\(DownloadFormat.size(movie.fileSize)) · \(movie.format.uppercased())")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer(minLength: 4)
+
+            Image(systemName: "chevron.right")
                 .font(.caption2)
                 .foregroundColor(.secondary)
         }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color(.secondarySystemGroupedBackground))
+        )
+    }
+}
+
+// MARK: - 海报缩略图
+
+private struct PosterThumb: View {
+    let localPath: String?
+    let remoteURL: String?
+    let width: CGFloat
+    let height: CGFloat
+
+    @State private var image: UIImage?
+
+    var body: some View {
+        ZStack {
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                ZStack {
+                    Color(.tertiarySystemFill)
+                    Image(systemName: "film")
+                        .font(.title3)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .frame(width: width, height: height)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .task(id: cacheKey) { await load() }
     }
 
-    private static func formatBytes(_ bytes: Int64) -> String {
+    private var cacheKey: String {
+        if let localPath, !localPath.isEmpty { return "file:" + localPath }
+        if let remoteURL, !remoteURL.isEmpty { return "url:" + remoteURL }
+        return ""
+    }
+
+    private func load() async {
+        guard !cacheKey.isEmpty else { return }
+        if let cached = PosterImageCache.shared.image(for: cacheKey) {
+            image = cached
+            return
+        }
+        // 优先本地缓存的海报：断网也能显示
+        if let localPath, !localPath.isEmpty, let loaded = UIImage(contentsOfFile: localPath) {
+            PosterImageCache.shared.store(loaded, for: cacheKey)
+            image = loaded
+            return
+        }
+        // 旧条目没有本地海报，联网兜一次
+        guard let remoteURL, !remoteURL.isEmpty, let url = URL(string: remoteURL) else { return }
+        guard let (data, _) = try? await URLSession.shared.data(from: url),
+              let downloaded = UIImage(data: data) else { return }
+        PosterImageCache.shared.store(downloaded, for: cacheKey)
+        image = downloaded
+    }
+}
+
+private final class PosterImageCache {
+    static let shared = PosterImageCache()
+    private let cache = NSCache<NSString, UIImage>()
+
+    private init() {
+        cache.countLimit = 200
+    }
+
+    func image(for key: String) -> UIImage? {
+        cache.object(forKey: key as NSString)
+    }
+
+    func store(_ image: UIImage, for key: String) {
+        cache.setObject(image, forKey: key as NSString)
+    }
+}
+
+// MARK: - 展示格式化
+
+private enum DownloadFormat {
+    private static let bytesFormatter: ByteCountFormatter = {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file
-        return formatter.string(fromByteCount: bytes)
+        return formatter
+    }()
+
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+
+    static func size(_ bytes: Int64) -> String {
+        bytesFormatter.string(fromByteCount: bytes)
+    }
+
+    static func speed(_ bytesPerSecond: Double) -> String {
+        guard bytesPerSecond.isFinite, bytesPerSecond > 0 else { return "—" }
+        return bytesFormatter.string(fromByteCount: Int64(bytesPerSecond)) + "/s"
+    }
+
+    static func remaining(_ seconds: Double) -> String {
+        guard seconds.isFinite, seconds > 0 else { return "未知" }
+        if seconds >= 3600 { return String(format: "%.1f 小时", seconds / 3600) }
+        if seconds >= 60 { return String(format: "%.0f 分钟", seconds / 60) }
+        return String(format: "%.0f 秒", seconds)
+    }
+
+    static func date(_ date: Date) -> String {
+        dateFormatter.string(from: date)
+    }
+}
+
+// MARK: - 卡片行样式
+
+private extension View {
+    /// 让 List 行变成独立卡片：去掉分隔线与默认内边距，背景交给内容自己画
+    func cardRow(
+        leading: CGFloat = 12,
+        trailing: CGFloat = 12,
+        top: CGFloat = 4,
+        bottom: CGFloat = 4
+    ) -> some View {
+        self
+            .listRowInsets(EdgeInsets(top: top, leading: leading, bottom: bottom, trailing: trailing))
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
     }
 }

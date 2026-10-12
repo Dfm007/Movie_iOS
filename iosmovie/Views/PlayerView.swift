@@ -1,28 +1,46 @@
-﻿import SwiftUI
+import SwiftUI
 import AVKit
 import UIKit
 
 struct PlayerView: View {
     let source: PlaySource
     var allSources: [PlaySource] = []
+    /// 起播位置（秒），0 = 从头播。只有首次加载生效，切集自动归零。
+    var startAt: Double = 0
+    /// 播放位置回报 (当前播放位置, 总时长)，供续播记录使用；可能被调用一次以上，写入要幂等
+    var onProgress: (Double, Double) -> Void
+    /// 用户点了关闭按钮
     var onClose: () -> Void
     @State private var currentSource: PlaySource
     @State private var hideEpisodeList = false
 
     private let episodeColumns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 5)
 
-    init(source: PlaySource, allSources: [PlaySource] = [], onClose: @escaping () -> Void) {
+    init(
+        source: PlaySource,
+        allSources: [PlaySource] = [],
+        startAt: Double = 0,
+        onProgress: @escaping (Double, Double) -> Void,
+        onClose: @escaping () -> Void
+    ) {
         self.source = source
         self.allSources = allSources
+        self.startAt = startAt
+        self.onProgress = onProgress
         self.onClose = onClose
         _currentSource = State(initialValue: source)
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            ZFPlayerRepresentable(url: currentSource.url, onClose: onClose)
-                .frame(height: hideEpisodeList ? UIScreen.main.bounds.height : UIScreen.main.bounds.width * 9 / 16)
-                .background(Color.black)
+            ZFPlayerRepresentable(
+                url: currentSource.url,
+                startAt: startAt,
+                onProgress: onProgress,
+                onClose: onClose
+            )
+            .frame(height: hideEpisodeList ? UIScreen.main.bounds.height : UIScreen.main.bounds.width * 9 / 16)
+            .background(Color.black)
 
             if !hideEpisodeList {
                 episodeListView
@@ -78,17 +96,22 @@ struct PlayerView: View {
 
 struct ZFPlayerRepresentable: UIViewControllerRepresentable {
     let url: String
+    var startAt: Double = 0
+    var onProgress: (Double, Double) -> Void
     var onClose: () -> Void
 
     func makeUIViewController(context: Context) -> ZFPlayerViewController {
         let vc = ZFPlayerViewController()
         vc.playURLString = url
+        vc.startAt = startAt
+        vc.onProgress = onProgress
         vc.onClose = onClose
         return vc
     }
 
     func updateUIViewController(_ uiViewController: ZFPlayerViewController, context: Context) {
         uiViewController.playURLString = url
+        uiViewController.onProgress = onProgress
         uiViewController.onClose = onClose
         uiViewController.restartIfNeeded()
     }
@@ -96,6 +119,11 @@ struct ZFPlayerRepresentable: UIViewControllerRepresentable {
 
 final class ZFPlayerViewController: UIViewController {
     var playURLString: String = ""
+    /// 起播位置（秒），0 = 从头播
+    var startAt: Double = 0
+    /// 回报 (播放位置, 总时长)，用于续播记录
+    var onProgress: ((Double, Double) -> Void)?
+    /// 用户主动关闭
     var onClose: (() -> Void)?
     private var playerManager: ZFAVPlayerManager?
     private var player: ZFPlayerController?
@@ -110,6 +138,12 @@ final class ZFPlayerViewController: UIViewController {
     private weak var fullScreenVC: FullScreenPlayerViewController?
     private var didBecomeReady = false
     private var loadWatchdog: DispatchWorkItem?
+    /// 起播定位只做一次，避免用户手动拖动后被反复拽回
+    private var didApplyStartPosition = false
+    /// 持续记录播放位置，关闭时回报给上层做续播
+    private var currentTime: Double = 0
+    private var duration: Double = 0
+    private var didReportProgress = false
 
     override var shouldAutorotate: Bool { false }
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .portrait }
@@ -158,12 +192,20 @@ final class ZFPlayerViewController: UIViewController {
         controlView.portraitControlView.fullScreenBtn.isHidden = true
         self.player = player
 
-        // 加载成功：撤销看门狗
+        // 加载成功：撤销看门狗，并按续播记录定位
         player.playerReadyToPlay = { [weak self] _, _ in
             guard let self else { return }
             self.didBecomeReady = true
             self.loadWatchdog?.cancel()
             self.loadWatchdog = nil
+            self.applyStartPositionIfNeeded()
+        }
+
+        // 持续记录播放位置：关闭时回报给上层，用于续播
+        player.playerPlayTimeChanged = { [weak self] _, currentTime, duration in
+            guard let self else { return }
+            self.currentTime = currentTime
+            self.duration = duration
         }
 
         // 播放失败：弹出真实错误，而不是黑屏无反馈
@@ -200,6 +242,34 @@ final class ZFPlayerViewController: UIViewController {
         }
         loadWatchdog = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 20, execute: work)
+    }
+
+    /// 按续播记录跳到上次位置。只在首次 ready 时执行一次。
+    private func applyStartPositionIfNeeded() {
+        guard !didApplyStartPosition else { return }
+        didApplyStartPosition = true
+        guard startAt > 1 else { return }
+
+        // 直接操作底层 AVPlayer 定位：ZFPlayerController 的 seekToTime: 只是转发给它，
+        // 这样写可以避开 ObjC 方法导入 Swift 后的名字歧义（seek(toTime:) / seek(to:)）。
+        guard let manager = player?.currentPlayerManager as? ZFAVPlayerManager else { return }
+        let target = CMTime(seconds: startAt, preferredTimescale: 600)
+        manager.player?.seek(to: target, toleranceBefore: .zero, toleranceAfter: .zero)
+    }
+
+    /// 回报播放位置，供上层写入续播记录。只回报一次。
+    private func reportProgress() {
+        guard !didReportProgress else { return }
+        didReportProgress = true
+        onProgress?(currentTime, duration)
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        // 进/出全屏会把本 VC 的 view 迁移到另一个容器，那不是"关闭播放器"。
+        // 这里只补记进度，绝不再触发关闭动作（避免误关）。
+        guard !isFullScreen else { return }
+        reportProgress()
     }
 
     private func showPlaybackFailure(message: String) {
@@ -331,6 +401,7 @@ final class ZFPlayerViewController: UIViewController {
         if isFullScreen {
             exitFullScreen()
         } else {
+            reportProgress()
             onClose?()
         }
     }
@@ -351,8 +422,17 @@ final class ZFPlayerViewController: UIViewController {
     }
 
     func restartIfNeeded() {
+        // 播放器还没建好时什么都不做：初始化流程自己会读 playURLString / startAt。
+        // （若此时就改 lastURLString，会把续播的起播位置一并清掉。）
+        guard player != nil else { return }
         guard playURLString != lastURLString else { return }
         lastURLString = playURLString
+
+        // 切集/换源：从头播，不沿用上一集的续播位置
+        startAt = 0
+        didApplyStartPosition = false
+        currentTime = 0
+        duration = 0
 
         guard let assetURL = Self.assetURL(from: playURLString) else {
             showPlaybackFailure(message: "播放地址无效：\(playURLString)")

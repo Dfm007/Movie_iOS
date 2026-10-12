@@ -11,6 +11,10 @@ struct DownloadedMovie: Identifiable, Codable {
     var folderID: String
     /// "ts" 或 "mp4"
     var format: String
+    /// 网络海报地址（下载时从详情页带过来，仅作兜底）
+    var posterURL: String?
+    /// 本地海报文件路径（下载时缓存，离线也能显示）
+    var posterPath: String?
 
     init(
         id: String,
@@ -20,7 +24,9 @@ struct DownloadedMovie: Identifiable, Codable {
         fileSize: Int64,
         downloadDate: Date,
         folderID: String = "",
-        format: String = "mp4"
+        format: String = "mp4",
+        posterURL: String? = nil,
+        posterPath: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -30,9 +36,11 @@ struct DownloadedMovie: Identifiable, Codable {
         self.downloadDate = downloadDate
         self.folderID = folderID
         self.format = format
+        self.posterURL = posterURL
+        self.posterPath = posterPath
     }
 
-    /// 兼容旧版元数据（没有 folderID / format 字段）
+    /// 兼容旧版元数据（没有 folderID / format / posterURL / posterPath 字段）
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
@@ -43,6 +51,8 @@ struct DownloadedMovie: Identifiable, Codable {
         downloadDate = try container.decode(Date.self, forKey: .downloadDate)
         folderID = try container.decodeIfPresent(String.self, forKey: .folderID) ?? ""
         format = try container.decodeIfPresent(String.self, forKey: .format) ?? "mp4"
+        posterURL = try container.decodeIfPresent(String.self, forKey: .posterURL)
+        posterPath = try container.decodeIfPresent(String.self, forKey: .posterPath)
     }
 }
 
@@ -75,4 +85,20 @@ struct DownloadTask: Identifiable, Equatable {
     var totalBytes: Int64 = 0
     var downloadedBytes: Int64 = 0
     var errorMessage: String? = nil
+    /// 网络海报地址
+    var posterURL: String? = nil
+    /// 本地海报路径（任务开始时就已缓存，供下载中卡片显示）
+    var posterPath: String? = nil
+    /// 实时速度（字节/秒），仅运行中有效，不持久化
+    var speed: Double = 0
+    /// 预计剩余秒数，仅运行中有效，不持久化
+    var remainingSeconds: Double = 0
+}
+
+/// 创建下载任务的入参（替代裸元组，方便把海报一路带下来）
+struct DownloadRequest {
+    let title: String
+    let episodeName: String
+    let sourceURL: String
+    let posterURL: String?
 }
