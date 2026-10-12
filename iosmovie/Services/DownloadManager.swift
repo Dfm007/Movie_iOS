@@ -209,7 +209,7 @@ actor DownloadEngine {
                     }
                 }
 
-                for await result in group {
+                for try await result in group {
                     guard let result else { continue }
                     switch result {
                     case .success(let (_, bytes)):
