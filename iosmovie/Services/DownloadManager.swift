@@ -338,53 +338,103 @@ actor DownloadEngine {
     // MARK: - 合并
 
     private func merge(folder: URL, playlist: M3U8Playlist) throws -> (url: URL, size: Int64, format: String) {
-        let isFragmentedMP4 = playlist.isFragmentedMP4
-        let fileName = isFragmentedMP4 ? "movie.mp4" : "movie.ts"
-        let outputURL = folder.appendingPathComponent(fileName)
-        let partURL = folder.appendingPathComponent(fileName + ".part")
+        if playlist.isFragmentedMP4 {
+            // fMP4：合并为单个 movie.mp4，本地 AVPlayer 可直接播放
+            let outputURL = folder.appendingPathComponent("movie.mp4")
+            let partURL = folder.appendingPathComponent("movie.mp4.part")
 
-        try? FileManager.default.removeItem(at: partURL)
-        guard FileManager.default.createFile(atPath: partURL.path, contents: nil) else {
-            throw DownloadFailure.message("无法创建输出文件")
-        }
-
-        let handle = try FileHandle(forWritingTo: partURL)
-        var total: Int64 = 0
-        let chunkSize = 1024 * 1024
-
-        func append(_ url: URL) throws {
-            guard let input = try? FileHandle(forReadingFrom: url) else { return }
-            defer { try? input.close() }
-            while true {
-                guard let data = try? input.read(upToCount: chunkSize) else { break }
-                if data.isEmpty { break }
-                try handle.write(contentsOf: data)
-                total += Int64(data.count)
-            }
-        }
-
-        do {
-            // items(for:) 已保证 seg_init 在最前，随后按序追加各分片
-            for item in Self.items(for: playlist) {
-                try Task.checkCancellation()
-                try append(folder.appendingPathComponent(item.fileName))
-            }
-            try handle.close()
-        } catch {
-            try? handle.close()
             try? FileManager.default.removeItem(at: partURL)
-            throw error
+            guard FileManager.default.createFile(atPath: partURL.path, contents: nil) else {
+                throw DownloadFailure.message("无法创建输出文件")
+            }
+
+            let handle = try FileHandle(forWritingTo: partURL)
+            var total: Int64 = 0
+            let chunkSize = 1024 * 1024
+
+            func append(_ url: URL) throws {
+                guard let input = try? FileHandle(forReadingFrom: url) else { return }
+                defer { try? input.close() }
+                while true {
+                    guard let data = try? input.read(upToCount: chunkSize) else { break }
+                    if data.isEmpty { break }
+                    try handle.write(contentsOf: data)
+                    total += Int64(data.count)
+                }
+            }
+
+            do {
+                if let initSegment = playlist.initSegment {
+                    try Task.checkCancellation()
+                    try append(folder.appendingPathComponent("seg_init"))
+                }
+                for segment in playlist.segments {
+                    try Task.checkCancellation()
+                    try append(folder.appendingPathComponent(String(format: "seg_%06d", segment.index)))
+                }
+                try handle.close()
+            } catch {
+                try? handle.close()
+                try? FileManager.default.removeItem(at: partURL)
+                throw error
+            }
+
+            try? FileManager.default.removeItem(at: outputURL)
+            try FileManager.default.moveItem(at: partURL, to: outputURL)
+
+            // 合并成功后清理分片，释放空间
+            if playlist.initSegment != nil {
+                try? FileManager.default.removeItem(at: folder.appendingPathComponent("seg_init"))
+            }
+            for segment in playlist.segments {
+                try? FileManager.default.removeItem(at: folder.appendingPathComponent(String(format: "seg_%06d", segment.index)))
+            }
+
+            return (outputURL, total, "mp4")
         }
 
-        try? FileManager.default.removeItem(at: outputURL)
-        try FileManager.default.moveItem(at: partURL, to: outputURL)
-
-        // 合并成功后清理分片，释放空间
-        for item in Self.items(for: playlist) {
-            try? FileManager.default.removeItem(at: folder.appendingPathComponent(item.fileName))
+        // TS：绝不合并成裸 .ts 文件。iOS 的 AVPlayer 无法直接播放裸 .ts，
+        // 只能用 .m3u8 流来播。所以本地缓存保留解密后的分片，并写出本地播放列表
+        // movie.m3u8 作为播放入口；分片相对路径由 AVPlayer 自动解析。
+        try writeLocalPlaylist(folder: folder, playlist: playlist)
+        let m3u8URL = folder.appendingPathComponent("movie.m3u8")
+        var total: Int64 = 0
+        for segment in playlist.segments {
+            let attributes = try? FileManager.default.attributesOfItem(
+                atPath: folder.appendingPathComponent(String(format: "seg_%06d", segment.index)).path
+            )
+            total += (attributes?[.size] as? Int64) ?? 0
         }
+        return (m3u8URL, total, "ts")
+    }
 
-        return (outputURL, total, isFragmentedMP4 ? "mp4" : "ts")
+    /// 写出本地播放列表：相对路径指向已解密的分片文件，AVPlayer 原生可播
+    private func writeLocalPlaylist(folder: URL, playlist: M3U8Playlist) throws {
+        var lines: [String] = []
+        lines.append("#EXTM3U")
+        lines.append("#EXT-X-VERSION:3")
+        let maxDuration = max(
+            playlist.targetDuration,
+            playlist.segments.map(\.duration).max() ?? 0,
+            1
+        )
+        lines.append("#EXT-X-TARGETDURATION:\(Int(ceil(maxDuration)))")
+        if playlist.initSegment != nil {
+            lines.append("#EXT-X-MAP:URI=\"seg_init\"")
+        }
+        lines.append("#EXT-X-MEDIA-SEQUENCE:0")
+        for segment in playlist.segments {
+            let duration = segment.duration > 0 ? segment.duration : 10.0
+            lines.append("#EXTINF:\(String(format: "%.3f", duration)),")
+            lines.append(String(format: "seg_%06d", segment.index))
+        }
+        lines.append("#EXT-X-ENDLIST")
+        let content = lines.joined(separator: "\n")
+        try content.write(
+            to: folder.appendingPathComponent("movie.m3u8"),
+            atomically: true,
+            encoding: .utf8
+        )
     }
 
     // MARK: - 播放列表 → 下载项
@@ -721,14 +771,17 @@ final class DownloadManager: ObservableObject {
                 episodeName = parts.count > 1 ? parts[1] : ""
             }
 
-            let candidates = ["movie.ts", "movie.mp4", "output.mp4"]
+            // TS 内容以 movie.m3u8 为播放入口（AVPlayer 不能直接播裸 .ts），
+            // fMP4 为 movie.mp4；output.mp4 兼容旧版
+            let candidates = ["movie.m3u8", "movie.mp4", "output.mp4"]
             let foundURL: URL? = candidates
                 .map { folder.appendingPathComponent($0) }
                 .first { fileManager.fileExists(atPath: $0.path) }
             guard let movieURL = foundURL else { continue }
 
             if format.isEmpty {
-                format = movieURL.pathExtension
+                // m3u8 只是入口，内容仍是 TS
+                format = movieURL.pathExtension == "m3u8" ? "ts" : movieURL.pathExtension
             }
 
             let attributes: [FileAttributeKey: Any]? = try? fileManager.attributesOfItem(atPath: movieURL.path)
@@ -781,7 +834,17 @@ final class DownloadManager: ObservableObject {
     private func loadMetadata() {
         guard let data = UserDefaults.standard.data(forKey: metadataKey),
               let movies = try? JSONDecoder().decode([DownloadedMovie].self, from: data) else { return }
-        downloadedMovies = movies.filter { FileManager.default.fileExists(atPath: $0.fileURL) }
+        downloadedMovies = movies.filter { movie in
+            guard FileManager.default.fileExists(atPath: movie.fileURL) else { return false }
+            // 旧版合并出的裸 .ts 无法被本地 AVPlayer 播放，且已无对应 movie.m3u8，
+            // 自动移除以免误点（其所在的下载目录可手动删除释放空间）
+            if movie.fileURL.hasSuffix(".ts") {
+                let m3u8 = (movie.fileURL as NSString).deletingLastPathComponent
+                    .appendingPathComponent("movie.m3u8")
+                return FileManager.default.fileExists(atPath: m3u8)
+            }
+            return true
+        }
     }
 
     private func persistTasks() {
