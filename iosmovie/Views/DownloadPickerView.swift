@@ -10,22 +10,40 @@ struct DownloadPickerView: View {
 
     var body: some View {
         NavigationView {
-            List {
-                ForEach(episodes) { episode in
-                    Button {
-                        if selectedIDs.contains(episode.id) {
-                            selectedIDs.remove(episode.id)
-                        } else {
-                            selectedIDs.insert(episode.id)
-                        }
-                    } label: {
-                        HStack {
-                            Text(episode.name)
-                                .foregroundColor(.primary)
-                            Spacer()
-                            if selectedIDs.contains(episode.id) {
-                                Image(systemName: "checkmark")
-                                    .foregroundColor(.blue)
+            Group {
+                if episodes.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "tray")
+                            .font(.largeTitle)
+                            .foregroundColor(.secondary)
+                        Text("暂无可选剧集")
+                            .font(.headline)
+                        Text("当前播放源没有可下载的剧集，请尝试切换采集站后重试")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 24)
+                    }
+                    .padding()
+                } else {
+                    List {
+                        ForEach(episodes) { episode in
+                            Button {
+                                if selectedIDs.contains(episode.id) {
+                                    selectedIDs.remove(episode.id)
+                                } else {
+                                    selectedIDs.insert(episode.id)
+                                }
+                            } label: {
+                                HStack {
+                                    Text(episode.name)
+                                        .foregroundColor(.primary)
+                                    Spacer()
+                                    if selectedIDs.contains(episode.id) {
+                                        Image(systemName: "checkmark")
+                                            .foregroundColor(.blue)
+                                    }
+                                }
                             }
                         }
                     }

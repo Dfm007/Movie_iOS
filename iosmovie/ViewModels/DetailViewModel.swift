@@ -52,7 +52,11 @@ final class DetailViewModel: ObservableObject {
 
         let source = makeSource(for: targetSite)
 
-        if isSiteSwitch && !currentMovieTitle.isEmpty {
+        // 初始加载（非切换源）也走标题匹配，与切换源行为完全一致：
+        // 用 currentMovieTitle 在当前 selectedSite 重新搜索匹配，确保取到该站点的正确剧集
+        // （含 episodes）。否则只依赖 detailMap[selectedSite.id] 直连，一旦该 vod_id 在站点
+        // 解析不出分集，初始源 episodes 就会为空，导致下载选择器白屏、必须切换源才正常。
+        if !currentMovieTitle.isEmpty {
             if let matched = await bestMatch(in: source, for: currentMovieTitle) {
                 await loadDetailDirect(on: source, path: matched.id)
                 isLoading = false
