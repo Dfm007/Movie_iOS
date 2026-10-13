@@ -195,6 +195,8 @@ struct PosterArtwork: View {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .stroke(AppTheme.border.opacity(0.7), lineWidth: 0.5)
             )
+            .frame(maxWidth: .infinity)
+            .clipped()
     }
 
     @ViewBuilder
@@ -274,6 +276,7 @@ struct MediaCard<Destination: View>: View {
         NavigationLink(destination: destination()) {
             VStack(alignment: .leading, spacing: 10) {
                 PosterArtwork(posterURL: posterURL, fallbackTitle: title)
+                    .frame(maxWidth: .infinity)
 
                 VStack(alignment: .leading, spacing: 5) {
                     Text(title)
@@ -300,7 +303,10 @@ struct MediaCard<Destination: View>: View {
                     }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .clipped()
         .buttonStyle(PressableScaleButtonStyle())
     }
 }
