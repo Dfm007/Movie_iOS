@@ -183,32 +183,40 @@ struct PosterArtwork: View {
     var cornerRadius: CGFloat = AppTheme.radiusMedium
 
     var body: some View {
-        ZStack {
-            if let posterURL, let url = URL(string: posterURL) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .empty:
-                        placeholder.overlay(ProgressView().tint(AppTheme.accent))
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    case .failure:
-                        placeholder
-                    @unknown default:
-                        placeholder
-                    }
-                }
-            } else {
-                placeholder
+        Color.clear
+            .aspectRatio(2 / 3, contentMode: .fit)
+            .overlay {
+                posterContent
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()
             }
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(AppTheme.border.opacity(0.7), lineWidth: 0.5)
+            )
+    }
+
+    @ViewBuilder
+    private var posterContent: some View {
+        if let posterURL, let url = URL(string: posterURL) {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .empty:
+                    placeholder.overlay(ProgressView().tint(AppTheme.accent))
+                case .success(let image):
+                    image
+                        .resizable()
+                        .scaledToFill()
+                case .failure:
+                    placeholder
+                @unknown default:
+                    placeholder
+                }
+            }
+        } else {
+            placeholder
         }
-        .aspectRatio(2 / 3, contentMode: .fit)
-        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .stroke(AppTheme.border.opacity(0.7), lineWidth: 0.5)
-        )
     }
 
     private var placeholder: some View {
