@@ -12,8 +12,6 @@ struct PlayerView: View {
     /// 用户点了关闭按钮
     var onClose: () -> Void
     @State private var currentSource: PlaySource
-    @State private var hideEpisodeList = false
-    @State private var speedMenuToken = 0
 
     private let episodeColumns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 4)
 
@@ -33,85 +31,24 @@ struct PlayerView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
+        VStack(spacing: 0) {
             ZFPlayerRepresentable(
                 url: currentSource.url,
                 startAt: startAt,
                 onProgress: onProgress,
                 onClose: onClose,
-                speedMenuToken: speedMenuToken
+                episodeGroups: allSources,
+                currentSourceID: currentSource.id,
+                onEpisodeSelected: { selected in
+                    currentSource = selected
+                }
             )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(height: UIScreen.main.bounds.width * 9 / 16)
             .background(Color.black)
-
-            VStack {
-                HStack {
-                    Spacer()
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            hideEpisodeList.toggle()
-                        }
-                    } label: {
-                        Image(systemName: hideEpisodeList ? "list.bullet" : "xmark")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(width: 40, height: 40)
-                            .background(Circle().fill(Color.black.opacity(0.45)))
-                    }
-                    .buttonStyle(PressableScaleButtonStyle())
-                }
-                .padding(.trailing, 16)
-                .padding(.top, 12)
-                Spacer()
-            }
-
-            if !hideEpisodeList {
-                episodeSheet
-            }
-        }
-        .background(Color.black)
-    }
-
-    private var episodeSheet: some View {
-        VStack(spacing: 0) {
-            Capsule()
-                .fill(AppTheme.border)
-                .frame(width: 44, height: 5)
-                .padding(.top, 8)
-
-            HStack {
-                Text("选集")
-                    .font(.headline.weight(.bold))
-                    .foregroundColor(AppTheme.textPrimary)
-                Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("长按 2x 快进")
-                        .font(.caption2)
-                        .foregroundColor(AppTheme.textSecondary)
-                    Button("倍速") {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            hideEpisodeList = true
-                        }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                            speedMenuToken += 1
-                        }
-                    }
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(AppTheme.accent)
-                    .buttonStyle(PressableScaleButtonStyle())
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
 
             episodeListView
         }
-        .frame(height: UIScreen.main.bounds.height * 0.45)
-        .background(AppTheme.surface)
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.radiusLarge, style: .continuous))
-        .padding(.horizontal, 8)
-        .padding(.bottom, 8)
-        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .background(AppTheme.background)
     }
 
     private var episodeListView: some View {
@@ -122,7 +59,7 @@ struct PlayerView: View {
                         Button(action: { currentSource = group }) {
                             Text(group.name)
                                 .font(.subheadline)
-                                .foregroundColor(currentSource.id == group.id ? .black.opacity(0.82) : AppTheme.textPrimary)
+                                .foregroundColor(currentSource.id == group.id ? .white : AppTheme.textPrimary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 10)
@@ -140,9 +77,9 @@ struct PlayerView: View {
                                 Button(action: { currentSource = episode }) {
                                     Text(episode.name)
                                         .font(.caption)
-                                        .foregroundColor(currentSource.id == episode.id ? .black.opacity(0.82) : AppTheme.textPrimary)
+                                        .foregroundColor(currentSource.id == episode.id ? .white : AppTheme.textPrimary)
                                         .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 8)
+                                        .padding(.vertical, 9)
                                         .background(currentSource.id == episode.id ? AppTheme.accent : AppTheme.mutedFill)
                                         .clipShape(RoundedRectangle(cornerRadius: AppTheme.radiusSmall, style: .continuous))
                                 }
@@ -152,10 +89,10 @@ struct PlayerView: View {
                     }
                 }
             }
-            .padding(.horizontal)
+            .padding(.horizontal, AppTheme.pagePadding)
             .padding(.vertical, 16)
         }
-        .background(Color.clear)
+        .background(AppTheme.background)
     }
 }
 
@@ -164,7 +101,9 @@ struct ZFPlayerRepresentable: UIViewControllerRepresentable {
     var startAt: Double = 0
     var onProgress: (Double, Double) -> Void
     var onClose: () -> Void
-    var speedMenuToken: Int = 0
+    var episodeGroups: [PlaySource] = []
+    var currentSourceID: String = ""
+    var onEpisodeSelected: ((PlaySource) -> Void)? = nil
 
     func makeUIViewController(context: Context) -> ZFPlayerViewController {
         let vc = ZFPlayerViewController()
@@ -172,7 +111,9 @@ struct ZFPlayerRepresentable: UIViewControllerRepresentable {
         vc.startAt = startAt
         vc.onProgress = onProgress
         vc.onClose = onClose
-        vc.updateSpeedMenuToken(speedMenuToken)
+        vc.episodeGroups = episodeGroups
+        vc.currentSourceID = currentSourceID
+        vc.onEpisodeSelected = onEpisodeSelected
         return vc
     }
 
@@ -180,7 +121,9 @@ struct ZFPlayerRepresentable: UIViewControllerRepresentable {
         uiViewController.playURLString = url
         uiViewController.onProgress = onProgress
         uiViewController.onClose = onClose
-        uiViewController.updateSpeedMenuToken(speedMenuToken)
+        uiViewController.episodeGroups = episodeGroups
+        uiViewController.currentSourceID = currentSourceID
+        uiViewController.onEpisodeSelected = onEpisodeSelected
         uiViewController.restartIfNeeded()
     }
 }
@@ -199,6 +142,7 @@ final class ZFPlayerViewController: UIViewController {
     private var closeButton: UIButton?
     private var fullScreenButton: UIButton?
     private var speedButton: UIButton?
+    private var episodeDrawerButton: UIButton?
     private var normalRate: Float = 1.0
     private var speedHintLabel: UILabel?
     private var speedMenuView: UIView?
@@ -372,6 +316,26 @@ final class ZFPlayerViewController: UIViewController {
         ])
     }
 
+    private func setupEpisodeDrawerButton() {
+        let button = UIButton(type: .system)
+        button.setImage(UIImage(systemName: "list.bullet"), for: .normal)
+        button.tintColor = .white
+        button.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        button.layer.cornerRadius = 18
+        button.isHidden = true
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(showEpisodeDrawer), for: .touchUpInside)
+        view.addSubview(button)
+        episodeDrawerButton = button
+
+        NSLayoutConstraint.activate([
+            button.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
+            button.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 12),
+            button.widthAnchor.constraint(equalToConstant: 36),
+            button.heightAnchor.constraint(equalToConstant: 36)
+        ])
+    }
+
     private func setupCloseButton() {
         let button = UIButton(type: .system)
         button.setImage(UIImage(systemName: "chevron.left"), for: .normal)
@@ -436,6 +400,24 @@ final class ZFPlayerViewController: UIViewController {
         ])
     }
 
+    @objc private func showEpisodeDrawer() {
+        guard !episodeGroups.isEmpty else { return }
+
+        let picker = FullScreenEpisodePickerViewController()
+        picker.groups = episodeGroups
+        picker.currentSourceID = currentSourceID
+        picker.onSelect = { [weak self] selected in
+            self?.currentSourceID = selected.id
+            self?.onEpisodeSelected?(selected)
+        }
+        picker.modalPresentationStyle = .pageSheet
+        if let sheet = picker.sheetPresentationController {
+            sheet.detents = [.medium(), .large()]
+            sheet.prefersGrabberVisible = true
+        }
+        present(picker, animated: true)
+    }
+
     @objc private func fullScreenTapped() {
         if isFullScreen {
             exitFullScreen()
@@ -463,6 +445,10 @@ final class ZFPlayerViewController: UIViewController {
             self.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
             fullVC.view.addSubview(self.view)
             self.didMove(toParent: fullVC)
+            self.episodeDrawerButton?.isHidden = false
+            if let button = self.episodeDrawerButton {
+                self.view.bringSubviewToFront(button)
+            }
         }
     }
 
@@ -478,6 +464,8 @@ final class ZFPlayerViewController: UIViewController {
     func exitFullScreen() {
         guard isFullScreen, let fullVC = fullScreenVC else { return }
         isFullScreen = false
+
+        episodeDrawerButton?.isHidden = true
 
         self.willMove(toParent: nil)
         self.view.removeFromSuperview()
@@ -629,5 +617,65 @@ final class FullScreenPlayerViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .black
+    }
+}
+
+final class FullScreenEpisodePickerViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
+    var groups: [PlaySource] = []
+    var currentSourceID: String = ""
+    var onSelect: ((PlaySource) -> Void)?
+
+    private let tableView = UITableView(frame: .zero, style: .insetGrouped)
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        title = "选集"
+        view.backgroundColor = .systemGroupedBackground
+
+        tableView.dataSource = self
+        tableView.delegate = self
+        tableView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(tableView)
+
+        NSLayoutConstraint.activate([
+            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            tableView.topAnchor.constraint(equalTo: view.topAnchor),
+            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+    }
+
+    func numberOfSections(in tableView: UITableView) -> Int {
+        groups.count
+    }
+
+    func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+        groups[section].name
+    }
+
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        let group = groups[section]
+        return group.episodes.isEmpty ? 1 : group.episodes.count
+    }
+
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
+        let group = groups[indexPath.section]
+        let source = group.episodes.isEmpty ? group : group.episodes[indexPath.row]
+
+        cell.textLabel?.text = source.name
+        cell.textLabel?.textColor = .label
+        cell.accessoryType = source.id == currentSourceID ? .checkmark : .none
+        cell.tintColor = .systemBlue
+        return cell
+    }
+
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
+
+        let group = groups[indexPath.section]
+        let source = group.episodes.isEmpty ? group : group.episodes[indexPath.row]
+        onSelect?(source)
+        dismiss(animated: true)
     }
 }
