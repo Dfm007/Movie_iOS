@@ -13,8 +13,9 @@ struct PlayerView: View {
     var onClose: () -> Void
     @State private var currentSource: PlaySource
     @State private var hideEpisodeList = false
+    @State private var speedMenuToken = 0
 
-    private let episodeColumns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 5)
+    private let episodeColumns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 4)
 
     init(
         source: PlaySource,
@@ -32,21 +33,85 @@ struct PlayerView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        ZStack(alignment: .bottom) {
             ZFPlayerRepresentable(
                 url: currentSource.url,
                 startAt: startAt,
                 onProgress: onProgress,
-                onClose: onClose
+                onClose: onClose,
+                speedMenuToken: speedMenuToken
             )
-            .frame(height: hideEpisodeList ? UIScreen.main.bounds.height : UIScreen.main.bounds.width * 9 / 16)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.black)
 
+            VStack {
+                HStack {
+                    Spacer()
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            hideEpisodeList.toggle()
+                        }
+                    } label: {
+                        Image(systemName: hideEpisodeList ? "list.bullet" : "xmark")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(width: 40, height: 40)
+                            .background(Circle().fill(Color.black.opacity(0.45)))
+                    }
+                    .buttonStyle(PressableScaleButtonStyle())
+                }
+                .padding(.trailing, 16)
+                .padding(.top, 12)
+                Spacer()
+            }
+
             if !hideEpisodeList {
-                episodeListView
+                episodeSheet
             }
         }
-        .background(AppTheme.background)
+        .background(Color.black)
+    }
+
+    private var episodeSheet: some View {
+        VStack(spacing: 0) {
+            Capsule()
+                .fill(AppTheme.border)
+                .frame(width: 44, height: 5)
+                .padding(.top, 8)
+
+            HStack {
+                Text("选集")
+                    .font(.headline.weight(.bold))
+                    .foregroundColor(AppTheme.textPrimary)
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("长按 2x 快进")
+                        .font(.caption2)
+                        .foregroundColor(AppTheme.textSecondary)
+                    Button("倍速") {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            hideEpisodeList = true
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                            speedMenuToken += 1
+                        }
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(AppTheme.accent)
+                    .buttonStyle(PressableScaleButtonStyle())
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+
+            episodeListView
+        }
+        .frame(height: UIScreen.main.bounds.height * 0.45)
+        .background(AppTheme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.radiusLarge, style: .continuous))
+        .padding(.horizontal, 8)
+        .padding(.bottom, 8)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 
     private var episodeListView: some View {
@@ -90,7 +155,7 @@ struct PlayerView: View {
             .padding(.horizontal)
             .padding(.vertical, 16)
         }
-        .background(AppTheme.background)
+        .background(Color.clear)
     }
 }
 
@@ -99,6 +164,7 @@ struct ZFPlayerRepresentable: UIViewControllerRepresentable {
     var startAt: Double = 0
     var onProgress: (Double, Double) -> Void
     var onClose: () -> Void
+    var speedMenuToken: Int = 0
 
     func makeUIViewController(context: Context) -> ZFPlayerViewController {
         let vc = ZFPlayerViewController()
@@ -106,6 +172,7 @@ struct ZFPlayerRepresentable: UIViewControllerRepresentable {
         vc.startAt = startAt
         vc.onProgress = onProgress
         vc.onClose = onClose
+        vc.updateSpeedMenuToken(speedMenuToken)
         return vc
     }
 
@@ -113,6 +180,7 @@ struct ZFPlayerRepresentable: UIViewControllerRepresentable {
         uiViewController.playURLString = url
         uiViewController.onProgress = onProgress
         uiViewController.onClose = onClose
+        uiViewController.updateSpeedMenuToken(speedMenuToken)
         uiViewController.restartIfNeeded()
     }
 }
@@ -144,6 +212,7 @@ final class ZFPlayerViewController: UIViewController {
     private var currentTime: Double = 0
     private var duration: Double = 0
     private var didReportProgress = false
+    private var lastSpeedMenuToken = 0
 
     override var shouldAutorotate: Bool { false }
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .portrait }
@@ -419,6 +488,12 @@ final class ZFPlayerViewController: UIViewController {
             self.view.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.width * 9 / 16)
             self.view.autoresizingMask = []
         }
+    }
+
+    func updateSpeedMenuToken(_ token: Int) {
+        guard token != lastSpeedMenuToken else { return }
+        lastSpeedMenuToken = token
+        toggleSpeedMenu()
     }
 
     func restartIfNeeded() {

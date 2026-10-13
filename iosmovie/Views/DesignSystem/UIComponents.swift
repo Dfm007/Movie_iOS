@@ -59,6 +59,7 @@ struct AppCard<Content: View>: View {
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
                     .stroke(AppTheme.border, lineWidth: 0.5)
             )
+            .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
     }
 }
 
@@ -254,6 +255,8 @@ struct MediaCard<Destination: View>: View {
     let subtitle: String
     let rating: String
     let badgeText: String?
+    let detailText: String?
+    let tagText: String?
     let posterURL: String?
     let destination: () -> Destination
 
@@ -262,6 +265,8 @@ struct MediaCard<Destination: View>: View {
         subtitle: String,
         rating: String,
         badgeText: String? = nil,
+        detailText: String? = nil,
+        tagText: String? = nil,
         posterURL: String?,
         @ViewBuilder destination: @escaping () -> Destination
     ) {
@@ -269,6 +274,8 @@ struct MediaCard<Destination: View>: View {
         self.subtitle = subtitle
         self.rating = rating
         self.badgeText = badgeText
+        self.detailText = detailText
+        self.tagText = tagText
         self.posterURL = posterURL
         self.destination = destination
     }
@@ -301,6 +308,17 @@ struct MediaCard<Destination: View>: View {
                         if let badgeText, !badgeText.isEmpty {
                             AppPill(text: badgeText, color: AppTheme.accentSecondary)
                         }
+                    }
+
+                    if let detailText, !detailText.isEmpty {
+                        Text(detailText)
+                            .font(.caption2)
+                            .foregroundColor(AppTheme.textSecondary)
+                            .lineLimit(1)
+                    }
+
+                    if let tagText, !tagText.isEmpty {
+                        AppPill(text: tagText, color: AppTheme.accent)
                     }
                 }
             }
@@ -406,5 +424,76 @@ struct LoadingStateView: View {
                 .foregroundColor(AppTheme.textSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+struct MediaRow<Destination: View>: View {
+    let title: String
+    let subtitle: String
+    let rating: String
+    let badgeText: String?
+    let posterURL: String?
+    let destination: () -> Destination
+
+    init(
+        title: String,
+        subtitle: String,
+        rating: String,
+        badgeText: String? = nil,
+        posterURL: String?,
+        @ViewBuilder destination: @escaping () -> Destination
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.rating = rating
+        self.badgeText = badgeText
+        self.posterURL = posterURL
+        self.destination = destination
+    }
+
+    var body: some View {
+        NavigationLink(destination: destination()) {
+            HStack(spacing: 12) {
+                PosterArtwork(posterURL: posterURL, fallbackTitle: title, cornerRadius: AppTheme.radiusSmall)
+                    .frame(width: 72)
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(AppTheme.textPrimary)
+                        .lineLimit(2)
+
+                    HStack(spacing: 6) {
+                        if !rating.isEmpty && rating != "0.0" {
+                            RatingBadge(rating: rating)
+                        }
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundColor(AppTheme.textSecondary)
+                            .lineLimit(1)
+                    }
+
+                    if let badgeText, !badgeText.isEmpty {
+                        AppPill(text: badgeText, color: AppTheme.accentSecondary)
+                    }
+                }
+
+                Spacer(minLength: 4)
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(AppTheme.textSecondary)
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: AppTheme.radiusMedium, style: .continuous)
+                    .fill(AppTheme.surface)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.radiusMedium, style: .continuous)
+                    .stroke(AppTheme.border, lineWidth: 0.5)
+            )
+        }
+        .buttonStyle(PressableScaleButtonStyle())
     }
 }

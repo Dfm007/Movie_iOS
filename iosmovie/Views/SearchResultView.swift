@@ -3,6 +3,7 @@ import SwiftUI
 struct SearchResultView: View {
     let keyword: String
     @StateObject private var viewModel = SearchViewModel()
+    @State private var layout: SearchResultLayout = .grid
 
     private let columns = [
         GridItem(.flexible(), spacing: 14),
@@ -22,27 +23,32 @@ struct SearchResultView: View {
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 18) {
-                        SectionHeader(
-                            title: "搜索结果",
-                            subtitle: "共 \(viewModel.results.count) 部影视"
-                        )
-                        .padding(.horizontal, AppTheme.pagePadding)
+                        HStack(alignment: .center, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("搜索结果")
+                                    .font(.title3.weight(.bold))
+                                    .foregroundColor(AppTheme.textPrimary)
+                                Text("共 \(viewModel.results.count) 部影视")
+                                    .font(.caption)
+                                    .foregroundColor(AppTheme.textSecondary)
+                            }
 
-                        LazyVGrid(columns: columns, spacing: 18) {
-                            ForEach(viewModel.results) { item in
-                                MediaCard(
-                                    title: item.title,
-                                    subtitle: metadata(for: item),
-                                    rating: item.rating,
-                                    badgeText: "\(item.sourceDetails.count)源",
-                                    posterURL: item.posterURL
-                                ) {
-                                    SearchDetailView(item: item)
+                            Spacer(minLength: 8)
+
+                            Picker("布局", selection: $layout) {
+                                ForEach(SearchResultLayout.allCases) { item in
+                                    Text(item.title).tag(item)
                                 }
                             }
+                            .pickerStyle(SegmentedPickerStyle())
+                            .tint(AppTheme.accent)
+                            .frame(width: 118)
                         }
                         .padding(.horizontal, AppTheme.pagePadding)
-                        .padding(.bottom, 28)
+
+                        resultsContent
+                            .padding(.horizontal, AppTheme.pagePadding)
+                            .padding(.bottom, 28)
                     }
                     .padding(.top, 8)
                 }
@@ -56,9 +62,58 @@ struct SearchResultView: View {
         }
     }
 
+    @ViewBuilder
+    private var resultsContent: some View {
+        if layout == .grid {
+            LazyVGrid(columns: columns, spacing: 18) {
+                ForEach(viewModel.results) { item in
+                    MediaCard(
+                        title: item.title,
+                        subtitle: metadata(for: item),
+                        rating: item.rating,
+                        badgeText: "\(item.sourceDetails.count)源",
+                        detailText: "\(item.sourceDetails.count) 个来源",
+                        tagText: item.type,
+                        posterURL: item.posterURL
+                    ) {
+                        SearchDetailView(item: item)
+                    }
+                }
+            }
+        } else {
+            LazyVStack(spacing: 10) {
+                ForEach(viewModel.results) { item in
+                    MediaRow(
+                        title: item.title,
+                        subtitle: metadata(for: item),
+                        rating: item.rating,
+                        badgeText: "\(item.sourceDetails.count)源",
+                        posterURL: item.posterURL
+                    ) {
+                        SearchDetailView(item: item)
+                    }
+                }
+            }
+        }
+    }
+
     private func metadata(for item: SearchResultItem) -> String {
         let parts = [item.year, item.type].filter { !$0.isEmpty }
         return parts.isEmpty ? "影视" : parts.joined(separator: " · ")
+    }
+}
+
+private enum SearchResultLayout: String, CaseIterable, Identifiable {
+    case grid
+    case list
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .grid: return "网格"
+        case .list: return "列表"
+        }
     }
 }
 

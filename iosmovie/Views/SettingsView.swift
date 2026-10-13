@@ -1,4 +1,4 @@
-﻿import SwiftUI
+import SwiftUI
 
 struct SettingsView: View {
     @State private var sites: [CMSSite] = CMSSite.all
@@ -7,6 +7,7 @@ struct SettingsView: View {
     @State private var editingSite: CMSSite?
     @State private var showResetAlert = false
     @StateObject private var latencyManager = SiteLatencyManager.shared
+    @AppStorage("appearance_mode") private var appearanceMode = "system"
 
     var body: some View {
         List {
@@ -97,6 +98,19 @@ struct SettingsView: View {
                         .foregroundColor(AppTheme.danger)
                 }
                 .listRowBackground(AppTheme.surface)
+            }
+
+            Section {
+                Picker("外观", selection: $appearanceMode) {
+                    Text("跟随系统").tag("system")
+                    Text("浅色").tag("light")
+                    Text("深色").tag("dark")
+                }
+                .pickerStyle(.segmented)
+                .tint(AppTheme.accent)
+                .listRowBackground(AppTheme.surface)
+            } header: {
+                Label("外观", systemImage: "circle.lefthalf.filled")
             }
 
             Section {

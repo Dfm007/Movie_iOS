@@ -1,4 +1,4 @@
-﻿import SwiftUI
+import SwiftUI
 
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
@@ -17,14 +17,9 @@ struct HomeView: View {
                 content
             }
             .background(AppTheme.background.ignoresSafeArea())
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("影视王")
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Text("影视王")
-                        .font(.headline.weight(.bold))
-                        .foregroundColor(AppTheme.textPrimary)
-                }
-
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack(spacing: 14) {
                         NavigationLink(destination: DownloadsView()) {
@@ -121,6 +116,8 @@ struct HomeView: View {
                                 title: movie.title,
                                 subtitle: metadata(for: movie),
                                 rating: movie.rating,
+                                detailText: "来源 \(viewModel.currentSite.name)",
+                                tagText: movie.type,
                                 posterURL: movie.posterURL
                             ) {
                                 HomeDetailRouter(movie: movie)

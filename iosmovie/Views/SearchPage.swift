@@ -18,7 +18,7 @@ struct SearchPage: View {
             }
         }
         .navigationTitle("搜索")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
         .background(AppTheme.background.ignoresSafeArea())
         .background(
             NavigationLink(
