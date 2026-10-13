@@ -49,6 +49,7 @@ struct AppCard<Content: View>: View {
 
     var body: some View {
         content
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(padding)
             .background(
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
