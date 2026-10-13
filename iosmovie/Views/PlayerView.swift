@@ -234,6 +234,11 @@ final class ZFPlayerViewController: UIViewController {
             self.showPlaybackFailure(message: message)
         }
 
+        // 播放结束：自动连播同一剧集列表里的下一集（已是最后一集则停在结尾）
+        player.playerDidToEnd = { [weak self] _ in
+            self?.playNextEpisodeIfAvailable()
+        }
+
         guard let assetURL = Self.assetURL(from: playURLString) else {
             showPlaybackFailure(message: "播放地址无效：\(playURLString)")
             return
@@ -298,6 +303,28 @@ final class ZFPlayerViewController: UIViewController {
         )
         alert.addAction(UIAlertAction(title: "好", style: .default))
         present(alert, animated: true)
+    }
+
+    // MARK: - 自动连播
+
+    /// 播完当前集后自动切到同一剧集列表里的下一集。
+    /// 已是最后一集、或当前播放的是单集源（如「我的下载」里的单个文件）时不做任何处理，
+    /// 保持停在结尾，由用户自己决定下一步。
+    private func playNextEpisodeIfAvailable() {
+        guard let next = nextEpisode() else { return }
+        currentSourceID = next.id
+        onEpisodeSelected?(next)
+    }
+
+    /// 在当前 sourceID 所属的剧集分组内取下一集。
+    /// 只在本分组内连播，不跨源分组——不同源的剧集划分可能不一致，跨源容易跳错集。
+    private func nextEpisode() -> PlaySource? {
+        for group in episodeGroups {
+            guard let index = group.episodes.firstIndex(where: { $0.id == currentSourceID }),
+                  index + 1 < group.episodes.count else { continue }
+            return group.episodes[index + 1]
+        }
+        return nil
     }
 
     private func setupFullScreenButton() {
@@ -504,6 +531,8 @@ final class ZFPlayerViewController: UIViewController {
         didApplyStartPosition = false
         currentTime = 0
         duration = 0
+        // 新的一集要重新上报进度，否则切集后关闭播放器不会再写续播记录
+        didReportProgress = false
 
         guard let assetURL = Self.assetURL(from: playURLString) else {
             showPlaybackFailure(message: "播放地址无效：\(playURLString)")
