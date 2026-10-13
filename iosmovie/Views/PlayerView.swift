@@ -136,6 +136,9 @@ final class ZFPlayerViewController: UIViewController {
     var onProgress: ((Double, Double) -> Void)?
     /// 用户主动关闭
     var onClose: (() -> Void)?
+    var episodeGroups: [PlaySource] = []
+    var currentSourceID: String = ""
+    var onEpisodeSelected: ((PlaySource) -> Void)?
     private var playerManager: ZFAVPlayerManager?
     private var player: ZFPlayerController?
     private var lastURLString: String = ""
