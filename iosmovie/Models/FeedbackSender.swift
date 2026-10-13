@@ -1,22 +1,89 @@
+import Combine
 import Foundation
+
+private enum FeedbackServiceConfig {
+    // 每个 App 只配置自己的 app_id、发件人名称、标题模板和 token，SMTP 凭据留在服务器。
+    static let endpoint: URL? = {
+        guard let rawValue = Bundle.main.object(forInfoDictionaryKey: "FeedbackEndpoint") as? String else {
+            return nil
+        }
+
+        let value = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty,
+              !value.contains("your-domain.com"),
+              !value.contains("$("),
+              let url = URL(string: value),
+              let scheme = url.scheme?.lowercased(),
+              (scheme == "https" || scheme == "http"),
+              let host = url.host,
+              !host.isEmpty else {
+            return nil
+        }
+
+        return url
+    }()
+
+    static let token: String? = {
+        guard let rawValue = Bundle.main.object(forInfoDictionaryKey: "FeedbackToken") as? String else {
+            return nil
+        }
+
+        let value = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? nil : value
+    }()
+
+    static let appID: String = {
+        let value = (Bundle.main.object(forInfoDictionaryKey: "FeedbackAppID") as? String ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? "movie_ios" : value
+    }()
+
+    static let fromName: String = {
+        let value = (Bundle.main.object(forInfoDictionaryKey: "FeedbackFromName") as? String ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? "影视王反馈" : value
+    }()
+
+    static let subjectTemplate: String = {
+        let value = (Bundle.main.object(forInfoDictionaryKey: "FeedbackSubject") as? String ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? "影视王反馈 - {type}" : value
+    }()
+
+    static func subject(for type: String) -> String {
+        subjectTemplate.replacingOccurrences(of: "{type}", with: type)
+    }
+}
 
 final class FeedbackSender: ObservableObject {
     @Published var isSending = false
     @Published var resultMessage: String?
     @Published var isSuccess = false
 
-    private let workerURL = URL(string: "https://movie-aefbewgmku.cn-hangzhou.fcapp.run/")!
-
     func sendFeedback(type: String, content: String, contact: String, completion: @escaping (Bool, String) -> Void) {
         isSending = true
         resultMessage = nil
 
-        var request = URLRequest(url: workerURL)
+        guard let endpoint = FeedbackServiceConfig.endpoint else {
+            finish(false, "反馈服务未配置", completion: completion)
+            return
+        }
+
+        var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 20
 
+        if let token = FeedbackServiceConfig.token {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            request.setValue(token, forHTTPHeaderField: "X-Feedback-Token")
+        }
+
         let payload: [String: String] = [
+            "app_id": FeedbackServiceConfig.appID,
+            "from_name": FeedbackServiceConfig.fromName,
+            "subject": FeedbackServiceConfig.subject(for: type),
             "type": type,
             "content": content,
             "contact": contact
@@ -31,29 +98,58 @@ final class FeedbackSender: ObservableObject {
 
         URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             DispatchQueue.main.async {
+                guard let self = self else { return }
+
                 if let error = error {
-                    self?.finish(false, "提交失败：\(error.localizedDescription)", completion: completion)
+                    self.finish(false, "提交失败：\(error.localizedDescription)", completion: completion)
                     return
                 }
 
-                guard let data = data else {
-                    self?.finish(false, "提交失败：服务器无响应", completion: completion)
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    self.finish(false, "提交失败：服务器无响应", completion: completion)
                     return
                 }
 
-                do {
-                    if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                let serverMessage = Self.decodeMessage(from: data)
+                if (200..<300).contains(httpResponse.statusCode) {
+                    if let json = Self.decodeJSON(from: data),
                        let success = json["success"] as? Bool,
-                       let message = json["message"] as? String {
-                        self?.finish(success, message, completion: completion)
+                       let message = json["message"] as? String,
+                       !message.isEmpty {
+                        self.finish(success, message, completion: completion)
                     } else {
-                        self?.finish(false, "提交失败：响应格式错误", completion: completion)
+                        self.finish(true, serverMessage ?? "发送成功", completion: completion)
                     }
-                } catch {
-                    self?.finish(false, "提交失败：响应解析失败", completion: completion)
+                } else {
+                    let fallback = "提交失败：服务器返回 \(httpResponse.statusCode)"
+                    self.finish(false, serverMessage ?? fallback, completion: completion)
                 }
             }
         }.resume()
+    }
+
+    private static func decodeJSON(from data: Data?) -> [String: Any]? {
+        guard let data = data, !data.isEmpty else { return nil }
+        return (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+    }
+
+    private static func decodeMessage(from data: Data?) -> String? {
+        if let json = decodeJSON(from: data) {
+            if let message = json["message"] as? String, !message.isEmpty {
+                return message
+            }
+            if let error = json["error"] as? String, !error.isEmpty {
+                return error
+            }
+        }
+
+        guard let data = data,
+              let text = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !text.isEmpty else {
+            return nil
+        }
+
+        return text
     }
 
     private func finish(_ success: Bool, _ message: String, completion: @escaping (Bool, String) -> Void) {

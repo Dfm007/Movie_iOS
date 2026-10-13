@@ -83,8 +83,12 @@ struct FeedbackView: View {
             type: selectedType,
             content: trimmedContent,
             contact: contact.trimmingCharacters(in: .whitespacesAndNewlines)
-        ) { _, _ in
+        ) { success, _ in
             showResult = true
+            if success {
+                content = ""
+                contact = ""
+            }
         }
     }
 }

@@ -5,3 +5,5 @@ DerivedData/
 .DS_Store
 node_modules/
 
+server/feedback_config.php
+
