@@ -40,7 +40,7 @@
 <true/>
 </dict>
 <key>FeedbackEndpoint</key>
-<string>http://3.106.243.97:8787/feedback.php</string>
+<string>http://120.26.245.163:8787/feedback.php</string>
 <key>FeedbackAppID</key>
 <string>movie_ios</string>
 <key>FeedbackFromName</key>
