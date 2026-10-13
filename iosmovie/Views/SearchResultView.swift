@@ -6,9 +6,8 @@ struct SearchResultView: View {
     @State private var layout: SearchResultLayout = .grid
 
     private let columns = [
-        GridItem(.flexible(), spacing: 10),
-        GridItem(.flexible(), spacing: 10),
-        GridItem(.flexible(), spacing: 10)
+        GridItem(.flexible(), spacing: 14),
+        GridItem(.flexible(), spacing: 14)
     ]
 
     var body: some View {
@@ -75,7 +74,6 @@ struct SearchResultView: View {
                         badgeText: "\(item.sourceDetails.count)源",
                         detailText: "\(item.sourceDetails.count) 个来源",
                         tagText: item.type,
-                        compact: true,
                         posterURL: item.posterURL
                     ) {
                         SearchDetailView(item: item)

@@ -257,7 +257,6 @@ struct MediaCard<Destination: View>: View {
     let badgeText: String?
     let detailText: String?
     let tagText: String?
-    let compact: Bool
     let posterURL: String?
     let destination: () -> Destination
 
@@ -268,7 +267,6 @@ struct MediaCard<Destination: View>: View {
         badgeText: String? = nil,
         detailText: String? = nil,
         tagText: String? = nil,
-        compact: Bool = false,
         posterURL: String?,
         @ViewBuilder destination: @escaping () -> Destination
     ) {
@@ -278,7 +276,6 @@ struct MediaCard<Destination: View>: View {
         self.badgeText = badgeText
         self.detailText = detailText
         self.tagText = tagText
-        self.compact = compact
         self.posterURL = posterURL
         self.destination = destination
     }
@@ -313,17 +310,15 @@ struct MediaCard<Destination: View>: View {
                         }
                     }
 
-                    if !compact {
-                        if let detailText, !detailText.isEmpty {
-                            Text(detailText)
-                                .font(.caption2)
-                                .foregroundColor(AppTheme.textSecondary)
-                                .lineLimit(1)
-                        }
+                    if let detailText, !detailText.isEmpty {
+                        Text(detailText)
+                            .font(.caption2)
+                            .foregroundColor(AppTheme.textSecondary)
+                            .lineLimit(1)
+                    }
 
-                        if let tagText, !tagText.isEmpty {
-                            AppPill(text: tagText, color: AppTheme.accent)
-                        }
+                    if let tagText, !tagText.isEmpty {
+                        AppPill(text: tagText, color: AppTheme.accent)
                     }
                 }
             }

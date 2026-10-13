@@ -6,9 +6,8 @@ struct HomeView: View {
     @State private var showNotice = false
 
     private let columns = [
-        GridItem(.flexible(), spacing: 10),
-        GridItem(.flexible(), spacing: 10),
-        GridItem(.flexible(), spacing: 10)
+        GridItem(.flexible(), spacing: 14),
+        GridItem(.flexible(), spacing: 14)
     ]
 
     var body: some View {
@@ -119,7 +118,6 @@ struct HomeView: View {
                                 rating: movie.rating,
                                 detailText: "来源 \(viewModel.currentSite.name)",
                                 tagText: movie.type,
-                                compact: true,
                                 posterURL: movie.posterURL
                             ) {
                                 HomeDetailRouter(movie: movie)
