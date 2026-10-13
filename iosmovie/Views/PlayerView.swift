@@ -169,6 +169,7 @@ final class ZFPlayerViewController: UIViewController {
         view.backgroundColor = .black
         setupPlayer()
         setupFullScreenButton()
+        setupEpisodeDrawerButton()
         setupCloseButton()
         setupSpeedButton()
         setupSpeedHintLabel()
@@ -322,9 +323,13 @@ final class ZFPlayerViewController: UIViewController {
     private func setupEpisodeDrawerButton() {
         let button = UIButton(type: .system)
         button.setImage(UIImage(systemName: "list.bullet"), for: .normal)
+        button.setTitle("选集", for: .normal)
         button.tintColor = .white
+        button.setTitleColor(.white, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 13, weight: .semibold)
         button.backgroundColor = UIColor.black.withAlphaComponent(0.5)
         button.layer.cornerRadius = 18
+        button.contentEdgeInsets = UIEdgeInsets(top: 0, left: 10, bottom: 0, right: 10)
         button.isHidden = true
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(showEpisodeDrawer), for: .touchUpInside)
@@ -334,7 +339,7 @@ final class ZFPlayerViewController: UIViewController {
         NSLayoutConstraint.activate([
             button.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
             button.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 12),
-            button.widthAnchor.constraint(equalToConstant: 36),
+            button.widthAnchor.constraint(equalToConstant: 72),
             button.heightAnchor.constraint(equalToConstant: 36)
         ])
     }
@@ -517,6 +522,9 @@ final class ZFPlayerViewController: UIViewController {
         }
         if let speed = speedButton {
             view.bringSubviewToFront(speed)
+        }
+        if let episodes = episodeDrawerButton {
+            view.bringSubviewToFront(episodes)
         }
     }
 
