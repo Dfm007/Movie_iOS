@@ -69,7 +69,7 @@ enum DownloadStatus: String, Codable, Equatable {
         case .downloading: return "下载中"
         case .paused:      return "已暂停"
         case .completed:   return "已完成"
-        case .failed:      return "失败"
+        case .failed:      return "下载失败"
         }
     }
 }

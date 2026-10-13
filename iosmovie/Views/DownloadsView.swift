@@ -435,15 +435,15 @@ private struct DownloadTaskCard: View {
                 HStack(spacing: 16) {
                     switch task.status {
                     case .downloading:
-                        actionButton("暂停", systemImage: "pause.circle", action: onPause)
+                        primaryButton("暂停", systemImage: "pause.circle", action: onPause)
                         destructiveButton("取消", systemImage: "xmark.circle", action: onCancel)
 
                     case .paused:
-                        actionButton("继续", systemImage: "play.circle", action: onResume)
+                        primaryButton("继续", systemImage: "play.circle", action: onResume)
                         destructiveButton("取消", systemImage: "xmark.circle", action: onCancel)
 
                     case .failed:
-                        warningButton("重试", systemImage: "arrow.clockwise.circle", action: onRetry)
+                        primaryButton("重试", systemImage: "arrow.clockwise.circle", action: onRetry)
                         destructiveButton("删除", systemImage: "trash.circle", action: onCancel)
 
                     case .completed:
@@ -482,18 +482,12 @@ private struct DownloadTaskCard: View {
         }
     }
 
-    private func actionButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+    /// 主操作按钮（暂停 / 继续 / 重试）：配色跟随当前状态，
+    /// 下载中=蓝、已暂停=橙、失败=红，与进度条、百分比、状态文字保持一致
+    private func primaryButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             buttonLabel(title, systemImage: systemImage)
-        }
-        .buttonStyle(.borderless)
-    }
-
-    /// 失败后的重试：用橙色和红色删除区分开
-    private func warningButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            buttonLabel(title, systemImage: systemImage)
-                .foregroundColor(.orange)
+                .foregroundColor(statusColor)
         }
         .buttonStyle(.borderless)
     }
