@@ -19,6 +19,7 @@ struct SearchPage: View {
         }
         .navigationTitle("搜索")
         .navigationBarTitleDisplayMode(.inline)
+        .background(AppTheme.background.ignoresSafeArea())
         .background(
             NavigationLink(
                 destination: SearchResultView(keyword: resultKeyword),
@@ -33,53 +34,49 @@ struct SearchPage: View {
     }
 
     private var searchBar: some View {
-        HStack(spacing: 8) {
-            HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.secondary)
-
-                TextField("搜索影视", text: $searchText)
-                    .textFieldStyle(PlainTextFieldStyle())
-                    .autocapitalization(.none)
-                    .disableAutocorrection(true)
-                    .onSubmit {
-                        submitSearch()
-                    }
-
-                if !searchText.isEmpty {
-                    Button {
-                        searchText = ""
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                }
+        HStack(spacing: 10) {
+            AppSearchField(placeholder: "搜索影视、演员或类型", text: $searchText) {
+                submitSearch()
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .background(Color(.systemGray6))
-            .clipShape(RoundedRectangle(cornerRadius: 10))
 
             Button("搜索") {
                 submitSearch()
             }
-            .buttonStyle(PlainButtonStyle())
-            .foregroundColor(.blue)
+            .font(.subheadline.weight(.semibold))
+            .foregroundColor(.black.opacity(0.86))
+            .padding(.horizontal, 15)
+            .padding(.vertical, 12)
+            .background(Capsule().fill(AppTheme.accent))
+            .buttonStyle(PressableScaleButtonStyle())
             .disabled(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .opacity(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.45 : 1)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, AppTheme.pagePadding)
+        .padding(.vertical, 12)
     }
 
     private var historyListView: some View {
-        List {
-            Section {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 12) {
+                SectionHeader(
+                    title: "搜索历史",
+                    actionTitle: "清空"
+                ) {
+                    SearchHistoryStore.removeAll()
+                    history = []
+                }
+                .padding(.horizontal, AppTheme.pagePadding)
+
                 ForEach(history, id: \.self) { keyword in
-                    HStack {
+                    HStack(spacing: 12) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .foregroundColor(AppTheme.textSecondary)
+
                         Button(keyword) {
                             submitSearch(keyword)
                         }
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(AppTheme.textPrimary)
                         .buttonStyle(PlainButtonStyle())
                         .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -88,36 +85,33 @@ struct SearchPage: View {
                             history = SearchHistoryStore.all()
                         } label: {
                             Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppTheme.textSecondary)
                         }
-                        .buttonStyle(PlainButtonStyle())
+                        .buttonStyle(PressableScaleButtonStyle())
                     }
-                }
-            } header: {
-                HStack {
-                    Text("搜索历史")
-                    Spacer()
-                    Button("清空") {
-                        SearchHistoryStore.removeAll()
-                        history = []
-                    }
-                    .font(.caption)
-                    .foregroundColor(.blue)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 13)
+                    .background(
+                        RoundedRectangle(cornerRadius: AppTheme.radiusMedium, style: .continuous)
+                            .fill(AppTheme.surface)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppTheme.radiusMedium, style: .continuous)
+                            .stroke(AppTheme.border, lineWidth: 0.5)
+                    )
+                    .padding(.horizontal, AppTheme.pagePadding)
                 }
             }
+            .padding(.bottom, 24)
         }
-        .listStyle(.plain)
     }
 
     private var emptyHistoryView: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "magnifyingglass")
-                .font(.largeTitle)
-                .foregroundColor(.secondary)
-            Text("暂无搜索历史")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-        }
+        EmptyStateView(
+            icon: "magnifyingglass",
+            title: "还没有搜索记录",
+            message: "输入片名、演员或类型，找到你想看的影视。"
+        )
         .frame(maxHeight: .infinity)
     }
 

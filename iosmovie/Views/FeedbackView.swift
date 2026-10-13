@@ -18,28 +18,57 @@ struct FeedbackView: View {
     private let feedbackTypes = ["问题反馈", "功能建议", "其他"]
 
     var body: some View {
-        Form {
-            Section("反馈类型") {
-                Picker("反馈类型", selection: $selectedType) {
-                    ForEach(feedbackTypes, id: \.self) { type in
-                        Text(type).tag(type)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                SectionHeader(
+                    title: "告诉我们你的想法",
+                    subtitle: "你的反馈会直接发送到开发者邮箱"
+                )
+
+                AppCard {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("反馈类型")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(AppTheme.textPrimary)
+
+                        Picker("反馈类型", selection: $selectedType) {
+                            ForEach(feedbackTypes, id: \.self) { type in
+                                Text(type).tag(type)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .tint(AppTheme.accent)
                     }
                 }
-                .pickerStyle(.segmented)
-            }
 
-            Section("反馈内容") {
-                TextEditor(text: $content)
-                    .frame(minHeight: 150)
-                    .focused($focusedField, equals: .content)
-            }
+                AppCard {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("反馈内容")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(AppTheme.textPrimary)
 
-            Section("联系方式（选填）") {
-                TextField("邮箱或 QQ", text: $contact)
-                    .focused($focusedField, equals: .contact)
-            }
+                        TextEditor(text: $content)
+                            .font(.body)
+                            .foregroundColor(AppTheme.textPrimary)
+                            .frame(minHeight: 150)
+                            .focused($focusedField, equals: .content)
+                    }
+                }
 
-            Section {
+                AppCard {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("联系方式（选填）")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(AppTheme.textPrimary)
+
+                        TextField("邮箱或 QQ", text: $contact)
+                            .font(.body)
+                            .foregroundColor(AppTheme.textPrimary)
+                            .textFieldStyle(PlainTextFieldStyle())
+                            .focused($focusedField, equals: .contact)
+                    }
+                }
+
                 Button {
                     submit()
                 } label: {
@@ -47,16 +76,21 @@ struct FeedbackView: View {
                         HStack {
                             Spacer()
                             ProgressView()
+                                .tint(.black.opacity(0.82))
                             Spacer()
                         }
                     } else {
                         Text("提交反馈")
-                            .frame(maxWidth: .infinity)
                     }
                 }
+                .buttonStyle(PrimaryActionButtonStyle())
                 .disabled(feedbackSender.isSending || content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .opacity(content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.55 : 1)
             }
+            .padding(.horizontal, AppTheme.pagePadding)
+            .padding(.vertical, 18)
         }
+        .background(AppTheme.background.ignoresSafeArea())
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
@@ -66,6 +100,7 @@ struct FeedbackView: View {
             }
         }
         .navigationTitle("意见反馈")
+        .navigationBarTitleDisplayMode(.inline)
         .alert("提示", isPresented: $showResult) {
             Button("确定", role: .cancel) { }
         } message: {

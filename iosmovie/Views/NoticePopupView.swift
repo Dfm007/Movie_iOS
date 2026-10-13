@@ -12,29 +12,38 @@ struct NoticePopupView: View {
                     onDismiss()
                 }
 
-            VStack(spacing: 16) {
+            VStack(spacing: 18) {
+                Image(systemName: "megaphone.fill")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(.black.opacity(0.82))
+                    .frame(width: 48, height: 48)
+                    .background(Circle().fill(AppTheme.accent))
+
                 Text(attributedText(from: notice.titleSegments, fontSize: 18, fontWeight: .bold))
                     .multilineTextAlignment(.center)
+                    .foregroundColor(AppTheme.textPrimary)
 
                 Text(attributedText(from: notice.messageSegments, fontSize: 15, fontWeight: .regular))
                     .multilineTextAlignment(.leading)
+                    .foregroundColor(AppTheme.textSecondary)
+                    .lineSpacing(4)
 
                 Button("知道了") {
                     onDismiss()
                 }
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(.white)
-                .padding(.horizontal, 28)
-                .padding(.vertical, 10)
-                .background(Color.blue)
-                .clipShape(Capsule())
+                .buttonStyle(PrimaryActionButtonStyle())
             }
             .padding(24)
-            .frame(maxWidth: 320)
+            .frame(maxWidth: 330)
             .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color(.systemBackground))
+                RoundedRectangle(cornerRadius: AppTheme.radiusLarge, style: .continuous)
+                    .fill(AppTheme.surface)
             )
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.radiusLarge, style: .continuous)
+                    .stroke(AppTheme.border, lineWidth: 0.5)
+            )
+            .shadow(color: Color.black.opacity(0.18), radius: 24, x: 0, y: 12)
         }
     }
 

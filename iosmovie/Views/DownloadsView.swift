@@ -37,6 +37,8 @@ struct DownloadsView: View {
             EmptyDownloadsSection()
         }
         .listStyle(.insetGrouped)
+        .background(AppTheme.background.ignoresSafeArea())
+        .tint(AppTheme.accent)
         .navigationTitle("我的下载")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -323,20 +325,11 @@ private struct EmptyDownloadsSection: View {
     var body: some View {
         if downloadManager.tasks.isEmpty && downloadManager.downloadedMovies.isEmpty {
             Section {
-                VStack(spacing: 10) {
-                    Image(systemName: "arrow.down.circle")
-                        .font(.largeTitle)
-                        .foregroundColor(.secondary)
-                    Text("还没有下载内容")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    Text("在影视详情页选择剧集即可离线缓存，下载完成后在这里播放")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 28)
+                EmptyStateView(
+                    icon: "arrow.down.circle",
+                    title: "还没有下载内容",
+                    message: "在影视详情页选择剧集即可离线缓存，下载完成后在这里播放。"
+                )
                 .listRowBackground(Color.clear)
             }
         }
@@ -455,8 +448,12 @@ private struct DownloadTaskCard: View {
         }
         .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color(.secondarySystemGroupedBackground))
+            RoundedRectangle(cornerRadius: AppTheme.radiusMedium, style: .continuous)
+                .fill(AppTheme.surface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.radiusMedium, style: .continuous)
+                .stroke(AppTheme.border, lineWidth: 0.5)
         )
     }
 
@@ -475,10 +472,10 @@ private struct DownloadTaskCard: View {
 
     private var statusColor: Color {
         switch task.status {
-        case .downloading: return .blue
-        case .paused:      return .orange
-        case .completed:   return .green
-        case .failed:      return .red
+        case .downloading: return AppTheme.accent
+        case .paused:      return AppTheme.warning
+        case .completed:   return AppTheme.success
+        case .failed:      return AppTheme.danger
         }
     }
 
@@ -529,31 +526,31 @@ private struct DownloadGroupHeader: View {
                     Text(group.title)
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(.primary)
+                        .foregroundColor(AppTheme.textPrimary)
                         .lineLimit(2)
 
                     Text("\(group.episodeCount) 集 · 共 \(DownloadFormat.size(group.totalSize))")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppTheme.textSecondary)
 
                     Text("最近下载 \(DownloadFormat.date(group.latestDate))")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppTheme.textSecondary)
                 }
 
                 Spacer(minLength: 4)
 
                 Image(systemName: "chevron.down")
                     .font(.caption.weight(.semibold))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppTheme.accent)
                     .rotationEffect(.degrees(isExpanded ? 0 : -90))
             }
             .padding(12)
             .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color(.secondarySystemGroupedBackground))
+                RoundedRectangle(cornerRadius: AppTheme.radiusMedium, style: .continuous)
+                    .fill(AppTheme.surface)
             )
-            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: AppTheme.radiusMedium, style: .continuous))
         }
         .buttonStyle(.plain)
     }
@@ -568,17 +565,17 @@ private struct DownloadedEpisodeRow: View {
         HStack(spacing: 10) {
             Image(systemName: "play.circle.fill")
                 .font(.title3)
-                .foregroundColor(.accentColor)
+                .foregroundColor(AppTheme.accent)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(movie.episodeName.isEmpty ? "正片" : movie.episodeName)
                     .font(.subheadline)
-                    .foregroundColor(.primary)
+                    .foregroundColor(AppTheme.textPrimary)
                     .lineLimit(1)
 
                 Text("\(DownloadFormat.size(movie.fileSize)) · \(movie.format.uppercased())")
                     .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppTheme.textSecondary)
             }
 
             Spacer(minLength: 4)
@@ -590,8 +587,8 @@ private struct DownloadedEpisodeRow: View {
         .padding(.vertical, 10)
         .padding(.horizontal, 12)
         .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color(.secondarySystemGroupedBackground))
+            RoundedRectangle(cornerRadius: AppTheme.radiusSmall, style: .continuous)
+                .fill(AppTheme.surface)
         )
     }
 }
@@ -614,15 +611,15 @@ private struct PosterThumb: View {
                     .aspectRatio(contentMode: .fill)
             } else {
                 ZStack {
-                    Color(.tertiarySystemFill)
+                    AppTheme.mutedFill
                     Image(systemName: "film")
                         .font(.title3)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppTheme.textSecondary)
                 }
             }
         }
         .frame(width: width, height: height)
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.radiusSmall, style: .continuous))
         .task(id: cacheKey) { await load() }
     }
 

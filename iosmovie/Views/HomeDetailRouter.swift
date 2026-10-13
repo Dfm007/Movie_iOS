@@ -24,17 +24,16 @@ struct HomeDetailRouter: View {
                     detailMap: detailMap
                 )
             } else if let errorMessage = errorMessage {
-                VStack(spacing: 12) {
-                    Text("无法进入详情")
-                        .font(.headline)
-                    Text(errorMessage)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+                EmptyStateView(
+                    icon: "exclamationmark.triangle",
+                    title: "无法进入详情",
+                    message: errorMessage
+                )
             } else {
-                ProgressView("正在解析多源...")
+                LoadingStateView(title: "正在解析多源")
             }
         }
+        .background(AppTheme.background.ignoresSafeArea())
         .navigationTitle(movie.title)
         .task {
             await resolveSources()

@@ -46,7 +46,7 @@ struct PlayerView: View {
                 episodeListView
             }
         }
-        .background(Color.white)
+        .background(AppTheme.background)
     }
 
     private var episodeListView: some View {
@@ -57,17 +57,17 @@ struct PlayerView: View {
                         Button(action: { currentSource = group }) {
                             Text(group.name)
                                 .font(.subheadline)
-                                .foregroundColor(currentSource.id == group.id ? .white : .primary)
+                                .foregroundColor(currentSource.id == group.id ? .black.opacity(0.82) : AppTheme.textPrimary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 10)
-                                .background(currentSource.id == group.id ? Color.blue : Color.gray.opacity(0.15))
-                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                                .background(currentSource.id == group.id ? AppTheme.accent : AppTheme.mutedFill)
+                                .clipShape(RoundedRectangle(cornerRadius: AppTheme.radiusSmall, style: .continuous))
                         }
                     } else {
                         Text(group.name)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(AppTheme.textSecondary)
                             .padding(.horizontal, 4)
 
                         LazyVGrid(columns: episodeColumns, spacing: 8) {
@@ -75,11 +75,11 @@ struct PlayerView: View {
                                 Button(action: { currentSource = episode }) {
                                     Text(episode.name)
                                         .font(.caption)
-                                        .foregroundColor(currentSource.id == episode.id ? .white : .primary)
+                                        .foregroundColor(currentSource.id == episode.id ? .black.opacity(0.82) : AppTheme.textPrimary)
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 8)
-                                        .background(currentSource.id == episode.id ? Color.blue : Color.gray.opacity(0.15))
-                                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                                        .background(currentSource.id == episode.id ? AppTheme.accent : AppTheme.mutedFill)
+                                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.radiusSmall, style: .continuous))
                                 }
                                 .buttonStyle(PlainButtonStyle())
                             }
@@ -90,7 +90,7 @@ struct PlayerView: View {
             .padding(.horizontal)
             .padding(.vertical, 16)
         }
-        .background(Color.white)
+        .background(AppTheme.background)
     }
 }
 

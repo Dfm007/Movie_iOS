@@ -6,9 +6,8 @@ struct HomeView: View {
     @State private var showNotice = false
 
     private let columns = [
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12)
+        GridItem(.flexible(), spacing: 14),
+        GridItem(.flexible(), spacing: 14)
     ]
 
     var body: some View {
@@ -17,27 +16,33 @@ struct HomeView: View {
                 categoryBar
                 content
             }
+            .background(AppTheme.background.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Text("影视王")
-                        .font(.headline)
+                        .font(.headline.weight(.bold))
+                        .foregroundColor(AppTheme.textPrimary)
                 }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 16) {
+                    HStack(spacing: 14) {
                         NavigationLink(destination: DownloadsView()) {
                             Image(systemName: "arrow.down.circle")
+                                .font(.system(size: 17, weight: .semibold))
                         }
 
                         NavigationLink(destination: SearchPage()) {
                             Image(systemName: "magnifyingglass")
+                                .font(.system(size: 17, weight: .semibold))
                         }
 
                         NavigationLink(destination: SettingsView()) {
-                            Image(systemName: "gear")
+                            Image(systemName: "gearshape")
+                                .font(.system(size: 17, weight: .semibold))
                         }
                     }
+                    .foregroundColor(AppTheme.textPrimary)
                 }
             }
             .task {
@@ -71,136 +76,67 @@ struct HomeView: View {
 
     private var categoryBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
+            HStack(spacing: 9) {
                 ForEach(viewModel.categories) { category in
-                    Button {
+                    CategoryChip(
+                        title: category.name,
+                        isSelected: viewModel.selectedCategoryID == category.id
+                    ) {
                         Task { await viewModel.selectCategory(category) }
-                    } label: {
-                        Text(category.name)
-                            .font(.subheadline)
-                            .fontWeight(viewModel.selectedCategoryID == category.id ? .semibold : .regular)
-                            .foregroundColor(viewModel.selectedCategoryID == category.id ? .white : .primary)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 7)
-                            .background(
-                                Capsule().fill(
-                                    viewModel.selectedCategoryID == category.id
-                                    ? Color.blue
-                                    : Color(.systemGray5)
-                                )
-                            )
                     }
-                    .buttonStyle(PlainButtonStyle())
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.horizontal, AppTheme.pagePadding)
+            .padding(.vertical, 10)
         }
+        .background(AppTheme.background)
     }
 
     @ViewBuilder
     private var content: some View {
-        if viewModel.isLoading {
-            Spacer()
-            ProgressView("加载中...")
-            Spacer()
-        } else if let error = viewModel.errorMessage {
-            Spacer()
-            VStack(spacing: 12) {
-                Text("加载失败")
-                    .font(.headline)
-                Text(error)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Button("重试") {
-                    Task { await viewModel.loadInitial() }
-                }
+        if viewModel.isLoading && viewModel.movies.isEmpty {
+            LoadingStateView(title: "正在准备片库")
+        } else if let error = viewModel.errorMessage, viewModel.movies.isEmpty {
+            EmptyStateView(
+                icon: "wifi.exclamationmark",
+                title: "加载失败",
+                message: error,
+                actionTitle: "重新加载"
+            ) {
+                Task { await viewModel.loadInitial() }
             }
-            Spacer()
+            .frame(maxHeight: .infinity)
         } else {
             ScrollView {
-                LazyVGrid(columns: columns, spacing: 16) {
-                    ForEach(viewModel.movies) { movie in
-                        NavigationLink(
-                            destination: HomeDetailRouter(movie: movie)
-                        ) {
-                            VStack(alignment: .leading, spacing: 6) {
-                                posterView(for: movie)
-                                Text(movie.title)
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                                    .lineLimit(2)
-                                    .multilineTextAlignment(.leading)
-                                HStack(spacing: 4) {
-                                    if !movie.rating.isEmpty && movie.rating != "0.0" {
-                                        Text(movie.rating)
-                                            .font(.system(size: 11))
-                                            .foregroundColor(.orange)
-                                            .fontWeight(.semibold)
-                                    }
-                                    Text(movie.type)
-                                        .font(.system(size: 11))
-                                        .foregroundColor(.secondary)
-                                }
+                LazyVStack(alignment: .leading, spacing: 18) {
+                    SectionHeader(
+                        title: "热门推荐",
+                        subtitle: "来自 \(viewModel.currentSite.name) 的精选内容"
+                    )
+                    .padding(.horizontal, AppTheme.pagePadding)
+
+                    LazyVGrid(columns: columns, spacing: 18) {
+                        ForEach(viewModel.movies) { movie in
+                            MediaCard(
+                                title: movie.title,
+                                subtitle: metadata(for: movie),
+                                rating: movie.rating,
+                                posterURL: movie.posterURL
+                            ) {
+                                HomeDetailRouter(movie: movie)
                             }
                         }
-                        .buttonStyle(PlainButtonStyle())
                     }
+                    .padding(.horizontal, AppTheme.pagePadding)
+                    .padding(.bottom, 28)
                 }
-                .padding(.horizontal, 12)
-                .padding(.top, 8)
-                .padding(.bottom, 16)
+                .padding(.top, 6)
             }
         }
     }
 
-    @ViewBuilder
-    private func posterView(for movie: MovieItem) -> some View {
-        if let posterURL = movie.posterURL, let url = URL(string: posterURL) {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .empty:
-                    posterPlaceholder(for: movie)
-                        .overlay(ProgressView())
-                case .success(let image):
-                    image
-                        .resizable()
-                        .aspectRatio(2/3, contentMode: .fill)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                case .failure:
-                    posterPlaceholder(for: movie)
-                @unknown default:
-                    posterPlaceholder(for: movie)
-                }
-            }
-            .aspectRatio(2/3, contentMode: .fit)
-        } else {
-            posterPlaceholder(for: movie)
-        }
-    }
-
-    private func posterPlaceholder(for movie: MovieItem) -> some View {
-        RoundedRectangle(cornerRadius: 8)
-            .fill(
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(red: 0.15, green: 0.18, blue: 0.28),
-                        Color(red: 0.30, green: 0.24, blue: 0.42)
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .aspectRatio(2/3, contentMode: .fit)
-            .overlay(
-                VStack(spacing: 4) {
-                    Image(systemName: "film")
-                        .font(.system(size: 24))
-                        .foregroundColor(.white.opacity(0.7))
-                    Text(movie.type)
-                        .font(.system(size: 10))
-                        .foregroundColor(.white.opacity(0.6))
-                }
-            )
+    private func metadata(for movie: MovieItem) -> String {
+        let parts = [movie.year, movie.type].filter { !$0.isEmpty }
+        return parts.isEmpty ? "影视" : parts.joined(separator: " · ")
     }
 }

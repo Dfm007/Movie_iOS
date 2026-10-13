@@ -11,9 +11,14 @@ struct SettingsView: View {
     var body: some View {
         List {
             Section {
-                Text("目前仅支持苹果 CMS 采集站")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                HStack(spacing: 10) {
+                    Image(systemName: "server.rack")
+                        .foregroundColor(AppTheme.accentSecondary)
+                    Text("目前仅支持苹果 CMS 采集站")
+                        .font(.caption)
+                        .foregroundColor(AppTheme.textSecondary)
+                }
+                .listRowBackground(AppTheme.surface)
             }
 
             Section {
@@ -27,50 +32,84 @@ struct SettingsView: View {
                     CMSSite.saveDefaultSiteID(newID)
                     NotificationCenter.default.post(name: .defaultSourceDidChange, object: nil)
                 }
+                .listRowBackground(AppTheme.surface)
 
                 Text("主页只会显示默认源采集到的影视")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppTheme.textSecondary)
+                    .listRowBackground(AppTheme.surface)
             } header: {
-                Text("默认源")
+                Label("默认源", systemImage: "star.fill")
             }
 
-            Section("自定义源") {
+            Section {
                 ForEach(sites) { site in
                     Button {
                         editingSite = site
                     } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            SiteLatencyLabel(site: site, latencyManager: latencyManager)
-                            Text(site.baseURL)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .lineLimit(2)
+                        HStack(spacing: 12) {
+                            Image(systemName: "square.stack.3d.up")
+                                .foregroundColor(AppTheme.accent)
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                SiteLatencyLabel(site: site, latencyManager: latencyManager)
+                                Text(site.baseURL)
+                                    .font(.caption)
+                                    .foregroundColor(AppTheme.textSecondary)
+                                    .lineLimit(2)
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(AppTheme.textSecondary)
                         }
                     }
+                    .listRowBackground(AppTheme.surface)
                 }
                 .onDelete(perform: deleteSites)
+            } header: {
+                Label("自定义源", systemImage: "square.stack.3d.up")
             }
 
             Section {
-                Button("重新测速") {
+                Button {
                     Task { await latencyManager.measureAll(sites: sites) }
+                } label: {
+                    Label("重新测速", systemImage: "speedometer")
+                        .foregroundColor(AppTheme.textPrimary)
                 }
-                Button("添加源") {
+                .listRowBackground(AppTheme.surface)
+
+                Button {
                     showAddSheet = true
+                } label: {
+                    Label("添加源", systemImage: "plus.circle")
+                        .foregroundColor(AppTheme.accent)
                 }
-                Button("恢复默认源") {
+                .listRowBackground(AppTheme.surface)
+
+                Button {
                     showResetAlert = true
+                } label: {
+                    Label("恢复默认源", systemImage: "arrow.counterclockwise")
+                        .foregroundColor(AppTheme.danger)
                 }
-                .foregroundColor(.red)
+                .listRowBackground(AppTheme.surface)
             }
 
             Section {
                 NavigationLink(destination: FeedbackView()) {
-                    Text("意见反馈")
+                    Label("意见反馈", systemImage: "bubble.left.and.bubble.right")
+                        .foregroundColor(AppTheme.textPrimary)
                 }
+                .listRowBackground(AppTheme.surface)
             }
         }
+        .listStyle(.insetGrouped)
+        .background(AppTheme.background.ignoresSafeArea())
+        .tint(AppTheme.accent)
         .navigationTitle("设置")
         .task {
             sites = CMSSite.all
@@ -118,11 +157,12 @@ private struct SiteLatencyLabel: View {
     @ObservedObject var latencyManager: SiteLatencyManager
 
     var body: some View {
-        HStack {
+        HStack(spacing: 8) {
             Text(site.name)
+                .foregroundColor(AppTheme.textPrimary)
             Spacer()
             Text(latencyManager.latencyText(for: site))
-                .font(.caption)
+                .font(.caption.weight(.semibold))
                 .foregroundColor(latencyManager.color(for: site))
         }
     }
@@ -140,9 +180,13 @@ struct AddSiteView: View {
             Form {
                 Section("源名称") {
                     TextField("例如：新源", text: $name)
+                        .foregroundColor(AppTheme.textPrimary)
+                        .listRowBackground(AppTheme.surface)
                 }
                 Section("采集站地址") {
                     TextField("例如：https://example.com/api.php/provide/vod/from/xxx", text: $url)
+                        .foregroundColor(AppTheme.textPrimary)
+                        .listRowBackground(AppTheme.surface)
                 }
                 Section {
                     Button("添加") {
@@ -152,8 +196,12 @@ struct AddSiteView: View {
                         onAdd(trimmedName, trimmedURL)
                         dismiss()
                     }
+                    .buttonStyle(PrimaryActionButtonStyle())
+                    .listRowBackground(Color.clear)
                 }
             }
+            .background(AppTheme.background.ignoresSafeArea())
+            .tint(AppTheme.accent)
             .navigationTitle("添加源")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -184,9 +232,13 @@ struct EditSiteView: View {
             Form {
                 Section("源名称") {
                     TextField("源名称", text: $name)
+                        .foregroundColor(AppTheme.textPrimary)
+                        .listRowBackground(AppTheme.surface)
                 }
                 Section("采集站地址") {
                     TextField("采集站地址", text: $url)
+                        .foregroundColor(AppTheme.textPrimary)
+                        .listRowBackground(AppTheme.surface)
                 }
                 Section {
                     Button("保存") {
@@ -196,8 +248,12 @@ struct EditSiteView: View {
                         onSave(trimmedName, trimmedURL)
                         dismiss()
                     }
+                    .buttonStyle(PrimaryActionButtonStyle())
+                    .listRowBackground(Color.clear)
                 }
             }
+            .background(AppTheme.background.ignoresSafeArea())
+            .tint(AppTheme.accent)
             .navigationTitle("编辑源")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
