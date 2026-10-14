@@ -8,6 +8,7 @@ struct SettingsView: View {
     @State private var showResetAlert = false
     @StateObject private var latencyManager = SiteLatencyManager.shared
     @AppStorage("appearance_mode") private var appearanceMode = "system"
+    @State private var wifiOnlyDownload = DownloadPreferences.wifiOnly
 
     var body: some View {
         List {
@@ -111,6 +112,27 @@ struct SettingsView: View {
                 .listRowBackground(AppTheme.surface)
             } header: {
                 Label("外观", systemImage: "circle.lefthalf.filled")
+            }
+
+            Section {
+                Toggle(isOn: $wifiOnlyDownload) {
+                    Label("仅 Wi-Fi 下载", systemImage: "wifi")
+                        .foregroundColor(AppTheme.textPrimary)
+                }
+                .tint(AppTheme.accent)
+                .onChange(of: wifiOnlyDownload) { newValue in
+                    DownloadPreferences.wifiOnly = newValue
+                    // 刚开启时如果正走移动网络，立即暂停正在进行的下载
+                    DownloadManager.shared.enforceWifiOnlyPolicy()
+                }
+                .listRowBackground(AppTheme.surface)
+
+                Text("开启后，移动网络下不会开始新下载，下载中的任务会自动暂停。")
+                    .font(.caption)
+                    .foregroundColor(AppTheme.textSecondary)
+                    .listRowBackground(AppTheme.surface)
+            } header: {
+                Label("下载", systemImage: "arrow.down.circle")
             }
 
             Section {

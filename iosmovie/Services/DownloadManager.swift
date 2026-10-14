@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import UIKit
 import CryptoSwift
@@ -537,6 +538,8 @@ final class DownloadManager: ObservableObject {
     private let store: DownloadStore
     private let engine: DownloadEngine
     private var taskHandles: [String: Task<Void, Never>] = [:]
+    /// 「仅 Wi-Fi 下载」的网络状态订阅
+    private var networkCancellable: AnyCancellable?
 
     // MARK: - 速度 / 剩余时间采样
     //
@@ -563,12 +566,24 @@ final class DownloadManager: ObservableObject {
         engine = DownloadEngine()
         loadTasks()
         loadMetadata()
+
+        // 「仅 Wi-Fi 下载」：切到移动网络时自动暂停正在进行的下载
+        networkCancellable = NetworkMonitor.shared.$isCellular
+            .dropFirst()
+            .sink { [weak self] _ in
+                Task { @MainActor in
+                    self?.enforceWifiOnlyPolicy()
+                }
+            }
     }
 
     // MARK: - 创建任务
 
     func startDownloads(requests: [DownloadRequest]) {
         guard !requests.isEmpty else { return }
+
+        // 「仅 Wi-Fi 下载」：移动网络下不启动，任务先建成暂停态，等切回 Wi-Fi 再继续
+        let blockedByWifiOnly = !NetworkMonitor.shared.allowsDownloading
 
         var created = 0
         var skipped = 0
@@ -593,17 +608,22 @@ final class DownloadManager: ObservableObject {
                 sourceURL: item.sourceURL,
                 folderID: folderID,
                 progress: 0,
-                status: .downloading,
+                status: blockedByWifiOnly ? .paused : .downloading,
                 posterURL: item.posterURL
             )
             tasks.insert(task, at: 0)
             created += 1
-            launch(task)
+            if !blockedByWifiOnly {
+                launch(task)
+            }
         }
 
         persistTasks()
 
-        if created > 0 {
+        if blockedByWifiOnly, created > 0 {
+            alertMessage = "已按「仅 Wi-Fi 下载」暂停 \(created) 个任务，连接 Wi-Fi 后可在下载页继续"
+            showAlert = true
+        } else if created > 0 {
             alertMessage = skipped > 0
                 ? "已创建 \(created) 个下载任务，\(skipped) 个已在列表中"
                 : "已创建 \(created) 个下载任务"
@@ -612,6 +632,22 @@ final class DownloadManager: ObservableObject {
             alertMessage = "所选剧集已在下载列表或已完成"
             showAlert = true
         }
+    }
+
+    // MARK: - 仅 Wi-Fi 下载
+
+    /// 按「仅 Wi-Fi 下载」设置检查：当前若是移动网络，暂停所有正在进行的下载
+    func enforceWifiOnlyPolicy() {
+        guard DownloadPreferences.wifiOnly, NetworkMonitor.shared.isCellular else { return }
+        pauseTasksForCellular()
+    }
+
+    private func pauseTasksForCellular() {
+        let active = tasks.filter { $0.status == .downloading }
+        guard !active.isEmpty else { return }
+        pauseAllTasks()
+        alertMessage = "已切换到移动网络，下载已暂停"
+        showAlert = true
     }
 
     // MARK: - 暂停 / 继续 / 取消 / 重试
