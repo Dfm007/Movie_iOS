@@ -20,6 +20,8 @@ final class DetailViewModel: ObservableObject {
     private(set) var hasConfigured = false
 
     private var siteDetailMap: [String: String] = [:]
+    /// 各源「预取到的详情」缓存（key = site.id），切换源时直接命中，做到秒切
+    private var cachedDetails: [String: MovieDetail] = [:]
     private var currentMovieTitle = ""
     private var lastFetchError: Error?
     /// 每次 loadDetail 生成一个令牌；只有「最新一次请求」的结果才会被应用，
@@ -53,43 +55,63 @@ final class DetailViewModel: ObservableObject {
         siteDetailMap.merge(detailMap) { _, new in new }
     }
 
-    /// 后台补齐其他源：对不在列表里的源按标题搜索，命中就补进 sites。
-    /// 搜索结果往往是流式的（进入详情时可能只解析出部分源），所以详情页自己兜一次底。
+    /// 为其他源预热详情：搜索（或直接用已知 vod_id）→ 取详情 → 缓存。
+    /// 这样切换源时能直接命中缓存、秒切；全部在后台进行，不阻塞当前详情。
     func discoverMoreSources(title: String) async {
         let text = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
 
-        let existing = Set(sites.map(\.id))
-        let candidates = CMSSite.all.filter { !existing.contains($0.id) }
+        // 跳过当前选中的源，以及已经缓存过详情的源
+        let skipID = selectedSite.id
+        let candidates = CMSSite.all.filter {
+            $0.id != skipID && cachedDetails[$0.id] == nil
+        }
         guard !candidates.isEmpty else { return }
 
-        await withTaskGroup(of: (CMSSite, String)?.self) { group in
+        // 在 MainActor 上取出已知的 vod_id，供后台任务使用（后台不能访问实例属性）
+        let knownIDs = siteDetailMap
+
+        await withTaskGroup(of: (CMSSite, String, MovieDetail?)?.self) { group in
             for site in candidates {
+                let knownID = knownIDs[site.id]
                 group.addTask {
                     let source = AppleCMSSource(site: site)
-                    guard let results = try? await source.searchMovies(keyword: text),
-                          !results.isEmpty else {
-                        return nil
-                    }
 
-                    let target = Self.normalizeTitle(text)
-                    // 完全匹配优先，其次标题包含（与首页解析策略保持一致）
-                    if let exact = results.first(where: { Self.normalizeTitle($0.title) == target }) {
-                        return (site, exact.id)
+                    // 已知 vod_id 就直接用，否则按标题搜索
+                    var vodID = knownID
+                    if vodID == nil {
+                        guard let results = try? await source.searchMovies(keyword: text),
+                              !results.isEmpty,
+                              let matched = Self.bestMatch(in: results, for: text) else {
+                            return nil
+                        }
+                        vodID = matched.id
                     }
-                    if let contained = results.first(where: {
-                        Self.normalizeTitle($0.title).contains(target)
-                    }) {
-                        return (site, contained.id)
-                    }
-                    return nil
+                    guard let id = vodID else { return nil }
+
+                    // 顺手把详情（选集）取回来缓存，切换时可直接用
+                    let detail = try? await source.fetchMovieDetail(path: id)
+                    return (site, id, detail)
                 }
             }
 
-            for await case let (site, vodID)? in group {
+            for await case let (site, vodID, detail)? in group {
+                if let detail { cachedDetails[site.id] = detail }
                 mergeAvailableSites([site], detailMap: [site.id: vodID])
             }
         }
+    }
+
+    /// 从搜索结果里挑最匹配的一条：完全匹配优先，其次标题包含
+    nonisolated private static func bestMatch(in results: [MovieItem], for title: String) -> MovieItem? {
+        let target = normalizeTitle(title)
+        if let exact = results.first(where: { normalizeTitle($0.title) == target }) {
+            return exact
+        }
+        if let contained = results.first(where: { normalizeTitle($0.title).contains(target) }) {
+            return contained
+        }
+        return nil
     }
 
     /// 标题归一化（与 SearchViewModel / HomeDetailRouter 保持一致）
@@ -115,13 +137,21 @@ final class DetailViewModel: ObservableObject {
     func loadDetail(path: String, site: CMSSite? = nil) async {
         let targetSite = site ?? selectedSite
         selectedSite = targetSite
-        isLoading = true
         errorMessage = nil
         lastFetchError = nil
 
+        // 每次请求刷新令牌，防止先发的旧请求后返回、覆盖新源的内容
         let token = UUID()
         loadToken = token
 
+        // 命中预取缓存 → 直接显示，秒切（不发网络请求）
+        if let cached = cachedDetails[targetSite.id] {
+            isLoading = false
+            apply(cached)
+            return
+        }
+
+        isLoading = true
         let source = makeSource(for: targetSite)
 
         // 候选详情 id：优先用 detailMap 里「该站点自己的」vod_id。
