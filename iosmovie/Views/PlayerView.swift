@@ -445,12 +445,19 @@ final class ZFPlayerViewController: UIViewController {
             self?.currentSourceID = selected.id
             self?.onEpisodeSelected?(selected)
         }
-        picker.modalPresentationStyle = .pageSheet
-        if let sheet = picker.sheetPresentationController {
+
+        // 用导航栏包一层：横屏下 sheet 形态特殊，需要一个始终可见的关闭按钮兜底
+        let nav = UINavigationController(rootViewController: picker)
+        nav.modalPresentationStyle = .pageSheet
+        if let sheet = nav.sheetPresentationController {
             sheet.detents = [.medium(), .large()]
             sheet.prefersGrabberVisible = true
+            // iPhone 横屏（vertical size class 为 compact）时 pageSheet 默认退化成全屏：
+            // 没有下拉手势、也没有关闭按钮，抽屉就关不掉了。
+            // 打开贴边模式，让横屏下保持底部卡片形态，下拉手势可用。
+            sheet.prefersEdgeAttachedInCompactHeight = true
         }
-        present(picker, animated: true)
+        present(nav, animated: true)
     }
 
     @objc private func fullScreenTapped() {
@@ -670,6 +677,12 @@ final class FullScreenEpisodePickerViewController: UIViewController, UITableView
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "选集"
+        // 明确的关闭入口：横屏抽屉退化成全屏时没有下拉手势，只靠点集关闭容易卡住
+        navigationItem.rightBarButtonItem = UIBarButtonItem(
+            barButtonSystemItem: .close,
+            target: self,
+            action: #selector(closeTapped)
+        )
         view.backgroundColor = .systemGroupedBackground
 
         tableView.dataSource = self
@@ -716,6 +729,10 @@ final class FullScreenEpisodePickerViewController: UIViewController, UITableView
         let group = groups[indexPath.section]
         let source = group.episodes.isEmpty ? group : group.episodes[indexPath.row]
         onSelect?(source)
+        dismiss(animated: true)
+    }
+
+    @objc private func closeTapped() {
         dismiss(animated: true)
     }
 }
