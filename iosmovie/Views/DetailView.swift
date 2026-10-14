@@ -65,9 +65,11 @@ struct DetailView: View {
             }
             // 先加载详情（用户最关心的内容），站点测速放在其后执行。
             await viewModel.loadDetail(path: detailURL)
+
+            // 立即在后台预取其他源的详情，不等站点测速（测速要 1~3 秒，会推迟预取窗口）
+            Task { await viewModel.discoverMoreSources(title: initialTitle) }
+
             await latencyManager.measureAll(sites: viewModel.sites)
-            // 后台补齐其他源：搜索页进来时可能只解析出部分源（首页进来的话这里通常没有候选源）
-            await viewModel.discoverMoreSources(title: initialTitle)
         }
         .onChange(of: availableSites) { newSites in
             // 首页后台解析出的其他源陆续送达时，动态补进播放源列表
@@ -194,7 +196,17 @@ struct DetailView: View {
 
     private var episodeSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            if viewModel.sources.isEmpty {
+            if viewModel.isLoading && !viewModel.sources.isEmpty {
+                // 正在切换源：给个明确的加载反馈，而不是继续显示旧源的选集
+                HStack(spacing: 8) {
+                    ProgressView()
+                    Text("正在切换播放源…")
+                        .font(.subheadline)
+                        .foregroundColor(AppTheme.textSecondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.vertical, 28)
+            } else if viewModel.sources.isEmpty {
                 emptyEpisodesHint
             } else {
                 SectionHeader(title: "选集", subtitle: "选择要播放或下载的剧集")
