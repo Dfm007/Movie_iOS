@@ -41,13 +41,16 @@ struct HomeView: View {
                 }
             }
             .task {
-                // 启动第一步：拉取远程配置（配置页），换服务器不用重新构建 App
-                let configTask = Task { await AppConfig.shared.refresh() }
-                // 首页数据与配置页并行加载，避免被配置页的等待拖慢启动
-                await viewModel.loadInitial()
+                // 配置页与首页数据并行拉取
+                // 用 detached 让配置页请求真正跑在主线程之外，避免被首页数据解析拖住
+                let configTask = Task.detached { await AppConfig.shared.refresh() }
+                let homeTask = Task { await viewModel.loadInitial() }
+
+                // 配置一就绪就请求最新公告，不等首页数据
                 await configTask.value
-                // 配置就绪后，用配置里的公告地址加载公告
                 noticeManager.fetch()
+
+                await homeTask.value
             }
             .onReceive(NotificationCenter.default.publisher(for: .defaultSourceDidChange)) { _ in
                 Task {

@@ -58,27 +58,27 @@ final class NoticeManager: ObservableObject {
                   let payload = Self.decodePayload(from: data) else {
                 return
             }
-
-            // 有新版本用「更新公告」，否则用普通公告（两套内容由服务端同一接口返回）
-            let isUpdate = AppConfig.shared.hasUpdate
-            let enabled = isUpdate ? (payload.updateEnabled ?? false) : (payload.enabled ?? true)
-            let title = isUpdate ? payload.updateTitle : payload.title
-            let message = isUpdate ? payload.updateMessage : payload.message
-
-            guard enabled,
-                  let notice = Self.makeNotice(title: title, message: message) else {
-                DispatchQueue.main.async {
-                    self?.notice = nil
-                    self?.isUpdateNotice = false
-                }
-                return
-            }
-
-            DispatchQueue.main.async {
-                self?.notice = notice
-                self?.isUpdateNotice = isUpdate
-            }
+            DispatchQueue.main.async { self?.apply(payload) }
         }.resume()
+    }
+
+    /// 按「是否有新版本」决定用哪套内容，并更新 UI（需在主线程调用）
+    private func apply(_ payload: NoticePayload) {
+        // 有新版本用「更新公告」，否则用普通公告（两套内容由服务端同一接口返回）
+        let isUpdate = AppConfig.shared.hasUpdate
+        let enabled = isUpdate ? (payload.updateEnabled ?? false) : (payload.enabled ?? true)
+        let title = isUpdate ? payload.updateTitle : payload.title
+        let message = isUpdate ? payload.updateMessage : payload.message
+
+        guard enabled,
+              let notice = Self.makeNotice(title: title, message: message) else {
+            self.notice = nil
+            self.isUpdateNotice = false
+            return
+        }
+
+        self.notice = notice
+        self.isUpdateNotice = isUpdate
     }
 
     /// 解析公告 JSON。手改配置文件时容易写上 `//` 注释（标准 JSON 不支持），
