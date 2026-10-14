@@ -60,8 +60,15 @@ final class AppConfig {
             // 解析不到任何接口时保留现状，避免配置页写错导致 App 用不了
             guard parsed.hasAnyEndpoint else { return }
 
-            queue.sync { self.remote = parsed }
-            Self.saveCache(parsed)
+            // 与现有配置合并：配置页里没写的标签继续沿用缓存值，不会被清空
+            queue.sync {
+                let merged = Remote(
+                    feedbackEndpoint: parsed.feedbackEndpoint ?? self.remote?.feedbackEndpoint,
+                    noticeEndpoint: parsed.noticeEndpoint ?? self.remote?.noticeEndpoint
+                )
+                self.remote = merged
+                Self.saveCache(merged)
+            }
         } catch {
             // 拉取失败：保留上次成功的缓存
         }
