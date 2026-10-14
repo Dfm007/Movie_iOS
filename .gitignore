@@ -5,3 +5,7 @@ DerivedData/
 .DS_Store
 node_modules/
 
+# 本地对接文档（不进 Git）
+影视王项目完整对接文档.md
+影视王项目完整对接文档-详细版.md
+
