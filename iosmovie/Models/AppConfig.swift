@@ -90,9 +90,22 @@ final class AppConfig {
               let endRange = text.range(of: endTag, range: startRange.upperBound..<text.endIndex) else {
             return nil
         }
-        let value = String(text[startRange.upperBound..<endRange.lowerBound])
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let raw = String(text[startRange.upperBound..<endRange.lowerBound])
+        let value = stripHTML(raw).trimmingCharacters(in: .whitespacesAndNewlines)
         return value.isEmpty ? nil : value
+    }
+
+    /// 平台（例如蓝奏云）会把页面里的 URL 自动包成 `<span style="...">` 之类的标签，
+    /// 这里去掉标签、还原常见 HTML 实体，保证拿到的是能直接使用的纯地址。
+    private static func stripHTML(_ text: String) -> String {
+        var result = text.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+        result = result.replacingOccurrences(of: "&amp;", with: "&")
+        result = result.replacingOccurrences(of: "&lt;", with: "<")
+        result = result.replacingOccurrences(of: "&gt;", with: ">")
+        result = result.replacingOccurrences(of: "&quot;", with: "\"")
+        result = result.replacingOccurrences(of: "&#39;", with: "'")
+        result = result.replacingOccurrences(of: "&nbsp;", with: " ")
+        return result
     }
 
     // MARK: - 辅助
