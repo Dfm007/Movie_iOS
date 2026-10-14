@@ -26,27 +26,64 @@ struct Notice: Equatable {
 final class NoticeManager: ObservableObject {
     @Published var notice: Notice?
 
-    private let noticeURL = URL(string: "https://dfm.lanzoub.com/b06lks1yb")!
+    /// 服务端公告地址，配置在 Info.plist 的 NoticeEndpoint
+    private let endpoint = NoticeManager.endpointURL()
+
+    /// 已展示过的公告 id：同一条公告只弹一次，服务端换 id 就会重新弹
+    private static let shownNoticeIDKey = "notice_shown_id"
 
     func fetch() {
-        URLSession.shared.dataTask(with: noticeURL) { [weak self] data, _, _ in
-            guard let data = data,
-                  let html = String(data: data, encoding: .utf8) else {
+        guard let endpoint else { return }
+        URLSession.shared.dataTask(with: endpoint) { [weak self] data, _, _ in
+            guard let data,
+                  let payload = try? JSONDecoder().decode(NoticePayload.self, from: data) else {
                 return
             }
-            let notice = Self.parse(html: html)
+
+            // 服务端总开关：enabled = false 时一律不弹
+            guard payload.enabled ?? true else {
+                DispatchQueue.main.async { self?.notice = nil }
+                return
+            }
+
+            // 带 id 的公告只弹一次；不带 id 的沿用旧行为，每次拉取都弹
+            if let id = payload.id, !id.isEmpty,
+               id == UserDefaults.standard.string(forKey: Self.shownNoticeIDKey) {
+                DispatchQueue.main.async { self?.notice = nil }
+                return
+            }
+
+            guard let notice = Self.makeNotice(from: payload) else { return }
             DispatchQueue.main.async {
                 self?.notice = notice
+                if let id = payload.id, !id.isEmpty {
+                    UserDefaults.standard.set(id, forKey: Self.shownNoticeIDKey)
+                }
             }
         }.resume()
     }
 
-    static func parse(html: String) -> Notice? {
-        let normalizedHTML = preprocessHTML(html)
-        guard let title = extract(normalizedHTML, tag: "title"),
-              let message = extract(normalizedHTML, tag: "message") else {
+    private static func endpointURL() -> URL? {
+        guard let rawValue = Bundle.main.object(forInfoDictionaryKey: "NoticeEndpoint") as? String else {
             return nil
         }
+        let value = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty,
+              !value.contains("$("),
+              let url = URL(string: value),
+              let scheme = url.scheme?.lowercased(),
+              (scheme == "https" || scheme == "http"),
+              let host = url.host,
+              !host.isEmpty else {
+            return nil
+        }
+        return url
+    }
+
+    static func makeNotice(from payload: NoticePayload) -> Notice? {
+        let title = preprocessHTML(payload.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let message = preprocessHTML(payload.message ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty, !message.isEmpty else { return nil }
         return Notice(
             title: title,
             titleSegments: parseSegments(from: title),
@@ -63,18 +100,6 @@ final class NoticeManager: ObservableObject {
         result = result.replacingOccurrences(of: "\n", with: "[br]")
         result = result.replacingOccurrences(of: "\r", with: "[br]")
         return result
-    }
-
-    private static func extract(_ text: String, tag: String) -> String? {
-        let startTag = "[\(tag)]"
-        let endTag = "[/\(tag)]"
-        guard let startRange = text.range(of: startTag),
-              let endRange = text.range(of: endTag, range: startRange.upperBound..<text.endIndex) else {
-            return nil
-        }
-        let value = String(text[startRange.upperBound..<endRange.lowerBound])
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        return value.isEmpty ? nil : value
     }
 
     static func parseSegments(from text: String) -> [NoticeTextSegment] {
@@ -160,4 +185,14 @@ final class NoticeManager: ObservableObject {
         let blue = Double(rgb & 0xFF) / 255.0
         return Color(red: red, green: green, blue: blue)
     }
+}
+
+/// 服务端公告 JSON 结构。
+struct NoticePayload: Decodable {
+    /// 总开关：false 时一律不弹
+    let enabled: Bool?
+    /// 公告唯一标识：同 id 只弹一次，改 id 即重新弹；不填则每次拉取都弹
+    let id: String?
+    let title: String?
+    let message: String?
 }

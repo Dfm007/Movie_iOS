@@ -39,6 +39,8 @@
 <key>NSAllowsArbitraryLoads</key>
 <true/>
 </dict>
+<key>NoticeEndpoint</key>
+<string>http://120.26.245.163:8787/notice.json</string>
 <key>FeedbackEndpoint</key>
 <string>http://120.26.245.163:8787/feedback.php</string>
 <key>FeedbackAppID</key>
