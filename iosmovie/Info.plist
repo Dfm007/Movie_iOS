@@ -43,10 +43,6 @@
 <string>https://dfm.lanzoub.com/b0qj39fc</string>
 <key>RemoteConfigAppID</key>
 <string>movie_ios</string>
-<key>RemoteConfigName</key>
-<string>影视王反馈</string>
-<key>RemoteConfigSubject</key>
-<string>影视王反馈 - {type}</string>
 <key>RemoteConfigToken</key>
 <string>07ce16c1ad8ca8dcb1ffff59d4cc4d6b0cf4bfa81db5d654088e061adf5c546a</string>
 </dict>

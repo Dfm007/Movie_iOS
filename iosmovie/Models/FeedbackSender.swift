@@ -2,8 +2,9 @@ import Combine
 import Foundation
 
 private enum FeedbackServiceConfig {
-    // 每个 App 只配置自己的 app_id、发件人名称、标题模板和 token，SMTP 凭据留在服务器。
-    /// 接口地址：优先取远程配置（配置页），其次 Info.plist 默认值
+    // App 只提供 app_id 和 token；发件人名称与邮件标题由服务端控制，
+    // 这样改标题 / 发件人不用重新构建 App。SMTP 凭据也只留在服务器。
+    /// 接口地址：来自远程配置页
     static var endpoint: URL? {
         AppConfig.shared.feedbackEndpoint
     }
@@ -16,22 +17,6 @@ private enum FeedbackServiceConfig {
     /// App 标识：与公告接口共用（Info.plist 的 RemoteConfigAppID）
     static var appID: String {
         AppConfig.shared.appID
-    }
-
-    static let fromName: String = {
-        let value = (Bundle.main.object(forInfoDictionaryKey: "RemoteConfigName") as? String ?? "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        return value.isEmpty ? "影视王反馈" : value
-    }()
-
-    static let subjectTemplate: String = {
-        let value = (Bundle.main.object(forInfoDictionaryKey: "RemoteConfigSubject") as? String ?? "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        return value.isEmpty ? "影视王反馈 - {type}" : value
-    }()
-
-    static func subject(for type: String) -> String {
-        subjectTemplate.replacingOccurrences(of: "{type}", with: type)
     }
 }
 
@@ -60,10 +45,10 @@ final class FeedbackSender: ObservableObject {
             request.setValue(token, forHTTPHeaderField: "X-Feedback-Token")
         }
 
+        // 不传 from_name / subject：由服务端 apps.<app_id> 的 from_name / default_subject 决定，
+        // 这样改发件人名称和邮件标题不用重新构建 App。
         let payload: [String: String] = [
             "app_id": FeedbackServiceConfig.appID,
-            "from_name": FeedbackServiceConfig.fromName,
-            "subject": FeedbackServiceConfig.subject(for: type),
             "type": type,
             "content": content,
             "contact": contact
