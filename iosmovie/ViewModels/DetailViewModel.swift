@@ -16,7 +16,7 @@ final class DetailViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var selectedSite: CMSSite = .defaultSite
 
-    var sites: [CMSSite] = CMSSite.all
+    @Published var sites: [CMSSite] = CMSSite.all
     private(set) var hasConfigured = false
 
     private var siteDetailMap: [String: String] = [:]
@@ -38,6 +38,16 @@ final class DetailViewModel: ObservableObject {
         selectedSite = sites.first ?? .defaultSite
         siteDetailMap = detailMap
         hasConfigured = true
+    }
+
+    /// 后台补全的源：只追加新源，不重置当前选中的源、也不重新加载详情
+    func mergeAvailableSites(_ availableSites: [CMSSite], detailMap: [String: String]) {
+        let existing = Set(sites.map(\.id))
+        let added = availableSites.filter { !existing.contains($0.id) }
+        guard !added.isEmpty else { return }
+
+        sites.append(contentsOf: added)
+        siteDetailMap.merge(detailMap) { _, new in new }
     }
 
     private func makeSource(for site: CMSSite) -> MovieSourceProtocol {

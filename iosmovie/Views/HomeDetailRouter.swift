@@ -49,24 +49,22 @@ struct HomeDetailRouter: View {
 
         let defaultSite = CMSSite.selectedDefaultSite
         var matches: [SourceDetail] = []
+        var enteredDetail = false
 
-        // ① 默认源：直接用首页带过来的 vod_id 取详情。
-        // 采集站的搜索索引常与列表数据不一致（列表里有、搜索却搜不到），只靠标题搜索会误报"未找到"。
-        if !movie.detailURL.isEmpty {
-            let source = AppleCMSSource(site: defaultSite)
-            if (try? await source.fetchMovieDetail(path: movie.detailURL)) != nil {
-                matches.append(SourceDetail(
-                    id: "\(defaultSite.id)_\(movie.detailURL)",
-                    site: defaultSite,
-                    detailURL: movie.detailURL
-                ))
+        // 所有源并发解析：默认源用首页带来的 vod_id，其余源按标题搜索
+        await withTaskGroup(of: (CMSSite, String)?.self) { group in
+            // ① 默认源：直接用 vod_id 取详情（采集站搜索索引常与列表不一致，只靠搜索会误报"未找到"）
+            if !movie.detailURL.isEmpty {
+                let vodID = movie.detailURL
+                group.addTask {
+                    let source = AppleCMSSource(site: defaultSite)
+                    guard (try? await source.fetchMovieDetail(path: vodID)) != nil else { return nil }
+                    return (defaultSite, vodID)
+                }
             }
-        }
 
-        // ② 其余源按标题搜索（默认源已命中就跳过）
-        await withTaskGroup(of: (CMSSite, MovieItem)?.self) { group in
-            for site in CMSSite.all {
-                if matches.contains(where: { $0.site.id == site.id }) { continue }
+            // ② 其他源：按标题搜索
+            for site in CMSSite.all where site.id != defaultSite.id {
                 group.addTask {
                     let source = AppleCMSSource(site: site)
                     guard let results = try? await source.searchMovies(keyword: title),
@@ -78,7 +76,7 @@ struct HomeDetailRouter: View {
 
                     // 1. 完全匹配优先
                     if let exact = results.first(where: { Self.normalize($0.title) == target }) {
-                        return (site, exact)
+                        return (site, exact.id)
                     }
 
                     // 2. 候选标题包含目标标题，且是正片（非解说/预告等），选第一个
@@ -86,7 +84,7 @@ struct HomeDetailRouter: View {
                         let cand = Self.normalize(item.title)
                         return cand.contains(target) && !Self.isNonMainTitle(item.title)
                     }) {
-                        return (site, contained)
+                        return (site, contained.id)
                     }
 
                     // 3. 短标题（≤3字）不再做模糊匹配，避免"遮天"配成"一手遮天"
@@ -95,13 +93,13 @@ struct HomeDetailRouter: View {
                     }
 
                     // 4. 长标题才允许相似度匹配
-                    var best: MovieItem?
+                    var best: String?
                     var bestScore = 0.0
                     for item in results {
                         let score = Self.similarity(between: target, and: Self.normalize(item.title))
                         if score > bestScore {
                             bestScore = score
-                            best = item
+                            best = item.id
                         }
                     }
                     if let best = best, bestScore >= 0.6 {
@@ -111,23 +109,17 @@ struct HomeDetailRouter: View {
                 }
             }
 
-            for await case let (site, movie)? in group {
-                if !matches.contains(where: { $0.site.id == site.id }) {
-                    matches.append(SourceDetail(id: "\(site.id)_\(movie.id)", site: site, detailURL: movie.id))
-                }
+            // 任一源成功就先进详情；其余源后台继续，成功后陆续补进播放源列表
+            for await case let (site, vodID)? in group {
+                guard !matches.contains(where: { $0.site.id == site.id }) else { continue }
+                matches.append(SourceDetail(id: "\(site.id)_\(vodID)", site: site, detailURL: vodID))
+                sourceDetails = matches
+                enteredDetail = true
             }
         }
 
-        if matches.isEmpty {
+        if !enteredDetail {
             errorMessage = "所有源都未找到该影片"
-        } else {
-            let defaultID = CMSSite.selectedDefaultSite.id
-            matches.sort { a, b in
-                if a.site.id == defaultID { return true }
-                if b.site.id == defaultID { return false }
-                return false
-            }
-            sourceDetails = matches
         }
     }
 

@@ -67,6 +67,11 @@ struct DetailView: View {
             await viewModel.loadDetail(path: detailURL)
             await latencyManager.measureAll(sites: viewModel.sites)
         }
+        .onChange(of: availableSites) { newSites in
+            // 首页后台解析出的其他源陆续送达时，动态补进播放源列表
+            guard let newSites = newSites, !newSites.isEmpty else { return }
+            viewModel.mergeAvailableSites(newSites, detailMap: detailMap)
+        }
         .background(
             PlayerPresenter(
                 source: playingSource ?? viewModel.sources.first ?? PlaySource(id: "", name: "", url: "", format: "", episodes: []),
