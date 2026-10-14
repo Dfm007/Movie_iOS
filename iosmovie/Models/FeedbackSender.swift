@@ -19,13 +19,13 @@ private enum FeedbackServiceConfig {
     }
 
     static let fromName: String = {
-        let value = (Bundle.main.object(forInfoDictionaryKey: "FeedbackFromName") as? String ?? "")
+        let value = (Bundle.main.object(forInfoDictionaryKey: "RemoteConfigName") as? String ?? "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return value.isEmpty ? "影视王反馈" : value
     }()
 
     static let subjectTemplate: String = {
-        let value = (Bundle.main.object(forInfoDictionaryKey: "FeedbackSubject") as? String ?? "")
+        let value = (Bundle.main.object(forInfoDictionaryKey: "RemoteConfigSubject") as? String ?? "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return value.isEmpty ? "影视王反馈 - {type}" : value
     }()
