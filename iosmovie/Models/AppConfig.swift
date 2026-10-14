@@ -39,9 +39,9 @@ final class AppConfig {
         queue.sync { Self.validURL(remote?.noticeEndpoint) }
     }
 
-    /// App 标识：发信与公告接口共用
+    /// App 标识：发信与公告接口共用（Info.plist 的 RemoteConfigAppID）
     var appID: String {
-        let value = (Bundle.main.object(forInfoDictionaryKey: "FeedbackAppID") as? String ?? "")
+        let value = (Bundle.main.object(forInfoDictionaryKey: "RemoteConfigAppID") as? String ?? "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return value.isEmpty ? "movie_ios" : value
     }

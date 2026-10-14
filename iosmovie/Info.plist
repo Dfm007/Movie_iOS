@@ -41,7 +41,7 @@
 </dict>
 <key>RemoteConfigURL</key>
 <string>https://dfm.lanzoub.com/b0qj39fc</string>
-<key>FeedbackAppID</key>
+<key>RemoteConfigAppID</key>
 <string>movie_ios</string>
 <key>FeedbackFromName</key>
 <string>影视王反馈</string>

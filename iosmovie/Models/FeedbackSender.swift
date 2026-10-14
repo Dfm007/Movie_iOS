@@ -13,11 +13,10 @@ private enum FeedbackServiceConfig {
         AppConfig.shared.token
     }
 
-    static let appID: String = {
-        let value = (Bundle.main.object(forInfoDictionaryKey: "FeedbackAppID") as? String ?? "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        return value.isEmpty ? "movie_ios" : value
-    }()
+    /// App 标识：与公告接口共用（Info.plist 的 RemoteConfigAppID）
+    static var appID: String {
+        AppConfig.shared.appID
+    }
 
     static let fromName: String = {
         let value = (Bundle.main.object(forInfoDictionaryKey: "FeedbackFromName") as? String ?? "")
