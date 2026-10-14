@@ -8,8 +8,6 @@ struct iosmovieApp: App {
         // 启动本地媒体服务器，供已下载的 HLS(m3u8) 通过 http://127.0.0.1 播放，
         // 绕过 iOS “不支持本地 HLS” 的限制（CoreMediaErrorDomain -12865）
         LocalMediaServer.shared.start()
-        // 拉取远程配置（配置页），换服务器时不需要重新构建 App
-        AppConfig.shared.refresh()
     }
 
     var body: some Scene {

@@ -41,10 +41,6 @@
 </dict>
 <key>RemoteConfigURL</key>
 <string>https://dfm.lanzoub.com/b0qj39fc</string>
-<key>NoticeEndpoint</key>
-<string>http://120.26.245.163:8787/notice.json</string>
-<key>FeedbackEndpoint</key>
-<string>http://120.26.245.163:8787/feedback.php</string>
 <key>FeedbackAppID</key>
 <string>movie_ios</string>
 <key>FeedbackFromName</key>

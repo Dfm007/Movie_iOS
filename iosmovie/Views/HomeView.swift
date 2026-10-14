@@ -41,7 +41,13 @@ struct HomeView: View {
                 }
             }
             .task {
+                // 启动第一步：拉取远程配置（配置页），换服务器不用重新构建 App
+                let configTask = Task { await AppConfig.shared.refresh() }
+                // 首页数据与配置页并行加载，避免被配置页的等待拖慢启动
                 await viewModel.loadInitial()
+                await configTask.value
+                // 配置就绪后，用配置里的公告地址加载公告
+                noticeManager.fetch()
             }
             .onReceive(NotificationCenter.default.publisher(for: .defaultSourceDidChange)) { _ in
                 Task {
@@ -50,7 +56,6 @@ struct HomeView: View {
             }
         }
         .onAppear {
-            noticeManager.fetch()
             Task {
                 await viewModel.refreshDefaultSourceIfNeeded()
             }

@@ -29,24 +29,20 @@ final class AppConfig {
 
     // MARK: - 对外取值
 
-    /// 反馈发信接口
+    /// 反馈发信接口（来自配置页；未拉到且无缓存时为 nil）
     var feedbackEndpoint: URL? {
-        queue.sync {
-            Self.validURL(remote?.feedbackEndpoint) ?? Self.plistURL(forKey: "FeedbackEndpoint")
-        }
+        queue.sync { Self.validURL(remote?.feedbackEndpoint) }
     }
 
-    /// 公告接口
+    /// 公告接口（来自配置页；未拉到且无缓存时为 nil）
     var noticeEndpoint: URL? {
-        queue.sync {
-            Self.validURL(remote?.noticeEndpoint) ?? Self.plistURL(forKey: "NoticeEndpoint")
-        }
+        queue.sync { Self.validURL(remote?.noticeEndpoint) }
     }
 
     // MARK: - 拉取远程配置
 
-    /// 请求配置页并解析；失败时静默保留缓存 / 默认值，不影响 App 使用
-    func refresh() {
+    /// 请求配置页并解析；失败时静默保留上次成功的缓存
+    func refresh() async {
         guard let url = Self.plistURL(forKey: "RemoteConfigURL") else { return }
 
         var request = URLRequest(url: url)
@@ -57,18 +53,18 @@ final class AppConfig {
             forHTTPHeaderField: "User-Agent"
         )
 
-        URLSession.shared.dataTask(with: request) { [weak self] data, _, _ in
-            guard let self,
-                  let data,
-                  let html = String(data: data, encoding: .utf8) else { return }
-
+        do {
+            let (data, _) = try await URLSession.shared.data(for: request)
+            guard let html = String(data: data, encoding: .utf8) else { return }
             let parsed = Self.parse(html: html)
             // 解析不到任何接口时保留现状，避免配置页写错导致 App 用不了
             guard parsed.hasAnyEndpoint else { return }
 
-            self.queue.sync { self.remote = parsed }
+            queue.sync { self.remote = parsed }
             Self.saveCache(parsed)
-        }.resume()
+        } catch {
+            // 拉取失败：保留上次成功的缓存
+        }
     }
 
     // MARK: - 解析
