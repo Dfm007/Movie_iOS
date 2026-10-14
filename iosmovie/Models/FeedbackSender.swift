@@ -8,14 +8,10 @@ private enum FeedbackServiceConfig {
         AppConfig.shared.feedbackEndpoint
     }
 
-    static let token: String? = {
-        guard let rawValue = Bundle.main.object(forInfoDictionaryKey: "FeedbackToken") as? String else {
-            return nil
-        }
-
-        let value = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        return value.isEmpty ? nil : value
-    }()
+    /// 接口 token：与公告接口共用（Info.plist 的 RemoteConfigToken）
+    static var token: String? {
+        AppConfig.shared.token
+    }
 
     static let appID: String = {
         let value = (Bundle.main.object(forInfoDictionaryKey: "FeedbackAppID") as? String ?? "")

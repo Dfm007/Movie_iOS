@@ -47,7 +47,7 @@
 <string>影视王反馈</string>
 <key>FeedbackSubject</key>
 <string>影视王反馈 - {type}</string>
-<key>FeedbackToken</key>
+<key>RemoteConfigToken</key>
 <string>07ce16c1ad8ca8dcb1ffff59d4cc4d6b0cf4bfa81db5d654088e061adf5c546a</string>
 </dict>
 </plist>

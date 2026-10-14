@@ -42,50 +42,74 @@ curl -X POST 'https://feedback.example.com/feedback.php' \
 部署完成后，把 `iosmovie/Info.plist` 改成实际配置：
 
 ```xml
-<key>FeedbackEndpoint</key>
-<string>https://feedback.example.com/feedback.php</string>
+<key>RemoteConfigURL</key>
+<string>https://你的配置页地址</string>
 <key>FeedbackAppID</key>
 <string>movie_ios</string>
 <key>FeedbackFromName</key>
 <string>影视王反馈</string>
 <key>FeedbackSubject</key>
 <string>影视王反馈 - {type}</string>
-<key>FeedbackToken</key>
+<key>RemoteConfigToken</key>
 <string>replace-with-a-long-random-token</string>
 ```
 
-`FeedbackSubject` 中的 `{type}` 会在 App 内替换成当前反馈类型。`FeedbackToken` 与服务器 `apps.movie_ios.token` 保持一致。
+`FeedbackSubject` 中的 `{type}` 会在 App 内替换成当前反馈类型。`RemoteConfigToken` 与服务器 `apps.movie_ios.token` 保持一致，发信和公告共用它。
 
-## 公告文件（notice.json）
+## 公告接口（notice.php）
 
-同目录的 `notice.json` 提供 App 启动公告，和发信接口共用同一个站点，上传到站点根目录即可：
+`notice.php` 提供 App 启动公告，**和发信接口共用同一份 `feedback_config.php` 与同一个 token**，上传到站点根目录即可：
 
 ```
-/www/wwwroot/smtp/notice.json   →   http://<服务器>:8787/notice.json
+/www/wwwroot/smtp/notice.php   →   http://<服务器>:8787/notice.php?app_id=movie_ios
 ```
 
-字段说明：
+请求：
 
-| 字段 | 说明 |
-|---|---|
-| `enabled` | 总开关。`true` 时用户每次打开 App 都会弹公告；`false` 时一律不弹 |
-| `title` | 公告标题 |
-| `message` | 公告正文 |
+```http
+GET /notice.php?app_id=movie_ios
+X-Feedback-Token: <App token>
+```
 
-`title` / `message` 支持简单的富文本标记：
-
-- `[br]`：换行（也可以直接在 JSON 里用 `\n`）
-- `[color=#FF3B30]文字[/color]`：给文字上色
-
-App 侧公告地址来自「配置页」里解析到的 `[notice]` 地址（见下一节）。示例：
+返回：
 
 ```json
 {
   "enabled": true,
-  "title": "维护公告",
-  "message": "服务器将于今晚 23:00 维护。[br][color=#FF3B30]期间可能无法播放。[/color]"
+  "title": "公告标题",
+  "message": "公告正文"
 }
 ```
+
+| 状态码 | 含义 |
+|---|---|
+| `200` | 返回公告 |
+| `400` | `app_id` 不合法 |
+| `401` | token 错误 |
+| `403` | `app_id` 未登记 |
+| `405` | 不是 GET 请求 |
+| `500` | 服务端配置缺失或无效 |
+
+公告内容配置在 `feedback_config.php` 的 `apps.<app_id>.notice` 里：
+
+```php
+'movie_ios' => [
+    'token' => '...',
+    // ...发信相关配置...
+
+    'notice' => [
+        'enabled' => true,
+        'title' => '公告',
+        'message' => "第一行\n第二行",
+    ],
+],
+```
+
+- `enabled` 为 `true` 时用户每次打开 App 都弹公告；`false` 时不弹。
+- 想改公告只改这里，App 不用重新构建。
+- `title` / `message` 支持简单富文本：`[br]` 换行、`[color=#FF3B30]文字[/color]` 上色。
+
+App 侧公告地址来自「配置页」里解析到的 `[notice]` 地址（见下一节）。
 
 ## 配置页（换服务器不用重新构建 App）
 
@@ -93,7 +117,7 @@ App 启动时会请求 `Info.plist` 里 `RemoteConfigURL` 指向的配置页（�
 
 ```
 [feedback]http://120.26.245.163:8787/feedback.php[/feedback]
-[notice]http://120.26.245.163:8787/notice.json[/notice]
+[notice]http://120.26.245.163:8787/notice.php[/notice]
 ```
 
 规则：

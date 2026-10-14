@@ -34,10 +34,22 @@ final class NoticeManager: ObservableObject {
     func fetch() {
         guard let endpoint else { return }
 
+        // 公告接口按 app_id 区分应用，并与发信接口共用同一个 token
+        guard var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false) else { return }
+        var queryItems = components.queryItems ?? []
+        queryItems.removeAll { $0.name == "app_id" }
+        queryItems.append(URLQueryItem(name: "app_id", value: AppConfig.shared.appID))
+        components.queryItems = queryItems
+        guard let requestURL = components.url else { return }
+
         // 公告要实时生效：禁止读本地缓存，否则服务器把 enabled 改成 false 了，客户端还会弹旧公告
-        var request = URLRequest(url: endpoint)
+        var request = URLRequest(url: requestURL)
         request.cachePolicy = .reloadIgnoringLocalCacheData
         request.timeoutInterval = 15
+        if let token = AppConfig.shared.token {
+            request.setValue(token, forHTTPHeaderField: "X-Feedback-Token")
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
 
         URLSession.shared.dataTask(with: request) { [weak self] data, _, _ in
             guard let data,

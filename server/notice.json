@@ -1,5 +1,0 @@
-{
-  "enabled": true,
-  "title": "公告",
-  "message": "示例公告：把本文件放到站点根目录（/www/wwwroot/smtp/notice.json）即可生效。\n改 enabled 为 false 就不再弹窗，改回 true 则每次打开 App 都会弹。\n支持 [br] 换行和 [color=#FF3B30]彩色文字[/color]。"
-}

@@ -39,6 +39,22 @@ final class AppConfig {
         queue.sync { Self.validURL(remote?.noticeEndpoint) }
     }
 
+    /// App 标识：发信与公告接口共用
+    var appID: String {
+        let value = (Bundle.main.object(forInfoDictionaryKey: "FeedbackAppID") as? String ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? "movie_ios" : value
+    }
+
+    /// 接口 token：发信与公告接口共用（Info.plist 的 RemoteConfigToken）
+    var token: String? {
+        guard let raw = Bundle.main.object(forInfoDictionaryKey: "RemoteConfigToken") as? String else {
+            return nil
+        }
+        let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? nil : value
+    }
+
     // MARK: - 拉取远程配置
 
     /// 请求配置页并解析；失败时静默保留上次成功的缓存
