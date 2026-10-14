@@ -246,7 +246,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     respond(405, false, '仅支持 POST 请求');
 }
 
-$configFile = __DIR__ . '/feedback_config.php';
+$configFile = __DIR__ . '/config.php';
 if (!is_file($configFile)) {
     respond(500, false, '服务端未配置');
 }

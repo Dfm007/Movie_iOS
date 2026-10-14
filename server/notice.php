@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 // 通用公告接口：按 app_id 返回对应 App 的公告。
-// 与发信接口 feedback.php 共用同一份 feedback_config.php 和同一个 token。
+// 与发信接口 feedback.php 共用同一份 config.php 和同一个 token。
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     respond(405, ['success' => false, 'message' => '仅支持 GET 请求']);
 }
 
-$configFile = __DIR__ . '/feedback_config.php';
+$configFile = __DIR__ . '/config.php';
 if (!is_file($configFile)) {
     respond(500, ['success' => false, 'message' => '服务端未配置']);
 }

@@ -9,7 +9,7 @@ App 通过 HTTPS 调用 `feedback.php`，服务器通过 SMTP 发信。服务端
 ## 宝塔部署步骤
 
 1. 在宝塔面板中新建一个站点，例如 `feedback.example.com`，根目录设为 `/www/wwwroot/feedback-api`。
-2. 上传本目录的 `feedback.php` 和 `feedback_config.php` 到站点根目录。
+2. 上传本目录的 `feedback.php`、`notice.php` 和 `config.php` 到站点根目录。
 3. 填写全局 SMTP 和各 App 配置。
 4. 确认站点使用 PHP 7.4 或更高版本，并启用 `openssl`、`mbstring` 扩展。
 5. 在宝塔的站点设置中申请并强制启用 HTTPS。
@@ -17,7 +17,7 @@ App 通过 HTTPS 调用 `feedback.php`，服务器通过 SMTP 发信。服务端
 7. 建议在宝塔站点的 Nginx 配置中加入以下规则，禁止直接访问配置文件：
 
 ```nginx
-location ~* /feedback_config\.php$ {
+location ~* /config\.php$ {
     deny all;
 }
 ```
@@ -58,7 +58,7 @@ curl -X POST 'https://feedback.example.com/feedback.php' \
 
 ## 公告接口（notice.php）
 
-`notice.php` 提供 App 启动公告，**和发信接口共用同一份 `feedback_config.php` 与同一个 token**，上传到站点根目录即可：
+`notice.php` 提供 App 启动公告，**和发信接口共用同一份 `config.php` 与同一个 token**，上传到站点根目录即可：
 
 ```
 /www/wwwroot/smtp/notice.php   →   http://<服务器>:8787/notice.php?app_id=movie_ios
@@ -90,7 +90,7 @@ X-Feedback-Token: <App token>
 | `405` | 不是 GET 请求 |
 | `500` | 服务端配置缺失或无效 |
 
-公告内容配置在 `feedback_config.php` 的 `apps.<app_id>.notice` 里：
+公告内容配置在 `config.php` 的 `apps.<app_id>.notice` 里：
 
 ```php
 'movie_ios' => [
@@ -129,11 +129,11 @@ App 启动时会请求 `Info.plist` 里 `RemoteConfigURL` 指向的配置页（�
 
 ## 常见问题
 
-- 返回 `发送失败，请稍后重试` 时，先把 `feedback_config.php` 顶部的 `'debug' => true` 临时打开，再请求一次即可看到具体 SMTP 错误；确认后改回 `false`。
+- 返回 `发送失败，请稍后重试` 时，先把 `config.php` 顶部的 `'debug' => true` 临时打开，再请求一次即可看到具体 SMTP 错误；确认后改回 `false`。
 
 - `SMTP connect failed`：检查宝塔安全组、服务器防火墙是否允许出站 465/587。
 - `SMTP unexpected response`：检查邮箱是否开启 SMTP 服务，以及是否使用授权码而不是登录密码。
 - `接口认证失败`：检查 `X-Feedback-Token` 与对应 App 的 `token` 是否一致。
-- `应用未授权`：检查请求中的 `app_id` 是否存在于 `feedback_config.php` 的 `apps` 中。
+- `应用未授权`：检查请求中的 `app_id` 是否存在于 `config.php` 的 `apps` 中。
 - 如果使用 587 端口，把 `smtp.secure` 改为 `tls`；465 端口使用 `ssl`。
-- `feedback_config.php` 不要提交到 Git，仓库已通过 `.gitignore` 忽略该文件。
+- `config.php` 不要提交到 Git，仓库已通过 `.gitignore` 忽略该文件。
