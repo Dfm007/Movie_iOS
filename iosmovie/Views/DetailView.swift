@@ -180,6 +180,7 @@ struct DetailView: View {
             Picker("采集站", selection: $viewModel.selectedSite) {
                 ForEach(viewModel.sites) { site in
                     SitePickerLabel(site: site, latencyManager: latencyManager)
+                        .tag(site)
                 }
             }
             .pickerStyle(SegmentedPickerStyle())

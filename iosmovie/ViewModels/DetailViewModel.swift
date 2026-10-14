@@ -22,6 +22,9 @@ final class DetailViewModel: ObservableObject {
     private var siteDetailMap: [String: String] = [:]
     private var currentMovieTitle = ""
     private var lastFetchError: Error?
+    /// 每次 loadDetail 生成一个令牌；只有「最新一次请求」的结果才会被应用，
+    /// 避免快速切换源时，先发的旧请求后返回、把新源的内容覆盖掉。
+    private var loadToken = UUID()
 
     func configure(availableSites: [CMSSite], detailMap: [String: String]) {
         let sourceSites = availableSites.isEmpty ? CMSSite.all : availableSites
@@ -116,6 +119,9 @@ final class DetailViewModel: ObservableObject {
         errorMessage = nil
         lastFetchError = nil
 
+        let token = UUID()
+        loadToken = token
+
         let source = makeSource(for: targetSite)
 
         // 候选详情 id：优先用 detailMap 里「该站点自己的」vod_id。
@@ -132,8 +138,10 @@ final class DetailViewModel: ObservableObject {
 
         var fallback: MovieDetail?
         for id in candidates {
+            guard loadToken == token else { return }
             if let detail = await fetchDetail(on: source, path: id) {
                 if detail.sources.contains(where: { !$0.episodes.isEmpty }) {
+                    guard loadToken == token else { return }
                     apply(detail)
                     isLoading = false
                     return
@@ -143,9 +151,11 @@ final class DetailViewModel: ObservableObject {
         }
 
         // 标题搜索兜底：精确 id 未拿到分集（或该站点不在 detailMap 中）时，用原始标题重搜一次。
+        guard loadToken == token else { return }
         if !currentMovieTitle.isEmpty,
            let matched = await bestMatch(in: source, for: currentMovieTitle),
            let detail = await fetchDetail(on: source, path: matched.id) {
+            guard loadToken == token else { return }
             if detail.sources.contains(where: { !$0.episodes.isEmpty }) || fallback == nil {
                 apply(detail)
                 isLoading = false
@@ -154,6 +164,7 @@ final class DetailViewModel: ObservableObject {
         }
 
         // 所有候选都无分集：至少展示已拿到的详情；若连一次详情都没拿到，则给出错误提示（而非空白）。
+        guard loadToken == token else { return }
         if let fallback {
             apply(fallback)
         } else if let error = lastFetchError {
