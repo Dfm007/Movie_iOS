@@ -160,6 +160,8 @@ final class ZFPlayerViewController: UIViewController {
     private var duration: Double = 0
     private var didReportProgress = false
     private var lastSpeedMenuToken = 0
+    /// 本轮播放中已经失败过的剧集 id，换源重试时用来避免来回循环
+    private var failedSourceIDs: Set<String> = []
 
     override var shouldAutorotate: Bool { false }
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .portrait }
@@ -209,12 +211,13 @@ final class ZFPlayerViewController: UIViewController {
         controlView.portraitControlView.fullScreenBtn.isHidden = true
         self.player = player
 
-        // 加载成功：撤销看门狗，并按续播记录定位
+        // 加载成功：撤销看门狗、清空失败记录，并按续播记录定位
         player.playerReadyToPlay = { [weak self] _, _ in
             guard let self else { return }
             self.didBecomeReady = true
             self.loadWatchdog?.cancel()
             self.loadWatchdog = nil
+            self.failedSourceIDs.removeAll()
             self.applyStartPositionIfNeeded()
         }
 
@@ -225,13 +228,13 @@ final class ZFPlayerViewController: UIViewController {
             self.duration = duration
         }
 
-        // 播放失败：弹出真实错误，而不是黑屏无反馈
+        // 播放失败：先尝试换到其他源的同名剧集，所有源都失败后才提示
         player.playerPlayFailed = { [weak self] _, error in
             guard let self else { return }
             self.loadWatchdog?.cancel()
             self.loadWatchdog = nil
             let message = (error as? NSError)?.localizedDescription ?? String(describing: error)
-            self.showPlaybackFailure(message: message)
+            self.handlePlaybackFailure(message: message)
         }
 
         // 播放结束：自动连播同一剧集列表里的下一集（已是最后一集则停在结尾）
@@ -258,7 +261,7 @@ final class ZFPlayerViewController: UIViewController {
         let work = DispatchWorkItem { [weak self] in
             guard let self, !self.didBecomeReady else { return }
             guard self.presentedViewController == nil else { return }
-            self.showPlaybackFailure(
+            self.handlePlaybackFailure(
                 message: "视频长时间未能加载。缓存文件可能不完整，建议删除后重新下载。"
             )
         }
@@ -301,8 +304,64 @@ final class ZFPlayerViewController: UIViewController {
             message: message,
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "好", style: .default))
+        alert.addAction(UIAlertAction(title: "重试", style: .default) { [weak self] _ in
+            self?.retryCurrentSource()
+        })
+        alert.addAction(UIAlertAction(title: "好", style: .cancel))
         present(alert, animated: true)
+    }
+
+    // MARK: - 播放失败换源
+
+    /// 播放失败处理：先尝试切到其他源的同名剧集，所有源都失败后才弹提示。
+    private func handlePlaybackFailure(message: String) {
+        failedSourceIDs.insert(currentSourceID)
+
+        if let next = nextSourceForSameEpisode() {
+            currentSourceID = next.id
+            onEpisodeSelected?(next)
+            return
+        }
+
+        showPlaybackFailure(message: message)
+    }
+
+    /// 找同一集在其他源分组里的对应剧集：优先同名，其次同序号；跳过已失败过的。
+    private func nextSourceForSameEpisode() -> PlaySource? {
+        guard let currentGroup = episodeGroups.first(where: { group in
+                  group.episodes.contains(where: { $0.id == currentSourceID })
+              }),
+              let currentIndex = currentGroup.episodes.firstIndex(where: { $0.id == currentSourceID }) else {
+            return nil
+        }
+        let currentEpisode = currentGroup.episodes[currentIndex]
+
+        for group in episodeGroups where group.id != currentGroup.id {
+            if let sameName = group.episodes.first(where: {
+                $0.name == currentEpisode.name && !failedSourceIDs.contains($0.id)
+            }) {
+                return sameName
+            }
+            if currentIndex < group.episodes.count {
+                let candidate = group.episodes[currentIndex]
+                if !failedSourceIDs.contains(candidate.id) {
+                    return candidate
+                }
+            }
+        }
+        return nil
+    }
+
+    /// 用户点「重试」：清空失败记录后重新加载当前地址
+    private func retryCurrentSource() {
+        failedSourceIDs.removeAll()
+        didBecomeReady = false
+        guard let assetURL = Self.assetURL(from: playURLString) else {
+            showPlaybackFailure(message: "播放地址无效：\(playURLString)")
+            return
+        }
+        playerManager?.assetURL = assetURL
+        scheduleLoadWatchdog()
     }
 
     // MARK: - 自动连播
