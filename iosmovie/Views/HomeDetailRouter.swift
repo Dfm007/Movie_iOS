@@ -47,10 +47,26 @@ struct HomeDetailRouter: View {
             return
         }
 
+        let defaultSite = CMSSite.selectedDefaultSite
         var matches: [SourceDetail] = []
 
+        // ① 默认源：直接用首页带过来的 vod_id 取详情。
+        // 采集站的搜索索引常与列表数据不一致（列表里有、搜索却搜不到），只靠标题搜索会误报"未找到"。
+        if !movie.detailURL.isEmpty {
+            let source = AppleCMSSource(site: defaultSite)
+            if (try? await source.fetchMovieDetail(path: movie.detailURL)) != nil {
+                matches.append(SourceDetail(
+                    id: "\(defaultSite.id)_\(movie.detailURL)",
+                    site: defaultSite,
+                    detailURL: movie.detailURL
+                ))
+            }
+        }
+
+        // ② 其余源按标题搜索（默认源已命中就跳过）
         await withTaskGroup(of: (CMSSite, MovieItem)?.self) { group in
             for site in CMSSite.all {
+                if matches.contains(where: { $0.site.id == site.id }) { continue }
                 group.addTask {
                     let source = AppleCMSSource(site: site)
                     guard let results = try? await source.searchMovies(keyword: title),
