@@ -66,6 +66,8 @@ struct DetailView: View {
             // 先加载详情（用户最关心的内容），站点测速放在其后执行。
             await viewModel.loadDetail(path: detailURL)
             await latencyManager.measureAll(sites: viewModel.sites)
+            // 后台补齐其他源：搜索页进来时可能只解析出部分源（首页进来的话这里通常没有候选源）
+            await viewModel.discoverMoreSources(title: initialTitle)
         }
         .onChange(of: availableSites) { newSites in
             // 首页后台解析出的其他源陆续送达时，动态补进播放源列表

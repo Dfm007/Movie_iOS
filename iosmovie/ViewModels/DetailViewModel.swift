@@ -50,6 +50,60 @@ final class DetailViewModel: ObservableObject {
         siteDetailMap.merge(detailMap) { _, new in new }
     }
 
+    /// 后台补齐其他源：对不在列表里的源按标题搜索，命中就补进 sites。
+    /// 搜索结果往往是流式的（进入详情时可能只解析出部分源），所以详情页自己兜一次底。
+    func discoverMoreSources(title: String) async {
+        let text = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+
+        let existing = Set(sites.map(\.id))
+        let candidates = CMSSite.all.filter { !existing.contains($0.id) }
+        guard !candidates.isEmpty else { return }
+
+        await withTaskGroup(of: (CMSSite, String)?.self) { group in
+            for site in candidates {
+                group.addTask {
+                    let source = AppleCMSSource(site: site)
+                    guard let results = try? await source.searchMovies(keyword: text),
+                          !results.isEmpty else {
+                        return nil
+                    }
+
+                    let target = Self.normalizeTitle(text)
+                    // 完全匹配优先，其次标题包含（与首页解析策略保持一致）
+                    if let exact = results.first(where: { Self.normalizeTitle($0.title) == target }) {
+                        return (site, exact.id)
+                    }
+                    if let contained = results.first(where: {
+                        Self.normalizeTitle($0.title).contains(target)
+                    }) {
+                        return (site, contained.id)
+                    }
+                    return nil
+                }
+            }
+
+            for await case let (site, vodID)? in group {
+                mergeAvailableSites([site], detailMap: [site.id: vodID])
+            }
+        }
+    }
+
+    /// 标题归一化（与 SearchViewModel / HomeDetailRouter 保持一致）
+    private static func normalizeTitle(_ text: String) -> String {
+        var result = text.lowercased()
+        result = result.replacingOccurrences(of: " ", with: "")
+        result = result.replacingOccurrences(of: "　", with: "")
+        result = result.replacingOccurrences(of: "·", with: "")
+        result = result.replacingOccurrences(of: "・", with: "")
+        result = result.replacingOccurrences(of: ".", with: "")
+        result = result.replacingOccurrences(of: "-", with: "")
+        result = result.replacingOccurrences(of: "—", with: "")
+        result = result.replacingOccurrences(of: ":", with: "")
+        result = result.replacingOccurrences(of: "：", with: "")
+        return result
+    }
+
     private func makeSource(for site: CMSSite) -> MovieSourceProtocol {
         AppleCMSSource(site: site)
     }
