@@ -33,9 +33,15 @@ final class NoticeManager: ObservableObject {
 
     func fetch() {
         guard let endpoint else { return }
-        URLSession.shared.dataTask(with: endpoint) { [weak self] data, _, _ in
+
+        // 公告要实时生效：禁止读本地缓存，否则服务器把 enabled 改成 false 了，客户端还会弹旧公告
+        var request = URLRequest(url: endpoint)
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.timeoutInterval = 15
+
+        URLSession.shared.dataTask(with: request) { [weak self] data, _, _ in
             guard let data,
-                  let payload = try? JSONDecoder().decode(NoticePayload.self, from: data) else {
+                  let payload = Self.decodePayload(from: data) else {
                 return
             }
 
@@ -50,6 +56,75 @@ final class NoticeManager: ObservableObject {
                 self?.notice = notice
             }
         }.resume()
+    }
+
+    /// 解析公告 JSON。手改配置文件时容易写上 `//` 注释（标准 JSON 不支持），
+    /// 这里先按标准解析，失败再剥掉行注释重试一次。
+    private static func decodePayload(from data: Data) -> NoticePayload? {
+        if let payload = try? JSONDecoder().decode(NoticePayload.self, from: data) {
+            return payload
+        }
+        guard let text = String(data: data, encoding: .utf8) else { return nil }
+
+        let withoutComments = strippingJSONComments(text)
+        if let payload = try? JSONDecoder().decode(NoticePayload.self, from: Data(withoutComments.utf8)) {
+            return payload
+        }
+
+        // 再宽容一点：去掉对象 / 数组结尾多余的逗号（手写配置时很常见）
+        let relaxed = cleaningTrailingCommas(withoutComments)
+        return try? JSONDecoder().decode(NoticePayload.self, from: Data(relaxed.utf8))
+    }
+
+    /// 去掉对象 / 数组结尾多余的逗号（JSON 标准不允许，但手写配置时容易多写）。
+    private static func cleaningTrailingCommas(_ text: String) -> String {
+        var result = text.replacingOccurrences(of: ",\\s*}", with: "}", options: .regularExpression)
+        result = result.replacingOccurrences(of: ",\\s*]", with: "]", options: .regularExpression)
+        return result
+    }
+
+    /// 去掉 JSON 里的 `//` 行注释；字符串内部的 `//`（例如 URL）不会被误删。
+    private static func strippingJSONComments(_ text: String) -> String {
+        var result = ""
+        var inString = false
+        var escaped = false
+        var index = text.startIndex
+
+        while index < text.endIndex {
+            let character = text[index]
+            let next = text.index(after: index)
+
+            if inString {
+                result.append(character)
+                if escaped {
+                    escaped = false
+                } else if character == "\\" {
+                    escaped = true
+                } else if character == "\"" {
+                    inString = false
+                }
+                index = next
+                continue
+            }
+
+            if character == "\"" {
+                inString = true
+                result.append(character)
+                index = next
+                continue
+            }
+
+            if character == "/", next < text.endIndex, text[next] == "/" {
+                while index < text.endIndex, text[index] != "\n" {
+                    index = text.index(after: index)
+                }
+                continue
+            }
+
+            result.append(character)
+            index = next
+        }
+        return result
     }
 
     static func makeNotice(from payload: NoticePayload) -> Notice? {
