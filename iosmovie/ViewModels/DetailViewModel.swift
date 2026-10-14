@@ -90,7 +90,8 @@ final class DetailViewModel: ObservableObject {
     }
 
     /// 标题归一化（与 SearchViewModel / HomeDetailRouter 保持一致）
-    private static func normalizeTitle(_ text: String) -> String {
+    /// 标 nonisolated：它会被后台并发任务（group.addTask）调用，本身是纯函数、与线程无关
+    nonisolated private static func normalizeTitle(_ text: String) -> String {
         var result = text.lowercased()
         result = result.replacingOccurrences(of: " ", with: "")
         result = result.replacingOccurrences(of: "　", with: "")
