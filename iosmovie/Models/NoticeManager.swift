@@ -25,6 +25,8 @@ struct Notice: Equatable {
 
 final class NoticeManager: ObservableObject {
     @Published var notice: Notice?
+    /// 当前展示的是否为「更新公告」（决定弹窗图标与按钮）
+    @Published private(set) var isUpdateNotice = false
 
     /// 公告地址：优先取远程配置（配置页），其次 Info.plist 默认值
     private var endpoint: URL? {
@@ -57,15 +59,24 @@ final class NoticeManager: ObservableObject {
                 return
             }
 
-            // 服务端开关：enabled 为 true 时每次打开都弹，false 时不弹
-            guard payload.enabled ?? true,
-                  let notice = Self.makeNotice(from: payload) else {
-                DispatchQueue.main.async { self?.notice = nil }
+            // 有新版本用「更新公告」，否则用普通公告（两套内容由服务端同一接口返回）
+            let isUpdate = AppConfig.shared.hasUpdate
+            let enabled = isUpdate ? (payload.updateEnabled ?? false) : (payload.enabled ?? true)
+            let title = isUpdate ? payload.updateTitle : payload.title
+            let message = isUpdate ? payload.updateMessage : payload.message
+
+            guard enabled,
+                  let notice = Self.makeNotice(title: title, message: message) else {
+                DispatchQueue.main.async {
+                    self?.notice = nil
+                    self?.isUpdateNotice = false
+                }
                 return
             }
 
             DispatchQueue.main.async {
                 self?.notice = notice
+                self?.isUpdateNotice = isUpdate
             }
         }.resume()
     }
@@ -139,9 +150,9 @@ final class NoticeManager: ObservableObject {
         return result
     }
 
-    static func makeNotice(from payload: NoticePayload) -> Notice? {
-        let title = preprocessHTML(payload.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        let message = preprocessHTML(payload.message ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    static func makeNotice(title: String?, message: String?) -> Notice? {
+        let title = preprocessHTML(title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let message = preprocessHTML(message ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         guard !title.isEmpty, !message.isEmpty else { return nil }
         return Notice(
             title: title,
@@ -248,8 +259,19 @@ final class NoticeManager: ObservableObject {
 
 /// 服务端公告 JSON 结构。
 struct NoticePayload: Decodable {
-    /// 总开关：true 时每次打开都弹，false 时不弹
+    /// 普通公告：true 时每次打开都弹，false 时不弹
     let enabled: Bool?
     let title: String?
     let message: String?
+    /// 更新公告：App 检测到新版本时改用这套内容
+    let updateEnabled: Bool?
+    let updateTitle: String?
+    let updateMessage: String?
+
+    enum CodingKeys: String, CodingKey {
+        case enabled, title, message
+        case updateEnabled = "update_enabled"
+        case updateTitle = "update_title"
+        case updateMessage = "update_message"
+    }
 }

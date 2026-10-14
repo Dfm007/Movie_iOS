@@ -2,6 +2,12 @@ import SwiftUI
 
 struct NoticePopupView: View {
     let notice: Notice
+    /// 顶部图标（公告用 megaphone，更新提示用 arrow.down.circle.fill）
+    var icon: String = "megaphone.fill"
+    /// 主按钮标题
+    var primaryTitle: String = "知道了"
+    /// 主按钮动作；为 nil 时等同关闭
+    var onPrimary: (() -> Void)? = nil
     var onDismiss: () -> Void
 
     var body: some View {
@@ -13,7 +19,7 @@ struct NoticePopupView: View {
                 }
 
             VStack(spacing: 18) {
-                Image(systemName: "megaphone.fill")
+                Image(systemName: icon)
                     .font(.system(size: 22, weight: .bold))
                     .foregroundColor(.black.opacity(0.82))
                     .frame(width: 48, height: 48)
@@ -28,8 +34,12 @@ struct NoticePopupView: View {
                     .foregroundColor(AppTheme.textSecondary)
                     .lineSpacing(4)
 
-                Button("知道了") {
-                    onDismiss()
+                Button(primaryTitle) {
+                    if let onPrimary = onPrimary {
+                        onPrimary()
+                    } else {
+                        onDismiss()
+                    }
                 }
                 .buttonStyle(PrimaryActionButtonStyle())
             }

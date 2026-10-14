@@ -15,6 +15,9 @@ jobs:
       - name: Install xcodegen
         run: brew install xcodegen
 
+      - name: Set build number
+        run: /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.run_number }}" iosmovie/Info.plist
+
       - name: Generate xcodeproj
         run: xcodegen generate
 

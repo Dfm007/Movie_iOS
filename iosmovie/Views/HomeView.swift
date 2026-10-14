@@ -62,7 +62,12 @@ struct HomeView: View {
         }
         .overlay {
             if showNotice, let notice = noticeManager.notice {
-                NoticePopupView(notice: notice) {
+                NoticePopupView(
+                    notice: notice,
+                    icon: noticeManager.isUpdateNotice ? "arrow.down.circle.fill" : "megaphone.fill",
+                    primaryTitle: noticeManager.isUpdateNotice ? "去更新" : "知道了",
+                    onPrimary: noticeManager.isUpdateNotice ? openUpdateURL : nil
+                ) {
                     showNotice = false
                 }
             }
@@ -72,6 +77,16 @@ struct HomeView: View {
                 showNotice = true
             }
         }
+    }
+
+    // MARK: - 版本更新
+
+    /// 更新公告的「去更新」按钮：打开配置页下发的地址
+    private func openUpdateURL() {
+        if let url = AppConfig.shared.updateURL {
+            UIApplication.shared.open(url)
+        }
+        showNotice = false
     }
 
     private var categoryBar: some View {
