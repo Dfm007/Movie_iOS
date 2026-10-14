@@ -33,8 +33,10 @@ final class SearchViewModel: ObservableObject {
 
         isLoading = true
         errorMessage = nil
+        results = []
 
         var allMovies: [(site: CMSSite, movie: MovieItem)] = []
+        var receivedAny = false
 
         await withTaskGroup(of: (CMSSite, [MovieItem])?.self) { group in
             for site in sites {
@@ -48,15 +50,20 @@ final class SearchViewModel: ObservableObject {
                     }
                 }
             }
+
+            // 任一源返回就立即展示；其余源返回后动态合并进去（不让慢源拖住整体）
             for await case let (site, movies)? in group {
+                guard !movies.isEmpty else { continue }
                 allMovies.append(contentsOf: movies.map { (site, $0) })
+                receivedAny = true
+                results = Self.merge(allMovies)
+                isLoading = false
             }
         }
 
-        results = Self.merge(allMovies)
         isLoading = false
 
-        if results.isEmpty {
+        if !receivedAny {
             errorMessage = "未找到相关影视"
         }
     }
