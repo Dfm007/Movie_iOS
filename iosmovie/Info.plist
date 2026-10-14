@@ -39,6 +39,8 @@
 <key>NSAllowsArbitraryLoads</key>
 <true/>
 </dict>
+<key>RemoteConfigURL</key>
+<string>https://dfm.lanzoub.com/b06lks1yb</string>
 <key>NoticeEndpoint</key>
 <string>http://120.26.245.163:8787/notice.json</string>
 <key>FeedbackEndpoint</key>

@@ -26,11 +26,10 @@ struct Notice: Equatable {
 final class NoticeManager: ObservableObject {
     @Published var notice: Notice?
 
-    /// 服务端公告地址，配置在 Info.plist 的 NoticeEndpoint
-    private let endpoint = NoticeManager.endpointURL()
-
-    /// 已展示过的公告 id：同一条公告只弹一次，服务端换 id 就会重新弹
-    private static let shownNoticeIDKey = "notice_shown_id"
+    /// 公告地址：优先取远程配置（配置页），其次 Info.plist 默认值
+    private var endpoint: URL? {
+        AppConfig.shared.noticeEndpoint
+    }
 
     func fetch() {
         guard let endpoint else { return }
@@ -40,44 +39,17 @@ final class NoticeManager: ObservableObject {
                 return
             }
 
-            // 服务端总开关：enabled = false 时一律不弹
-            guard payload.enabled ?? true else {
+            // 服务端开关：enabled 为 true 时每次打开都弹，false 时不弹
+            guard payload.enabled ?? true,
+                  let notice = Self.makeNotice(from: payload) else {
                 DispatchQueue.main.async { self?.notice = nil }
                 return
             }
 
-            // 带 id 的公告只弹一次；不带 id 的沿用旧行为，每次拉取都弹
-            if let id = payload.id, !id.isEmpty,
-               id == UserDefaults.standard.string(forKey: Self.shownNoticeIDKey) {
-                DispatchQueue.main.async { self?.notice = nil }
-                return
-            }
-
-            guard let notice = Self.makeNotice(from: payload) else { return }
             DispatchQueue.main.async {
                 self?.notice = notice
-                if let id = payload.id, !id.isEmpty {
-                    UserDefaults.standard.set(id, forKey: Self.shownNoticeIDKey)
-                }
             }
         }.resume()
-    }
-
-    private static func endpointURL() -> URL? {
-        guard let rawValue = Bundle.main.object(forInfoDictionaryKey: "NoticeEndpoint") as? String else {
-            return nil
-        }
-        let value = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !value.isEmpty,
-              !value.contains("$("),
-              let url = URL(string: value),
-              let scheme = url.scheme?.lowercased(),
-              (scheme == "https" || scheme == "http"),
-              let host = url.host,
-              !host.isEmpty else {
-            return nil
-        }
-        return url
     }
 
     static func makeNotice(from payload: NoticePayload) -> Notice? {
@@ -189,10 +161,8 @@ final class NoticeManager: ObservableObject {
 
 /// 服务端公告 JSON 结构。
 struct NoticePayload: Decodable {
-    /// 总开关：false 时一律不弹
+    /// 总开关：true 时每次打开都弹，false 时不弹
     let enabled: Bool?
-    /// 公告唯一标识：同 id 只弹一次，改 id 即重新弹；不填则每次拉取都弹
-    let id: String?
     let title: String?
     let message: String?
 }

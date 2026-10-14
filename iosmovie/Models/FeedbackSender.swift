@@ -3,25 +3,10 @@ import Foundation
 
 private enum FeedbackServiceConfig {
     // 每个 App 只配置自己的 app_id、发件人名称、标题模板和 token，SMTP 凭据留在服务器。
-    static let endpoint: URL? = {
-        guard let rawValue = Bundle.main.object(forInfoDictionaryKey: "FeedbackEndpoint") as? String else {
-            return nil
-        }
-
-        let value = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !value.isEmpty,
-              !value.contains("your-domain.com"),
-              !value.contains("$("),
-              let url = URL(string: value),
-              let scheme = url.scheme?.lowercased(),
-              (scheme == "https" || scheme == "http"),
-              let host = url.host,
-              !host.isEmpty else {
-            return nil
-        }
-
-        return url
-    }()
+    /// 接口地址：优先取远程配置（配置页），其次 Info.plist 默认值
+    static var endpoint: URL? {
+        AppConfig.shared.feedbackEndpoint
+    }
 
     static let token: String? = {
         guard let rawValue = Bundle.main.object(forInfoDictionaryKey: "FeedbackToken") as? String else {
