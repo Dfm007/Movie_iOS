@@ -118,14 +118,15 @@ final class DetailViewModel: ObservableObject {
 
         let source = makeSource(for: targetSite)
 
-        // 候选详情 id（按优先级）：detailMap 里该站点的精确 vod_id → 传入的 path。
+        // 候选详情 id：优先用 detailMap 里「该站点自己的」vod_id。
+        // 注意 path 是「进入详情时那个源」的 vod_id，只能给同一个源用；
+        // 否则切到 B 源时会拿 A 的 id 去 B 源查，导致选集切不过去或显示错内容。
         // 逐个尝试，选第一个「带分集」的详情；若都无分集，保留第一个成功的详情兜底展示。
-        // 这样无论初次进入还是切换源，行为完全一致，不再依赖顺序或时序。
         var candidates: [String] = []
         if let id = siteDetailMap[targetSite.id], !id.isEmpty, !candidates.contains(id) {
             candidates.append(id)
         }
-        if !path.isEmpty, !candidates.contains(path) {
+        if candidates.isEmpty, !path.isEmpty, !candidates.contains(path) {
             candidates.append(path)
         }
 
