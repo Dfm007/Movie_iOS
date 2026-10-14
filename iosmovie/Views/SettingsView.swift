@@ -142,6 +142,28 @@ struct SettingsView: View {
                 }
                 .listRowBackground(AppTheme.surface)
             }
+
+            Section {
+                HStack {
+                    Label("当前版本", systemImage: "number")
+                        .foregroundColor(AppTheme.textPrimary)
+                    Spacer()
+                    Text(versionText)
+                        .foregroundColor(AppTheme.textSecondary)
+                }
+                .listRowBackground(AppTheme.surface)
+
+                HStack {
+                    Label("开发者", systemImage: "person")
+                        .foregroundColor(AppTheme.textPrimary)
+                    Spacer()
+                    Text("dfm007")
+                        .foregroundColor(AppTheme.textSecondary)
+                }
+                .listRowBackground(AppTheme.surface)
+            } header: {
+                Label("关于", systemImage: "info.circle")
+            }
         }
         .listStyle(.insetGrouped)
         .background(AppTheme.background.ignoresSafeArea())
@@ -176,6 +198,14 @@ struct SettingsView: View {
             }
             Button("否", role: .cancel) { }
         }
+    }
+
+    /// 显示 "1.0 (12)"：前者是发版版本号，后者是 CI 自动递增的构建号
+    private var versionText: String {
+        let version = AppConfig.shared.currentVersion
+        let build = (Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return build.isEmpty ? version : "\(version) (\(build))"
     }
 
     private func deleteSites(at offsets: IndexSet) {
