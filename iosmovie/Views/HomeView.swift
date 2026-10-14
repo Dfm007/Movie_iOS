@@ -42,11 +42,10 @@ struct HomeView: View {
             }
             .task {
                 // 配置页与首页数据并行拉取
-                // 用 detached 让配置页请求真正跑在主线程之外，避免被首页数据解析拖住
                 let configTask = Task.detached { await AppConfig.shared.refresh() }
                 let homeTask = Task { await viewModel.loadInitial() }
 
-                // 配置一就绪就请求最新公告，不等首页数据
+                // 配置就绪后请求公告接口，公告接口会同时返回公告、版本号和更新地址
                 await configTask.value
                 noticeManager.fetch()
 
@@ -84,7 +83,7 @@ struct HomeView: View {
 
     // MARK: - 版本更新
 
-    /// 更新公告的「去更新」按钮：打开配置页下发的地址
+    /// 更新公告的「去更新」按钮：打开公告接口下发的地址
     private func openUpdateURL() {
         if let url = AppConfig.shared.updateURL {
             UIApplication.shared.open(url)

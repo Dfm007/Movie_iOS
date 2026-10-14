@@ -1,24 +1,18 @@
 import Foundation
 
-/// 远程配置：从一个「配置页」（例如蓝奏云分享页）里解析出真实的接口地址。
-///
-/// 目的：换服务器时只改配置页内容，App 不需要重新构建。
-/// 取值优先级：远程配置 → 上次成功的缓存 → Info.plist 默认值。
+/// 远程配置：从配置页（例如蓝奏云）解析反馈和公告接口地址。
+/// 版本号和更新地址由公告接口 `/api/v1/notice` 返回。
 final class AppConfig {
     static let shared = AppConfig()
 
-    /// 配置页里解析出来的字段
+    /// 配置页里解析出来的接口地址字段。
     struct Remote: Codable {
         var feedbackEndpoint: String?
         var noticeEndpoint: String?
-        /// 最新版本号（用于更新检查）
-        var latestVersion: String?
-        /// 新版本下载 / 说明页地址
-        var updateURL: String?
 
-        /// 任一字段有值即视为有效配置（配置页写错时不会清空缓存）
+        /// 任一字段有值即视为有效配置（配置页写错时不会清空缓存）。
         var hasAnyContent: Bool {
-            [feedbackEndpoint, noticeEndpoint, latestVersion, updateURL].contains { value in
+            [feedbackEndpoint, noticeEndpoint].contains { value in
                 guard let value else { return false }
                 return !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             }
@@ -28,6 +22,8 @@ final class AppConfig {
     private static let cacheKey = "remote_config_cache"
     private let queue = DispatchQueue(label: "com.iosmovie.app-config")
     private var remote: Remote?
+    private var latestVersionValue: String?
+    private var updateURLValue: URL?
 
     private init() {
         remote = Self.loadCache()
@@ -45,17 +41,25 @@ final class AppConfig {
         queue.sync { Self.validURL(remote?.noticeEndpoint) }
     }
 
-    /// 配置页下发的最新版本号（用于更新检查）
+    /// 公告接口返回的最新版本号（用于更新检查）
     var latestVersion: String? {
-        queue.sync {
-            let value = remote?.latestVersion?.trimmingCharacters(in: .whitespacesAndNewlines)
-            return (value?.isEmpty ?? true) ? nil : value
-        }
+        queue.sync { latestVersionValue }
     }
 
-    /// 新版本下载 / 说明页地址
+    /// 公告接口返回的新版本下载 / 说明页地址
     var updateURL: URL? {
-        queue.sync { Self.validURL(remote?.updateURL) }
+        queue.sync { updateURLValue }
+    }
+
+    /// 用公告接口返回的版本信息更新运行时状态
+    func updateVersionInfo(latestVersion: String?, updateURL: String?) {
+        let version = latestVersion?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let url = Self.validURL(updateURL)
+
+        queue.sync {
+            latestVersionValue = (version?.isEmpty ?? true) ? nil : version
+            updateURLValue = url
+        }
     }
 
     /// App 标识：发信与公告接口共用（Info.plist 的 RemoteConfigAppID）
@@ -76,7 +80,7 @@ final class AppConfig {
 
     // MARK: - 拉取远程配置
 
-    /// 请求配置页并解析；失败时静默保留上次成功的缓存
+    /// 请求配置页并解析接口地址；失败时静默保留上次成功的缓存。
     func refresh() async {
         guard let url = Self.plistURL(forKey: "RemoteConfigURL") else { return }
 
@@ -99,9 +103,7 @@ final class AppConfig {
             queue.sync {
                 let merged = Remote(
                     feedbackEndpoint: parsed.feedbackEndpoint ?? self.remote?.feedbackEndpoint,
-                    noticeEndpoint: parsed.noticeEndpoint ?? self.remote?.noticeEndpoint,
-                    latestVersion: parsed.latestVersion ?? self.remote?.latestVersion,
-                    updateURL: parsed.updateURL ?? self.remote?.updateURL
+                    noticeEndpoint: parsed.noticeEndpoint ?? self.remote?.noticeEndpoint
                 )
                 self.remote = merged
                 Self.saveCache(merged)
@@ -116,14 +118,10 @@ final class AppConfig {
     /// 配置页格式：
     /// `[feedback]接口地址[/feedback]`
     /// `[notice]接口地址[/notice]`
-    /// `[version]最新版本号[/version]`
-    /// `[update_url]下载或说明页地址[/update_url]`
     static func parse(html: String) -> Remote {
         Remote(
             feedbackEndpoint: extract(html, tag: "feedback"),
-            noticeEndpoint: extract(html, tag: "notice"),
-            latestVersion: extract(html, tag: "version"),
-            updateURL: extract(html, tag: "update_url")
+            noticeEndpoint: extract(html, tag: "notice")
         )
     }
 
@@ -194,7 +192,7 @@ extension AppConfig {
         return value.isEmpty ? "1.0" : value
     }
 
-    /// 配置页下发的版本号是否比本地新
+    /// 公告接口下发的版本号是否比本地新
     var hasUpdate: Bool {
         guard let latest = latestVersion else { return false }
         return Self.isVersion(latest, newerThan: currentVersion)

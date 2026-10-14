@@ -28,7 +28,7 @@ final class NoticeManager: ObservableObject {
     /// 当前展示的是否为「更新公告」（决定弹窗图标与按钮）
     @Published private(set) var isUpdateNotice = false
 
-    /// 公告地址：优先取远程配置（配置页），其次 Info.plist 默认值
+    /// 公告地址：固定取 Info.plist 的 NoticeEndpoint
     private var endpoint: URL? {
         AppConfig.shared.noticeEndpoint
     }
@@ -64,6 +64,9 @@ final class NoticeManager: ObservableObject {
 
     /// 按「是否有新版本」决定用哪套内容，并更新 UI（需在主线程调用）
     private func apply(_ payload: NoticePayload) {
+        // 版本号和更新地址由公告接口下发
+        AppConfig.shared.updateVersionInfo(latestVersion: payload.version, updateURL: payload.updateURL)
+
         // 有新版本用「更新公告」，否则用普通公告（两套内容由服务端同一接口返回）
         let isUpdate = AppConfig.shared.hasUpdate
         let enabled = isUpdate ? (payload.updateEnabled ?? false) : (payload.enabled ?? true)
@@ -267,11 +270,17 @@ struct NoticePayload: Decodable {
     let updateEnabled: Bool?
     let updateTitle: String?
     let updateMessage: String?
+    /// 最新版本号（来自后台发信设置）
+    let version: String?
+    /// 新版本下载 / 说明页地址
+    let updateURL: String?
 
     enum CodingKeys: String, CodingKey {
         case enabled, title, message
         case updateEnabled = "update_enabled"
         case updateTitle = "update_title"
         case updateMessage = "update_message"
+        case version
+        case updateURL = "update_url"
     }
 }
