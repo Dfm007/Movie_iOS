@@ -49,6 +49,7 @@ final class VPCPlayerModel: ObservableObject {
     private var dragStartVolume: Float?
     private var previousRate: Float = 1
     private var controlsHideWorkItem: DispatchWorkItem?
+    private var longPressActive = false
 
     init(
         source: PlaySource,
@@ -420,10 +421,14 @@ final class VPCPlayerModel: ObservableObject {
     func setLongPressActive(_ active: Bool) {
         guard !isLocked else { return }
         if active {
+            guard !longPressActive, context.render.player.rate > 0 else { return }
+            longPressActive = true
             previousRate = context.render.player.rate > 0 ? context.render.player.rate : 1
             context.render.player.rate = 2
             gestureHint = "2x 快进中"
         } else {
+            guard longPressActive else { return }
+            longPressActive = false
             context.render.player.rate = previousRate
             clearGestureHintLater()
         }
@@ -432,9 +437,9 @@ final class VPCPlayerModel: ObservableObject {
     func handleDoubleTap(at x: CGFloat, width: CGFloat) {
         guard !isLocked, width > 0 else { return }
         let ratio = x / width
-        if ratio < 0.3 {
+        if ratio < 0.2 {
             seek(by: -10)
-        } else if ratio < 0.7 {
+        } else if ratio < 0.8 {
             togglePlayPause()
         } else {
             seek(by: 10)

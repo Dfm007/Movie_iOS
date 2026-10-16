@@ -150,10 +150,12 @@ struct PlayerView: View {
                         model.handleDoubleTap(at: value.location.x, width: width)
                     }
             )
-            .simultaneousGesture(
-                LongPressGesture(minimumDuration: 0.5, maximumDistance: 12)
-                    .onChanged { model.setLongPressActive($0) }
-                    .onEnded { _ in model.setLongPressActive(false) }
+            .background(
+                VPCLongPressGestureView(
+                    onBegan: { model.setLongPressActive(true) },
+                    onEnded: { model.setLongPressActive(false) }
+                )
+                .frame(width: 1, height: 1)
             )
     }
 

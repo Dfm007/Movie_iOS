@@ -21,6 +21,82 @@ struct VPCDanmakuView: UIViewRepresentable {
     func updateUIView(_ uiView: DanmakuView, context: UIViewRepresentableContext<VPCDanmakuView>) {}
 }
 
+struct VPCLongPressGestureView: UIViewRepresentable {
+    let onBegan: () -> Void
+    let onEnded: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onBegan: onBegan, onEnded: onEnded)
+    }
+
+    func makeUIView(context: UIViewRepresentableContext<VPCLongPressGestureView>) -> LongPressHostView {
+        let view = LongPressHostView()
+        view.isUserInteractionEnabled = false
+        view.onBegan = context.coordinator.onBegan
+        view.onEnded = context.coordinator.onEnded
+        return view
+    }
+
+    func updateUIView(_ uiView: LongPressHostView, context: UIViewRepresentableContext<VPCLongPressGestureView>) {
+        uiView.onBegan = context.coordinator.onBegan
+        uiView.onEnded = context.coordinator.onEnded
+    }
+
+    final class Coordinator {
+        let onBegan: () -> Void
+        let onEnded: () -> Void
+
+        init(onBegan: @escaping () -> Void, onEnded: @escaping () -> Void) {
+            self.onBegan = onBegan
+            self.onEnded = onEnded
+        }
+    }
+}
+
+final class LongPressHostView: UIView, UIGestureRecognizerDelegate {
+    var onBegan: (() -> Void)?
+    var onEnded: (() -> Void)?
+
+    private weak var installedRecognizer: UILongPressGestureRecognizer?
+
+    deinit {
+        if let recognizer = installedRecognizer {
+            recognizer.view?.removeGestureRecognizer(recognizer)
+        }
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        guard installedRecognizer == nil, let host = superview else { return }
+
+        let recognizer = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
+        recognizer.minimumPressDuration = 0.5
+        recognizer.allowableMovement = 12
+        recognizer.cancelsTouchesInView = false
+        recognizer.delegate = self
+        host.addGestureRecognizer(recognizer)
+        installedRecognizer = recognizer
+    }
+
+    @objc private func handleLongPress(_ recognizer: UILongPressGestureRecognizer) {
+        switch recognizer.state {
+        case .began:
+            onBegan?()
+        case .ended, .cancelled, .failed:
+            onEnded?()
+        default:
+            break
+        }
+    }
+
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
+        true
+    }
+}
+
 struct VPCBufferingView: View {
     let text: String
 
