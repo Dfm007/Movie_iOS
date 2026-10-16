@@ -434,7 +434,8 @@ final class VPCPlayerModel: ObservableObject {
         }
     }
 
-    func handleDoubleTap(at x: CGFloat, width: CGFloat) {
+    func handleDoubleTap(at x: CGFloat) {
+        let width = CGFloat(context.viewSize.width)
         guard !isLocked, width > 0 else { return }
         let ratio = x / width
         if ratio < 0.2 {

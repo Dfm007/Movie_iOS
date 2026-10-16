@@ -41,7 +41,7 @@ struct PlayerView: View {
     var body: some View {
         GeometryReader { proxy in
             VStack(spacing: 0) {
-                playerWidget(width: proxy.size.width)
+                playerWidget
                     .frame(maxWidth: .infinity)
                     .frame(height: model.isFullScreen ? nil : proxy.size.width * 9 / 16)
                     .frame(maxHeight: model.isFullScreen ? .infinity : nil)
@@ -80,7 +80,7 @@ struct PlayerView: View {
         }
     }
 
-    private func playerWidget(width: CGFloat) -> some View {
+    private var playerWidget: some View {
         PlayerWidget(model.context)
             .background(Color.black)
             .overlay {
@@ -137,9 +137,9 @@ struct PlayerView: View {
                 }
             }
             .overlay(alignment: .leading) {
-                if model.isFullScreen && (model.isLocked || model.controlsVisible) {
+                if model.isFullScreen {
                     VPCLockButton(isLocked: model.isLocked) { model.toggleLock() }
-                        .padding(.leading, 12)
+                        .padding(.leading, 24)
                 }
             }
             .animation(.easeInOut(duration: 0.2), value: model.controlsVisible)
@@ -147,7 +147,7 @@ struct PlayerView: View {
             .simultaneousGesture(
                 SpatialTapGesture(count: 2)
                     .onEnded { value in
-                        model.handleDoubleTap(at: value.location.x, width: width)
+                        model.handleDoubleTap(at: value.location.x)
                     }
             )
             .background(

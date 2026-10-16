@@ -67,14 +67,14 @@ final class LongPressHostView: UIView, UIGestureRecognizerDelegate {
 
     override func didMoveToWindow() {
         super.didMoveToWindow()
-        guard installedRecognizer == nil, let host = superview else { return }
+        guard installedRecognizer == nil, let window = window else { return }
 
         let recognizer = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
         recognizer.minimumPressDuration = 0.5
         recognizer.allowableMovement = 12
         recognizer.cancelsTouchesInView = false
         recognizer.delegate = self
-        host.addGestureRecognizer(recognizer)
+        window.addGestureRecognizer(recognizer)
         installedRecognizer = recognizer
     }
 
