@@ -480,7 +480,7 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = iosmovie/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks");
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.iosmovie.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "iosmovie/iosmovie-Bridging-Header.h";
@@ -499,7 +499,7 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = iosmovie/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks");
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.iosmovie.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "iosmovie/iosmovie-Bridging-Header.h";
