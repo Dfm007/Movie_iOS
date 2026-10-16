@@ -148,12 +148,11 @@ final class ZFPlayerViewController: UIViewController {
     private var fullScreenButton: UIButton?
     private var speedButton: UIButton?
     private var episodeDrawerButton: UIButton?
-    private var fullScreenBottomConstraint: NSLayoutConstraint?
-    private var speedBottomConstraint: NSLayoutConstraint?
     private var normalRate: Float = 1.0
     private var speedHintLabel: UILabel?
     private var speedMenuView: UIView?
     private var isFullScreen = false
+    private weak var fullScreenVC: FullScreenPlayerViewController?
     private var didBecomeReady = false
     private var loadWatchdog: DispatchWorkItem?
     /// 起播定位只做一次，避免用户手动拖动后被反复拽回
@@ -222,17 +221,8 @@ final class ZFPlayerViewController: UIViewController {
         self.player = player
         self.playerView = manager.view
 
-        // 只响应显式全屏按钮；设备转动不自动触发全屏，避免用户侧躺时误旋转。
+        // 设备转动不自动触发全屏；全屏由页面按钮显式控制，横屏过渡自行处理。
         player.orientationObserver.allowOrientationRotation = false
-        player.orientationWillChange = { [weak self] _, isFullScreen in
-            self?.isFullScreen = isFullScreen
-            self?.updateFullScreenChrome()
-        }
-        player.orientationDidChanged = { [weak self] _, isFullScreen in
-            self?.isFullScreen = isFullScreen
-            self?.updateFullScreenChrome()
-            self?.bringPlayerControlsToFront()
-        }
 
         // 加载成功：撤销看门狗、清空失败记录，并按续播记录定位
         player.playerReadyToPlay = { [weak self] _, _ in
@@ -424,11 +414,9 @@ final class ZFPlayerViewController: UIViewController {
         overlay.bringSubviewToFront(button)
         self.fullScreenButton = button
 
-        let bottom = button.bottomAnchor.constraint(equalTo: overlay.bottomAnchor, constant: -16)
-        fullScreenBottomConstraint = bottom
         NSLayoutConstraint.activate([
             button.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -12),
-            bottom,
+            button.bottomAnchor.constraint(equalTo: overlay.bottomAnchor, constant: -16),
             button.widthAnchor.constraint(equalToConstant: 36),
             button.heightAnchor.constraint(equalToConstant: 36)
         ])
@@ -497,11 +485,9 @@ final class ZFPlayerViewController: UIViewController {
         overlay.bringSubviewToFront(speed)
         speedButton = speed
 
-        let bottom = speed.bottomAnchor.constraint(equalTo: overlay.bottomAnchor, constant: -16)
-        speedBottomConstraint = bottom
         NSLayoutConstraint.activate([
             speed.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -60),
-            bottom,
+            speed.bottomAnchor.constraint(equalTo: overlay.bottomAnchor, constant: -16),
             speed.widthAnchor.constraint(equalToConstant: 48),
             speed.heightAnchor.constraint(equalToConstant: 36)
         ])
@@ -571,14 +557,96 @@ final class ZFPlayerViewController: UIViewController {
     }
 
     private func setFullScreen(_ fullScreen: Bool) {
-        guard let player, isFullScreen != fullScreen else { return }
         if fullScreen {
-            dismissSpeedMenu()
+            presentFullScreen()
+        } else {
+            dismissFullScreen()
+        }
+    }
+
+    private func presentFullScreen() {
+        guard !isFullScreen else { return }
+        dismissSpeedMenu()
+        isFullScreen = true
+
+        // 必须用独立的横屏 VC 强制系统旋转；ZFPlayer 自带的 enterFullScreen
+        // 在当前 SwiftUI 容器里只旋转播放器视图，系统窗口仍会停在竖屏。
+        let fullVC = FullScreenPlayerViewController()
+        fullVC.modalPresentationStyle = .fullScreen
+        fullVC.onClose = { [weak self] in
+            self?.isFullScreen = false
+        }
+        fullScreenVC = fullVC
+
+        present(fullVC, animated: false) { [weak self] in
+            guard let self = self else { return }
+
+            fullVC.addChild(self)
+            self.view.frame = fullVC.view.bounds
+            self.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+
+            let shouldAnimate = !UIAccessibility.isReduceMotionEnabled
+            let startTransform = CGAffineTransform(rotationAngle: .pi / 2)
+                .scaledBy(x: 0.5, y: 0.5)
+            self.view.transform = shouldAnimate ? startTransform : .identity
+            fullVC.view.addSubview(self.view)
+            self.didMove(toParent: fullVC)
+            self.updateFullScreenChrome()
+            self.bringPlayerControlsToFront()
+
+            guard shouldAnimate else { return }
+
+            // 先用 90° 旋转模拟竖屏朝向，再旋转回横屏全屏，形成连续的空间过渡。
+            UIView.animate(
+                withDuration: 0.32,
+                delay: 0,
+                options: [.curveEaseInOut, .beginFromCurrentState]
+            ) {
+                self.view.transform = .identity
+            }
+        }
+    }
+
+    private func dismissFullScreen() {
+        guard isFullScreen, let fullVC = fullScreenVC else { return }
+        isFullScreen = false
+        updateFullScreenChrome()
+
+        let finish = { [weak self, weak fullVC] in
+            guard let self = self else { return }
+            self.willMove(toParent: nil)
+            self.view.removeFromSuperview()
+            self.removeFromParent()
+
+            fullVC?.dismiss(animated: false) { [weak self] in
+                guard let self = self else { return }
+                self.view.frame = CGRect(
+                    x: 0,
+                    y: 0,
+                    width: UIScreen.main.bounds.width,
+                    height: UIScreen.main.bounds.width * 9 / 16
+                )
+                self.view.autoresizingMask = []
+                self.view.transform = .identity
+                self.bringPlayerControlsToFront()
+            }
         }
 
-        isFullScreen = fullScreen
-        updateFullScreenChrome()
-        player.enterFullScreen(fullScreen, animated: !UIAccessibility.isReduceMotionEnabled)
+        guard !UIAccessibility.isReduceMotionEnabled else {
+            finish()
+            return
+        }
+
+        UIView.animate(
+            withDuration: 0.28,
+            delay: 0,
+            options: [.curveEaseInOut, .beginFromCurrentState]
+        ) {
+            self.view.transform = CGAffineTransform(rotationAngle: .pi / 2)
+                .scaledBy(x: 0.5, y: 0.5)
+        } completion: { _ in
+            finish()
+        }
     }
 
     private func updateFullScreenChrome() {
@@ -588,11 +656,6 @@ final class ZFPlayerViewController: UIViewController {
             for: .normal
         )
         fullScreenButton?.accessibilityLabel = isFullScreen ? "退出全屏" : "全屏"
-
-        // 横屏底部有进度条和播放按钮，把自定义按钮抬到工具栏上方。
-        let bottomInset: CGFloat = isFullScreen ? -100 : -16
-        speedBottomConstraint?.constant = bottomInset
-        fullScreenBottomConstraint?.constant = bottomInset
         bringPlayerControlsToFront()
     }
 
@@ -748,6 +811,19 @@ final class ZFPlayerViewController: UIViewController {
         default:
             break
         }
+    }
+}
+
+final class FullScreenPlayerViewController: UIViewController {
+    var onClose: (() -> Void)?
+
+    override var shouldAutorotate: Bool { true }
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .landscape }
+    override var preferredInterfaceOrientationForPresentation: UIInterfaceOrientation { .landscapeRight }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = .black
     }
 }
 
