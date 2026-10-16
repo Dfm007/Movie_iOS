@@ -18,6 +18,7 @@ enum VPCPlaybackState: Equatable {
 
 final class VPCPlayerModel: ObservableObject {
     let context = Context()
+    let movieTitle: String
 
     @Published var currentSource: PlaySource
     @Published var isFullScreen = false
@@ -52,17 +53,25 @@ final class VPCPlayerModel: ObservableObject {
     private var longPressActive = false
 
     init(
+        movieTitle: String,
         source: PlaySource,
         allSources: [PlaySource],
         startAt: Double,
         onProgress: @escaping (Double, Double) -> Void,
         onClose: @escaping () -> Void
     ) {
+        self.movieTitle = movieTitle
         self.currentSource = source
         self.allSources = allSources
         self.startAt = startAt
         self.onProgress = onProgress
         self.onClose = onClose
+    }
+
+    var displayTitle: String {
+        let episode = currentSource.name.isEmpty ? "正片" : currentSource.name
+        if movieTitle.isEmpty { return episode }
+        return "\(movieTitle) · \(episode)"
     }
 
     func start() {

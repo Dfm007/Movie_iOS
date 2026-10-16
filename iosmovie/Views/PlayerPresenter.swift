@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 
 struct PlayerPresenter: UIViewControllerRepresentable {
+    let title: String
     let source: PlaySource
     let allSources: [PlaySource]
     @Binding var isPresented: Bool
@@ -19,6 +20,7 @@ struct PlayerPresenter: UIViewControllerRepresentable {
     func updateUIViewController(_ host: UIViewController, context: Context) {
         if isPresented {
             PlayerWindowPresenter.shared.present(
+                title: title,
                 source: source,
                 allSources: allSources,
                 startAt: startAt,
@@ -35,6 +37,7 @@ final class PlayerWindowPresenter {
     private var playerVC: PlayerHostingController?
 
     func present(
+        title: String,
         source: PlaySource,
         allSources: [PlaySource],
         startAt: Double = 0,
@@ -45,6 +48,7 @@ final class PlayerWindowPresenter {
         guard let top = Self.topViewController() else { return }
 
         let vc = PlayerHostingController(
+            title: title,
             source: source,
             allSources: allSources,
             startAt: startAt,
@@ -93,6 +97,7 @@ final class PlayerWindowPresenter {
 
 final class PlayerHostingController: UIHostingController<PlayerView> {
     init(
+        title: String,
         source: PlaySource,
         allSources: [PlaySource],
         startAt: Double = 0,
@@ -101,6 +106,7 @@ final class PlayerHostingController: UIHostingController<PlayerView> {
     ) {
         super.init(
             rootView: PlayerView(
+                title: title,
                 source: source,
                 allSources: allSources,
                 startAt: startAt,

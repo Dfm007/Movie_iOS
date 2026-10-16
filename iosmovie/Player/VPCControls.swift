@@ -185,7 +185,7 @@ struct VPCHalfScreenTopControls: View {
     var body: some View {
         HStack(spacing: 8) {
             VPCCloseButton(action: onClose)
-            VPCTitleView(title: model.currentSource.name)
+            VPCTitleView(title: model.displayTitle)
             Spacer(minLength: 8)
         }
         .padding(.horizontal, 10)
@@ -213,7 +213,7 @@ struct VPCFullScreenTopControls: View {
     var body: some View {
         HStack(spacing: 8) {
             VPCBackButton { model.exitFullScreen() }
-            VPCTitleView(title: model.currentSource.name)
+            VPCTitleView(title: model.displayTitle)
             Spacer(minLength: 8)
             VPCEpisodeButton(action: onShowEpisodes)
         }
@@ -470,6 +470,13 @@ struct VPCEpisodePickerView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
                 }
+
+                Text("要切换播放源请返回影视详情页")
+                    .font(.caption)
+                    .foregroundColor(AppTheme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 10)
 
                 Divider()
 

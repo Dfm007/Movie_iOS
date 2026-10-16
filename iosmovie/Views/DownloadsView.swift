@@ -58,6 +58,7 @@ struct DownloadsView: View {
         }
         .background(
             PlayerPresenter(
+                title: playingMovie?.title ?? "",
                 source: playingMovie.map(localPlaySource) ?? PlaySource(
                     id: "",
                     name: "",

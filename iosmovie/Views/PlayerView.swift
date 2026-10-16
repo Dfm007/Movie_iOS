@@ -4,6 +4,7 @@ import UIKit
 import VideoPlayerContainer
 
 struct PlayerView: View {
+    let title: String
     let source: PlaySource
     var allSources: [PlaySource] = []
     var startAt: Double = 0
@@ -16,12 +17,14 @@ struct PlayerView: View {
     private let episodeColumns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 4)
 
     init(
+        title: String,
         source: PlaySource,
         allSources: [PlaySource] = [],
         startAt: Double = 0,
         onProgress: @escaping (Double, Double) -> Void,
         onClose: @escaping () -> Void
     ) {
+        self.title = title
         self.source = source
         self.allSources = allSources
         self.startAt = startAt
@@ -29,6 +32,7 @@ struct PlayerView: View {
         self.onClose = onClose
         _model = StateObject(
             wrappedValue: VPCPlayerModel(
+                movieTitle: title,
                 source: source,
                 allSources: allSources,
                 startAt: startAt,
@@ -36,6 +40,15 @@ struct PlayerView: View {
                 onClose: onClose
             )
         )
+    }
+
+    private var lockLeadingPadding: CGFloat {
+        let inset = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first(where: { $0.isKeyWindow })?
+            .safeAreaInsets.left ?? 0
+        return max(8, inset + 6)
     }
 
     var body: some View {
@@ -50,7 +63,7 @@ struct PlayerView: View {
                     .overlay(alignment: .leading) {
                         if model.isFullScreen {
                             VPCLockButton(isLocked: model.isLocked) { model.toggleLock() }
-                                .padding(.leading, max(72, proxy.safeAreaInsets.leading + 12))
+                                .padding(.leading, lockLeadingPadding)
                         }
                     }
 

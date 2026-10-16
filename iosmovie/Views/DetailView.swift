@@ -78,6 +78,7 @@ struct DetailView: View {
         }
         .background(
             PlayerPresenter(
+                title: viewModel.movieTitle,
                 source: playingSource ?? viewModel.sources.first ?? PlaySource(id: "", name: "", url: "", format: "", episodes: []),
                 allSources: viewModel.sources,
                 isPresented: $playerPresented
