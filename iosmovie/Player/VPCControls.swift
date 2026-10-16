@@ -404,6 +404,37 @@ struct VPCSeekPreviewOverlay: View {
     }
 }
 
+/// 全屏控件隐藏时的极细进度提示，不可交互，只订阅播放进度。
+struct VPCThinProgressBar: View {
+    @ObservedObject var metrics: VPCPlaybackMetrics
+
+    var body: some View {
+        if metrics.duration > 0 {
+            GeometryReader { proxy in
+                let width = max(proxy.size.width, 1)
+
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.white.opacity(0.16))
+
+                    Capsule()
+                        .fill(Color.white.opacity(0.34))
+                        .frame(width: width * metrics.bufferedProgress)
+
+                    Capsule()
+                        .fill(VPCTheme.accent)
+                        .frame(width: width * metrics.playbackProgress)
+                }
+            }
+            .frame(height: 2)
+            .frame(maxWidth: .infinity)
+            .clipShape(Capsule())
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+        }
+    }
+}
+
 struct VPCSpeedMenu: View {
     @EnvironmentObject private var context: Context
     private let rates: [Float] = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]

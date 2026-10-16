@@ -140,6 +140,12 @@ struct PlayerView: View {
                     .transition(.opacity)
                 }
             }
+            .overlay(alignment: .bottom) {
+                if model.isFullScreen && !model.controlsVisible {
+                    VPCThinProgressBar(metrics: model.metrics)
+                        .transition(.opacity)
+                }
+            }
             .overlay(alignment: .center) {
                 if model.controlsVisible && !model.isLocked {
                     VPCPlaybackButton()
