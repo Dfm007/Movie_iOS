@@ -88,6 +88,23 @@ struct PlayerView: View {
                     .allowsHitTesting(false)
                     .opacity(model.isDanmakuVisible ? 1 : 0)
             }
+            .overlay {
+                if model.state == .loading {
+                    VPCBufferingView(text: "加载中")
+                } else if model.state == .buffering {
+                    VPCBufferingView(text: "缓冲中")
+                }
+            }
+            .overlay {
+                if let hint = model.gestureHint {
+                    VPCGestureHintView(text: hint)
+                }
+            }
+            .simultaneousGesture(
+                LongPressGesture(minimumDuration: 0.4)
+                    .onChanged { model.setLongPressActive($0) }
+                    .onEnded { _ in model.setLongPressActive(false) }
+            )
     }
 
     private var episodeListView: some View {

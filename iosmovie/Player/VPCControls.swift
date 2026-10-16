@@ -21,6 +21,38 @@ struct VPCDanmakuView: UIViewRepresentable {
     func updateUIView(_ uiView: DanmakuView, context: UIViewRepresentableContext<VPCDanmakuView>) {}
 }
 
+struct VPCBufferingView: View {
+    let text: String
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ProgressView()
+                .tint(.white)
+            Text(text)
+                .font(.caption)
+                .foregroundColor(.white)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(VPCTheme.controlBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+struct VPCGestureHintView: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.subheadline.weight(.semibold))
+            .foregroundColor(.white)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .background(VPCTheme.controlBackground)
+            .clipShape(Capsule())
+    }
+}
+
 struct VPCCloseButton: View {
     let action: () -> Void
 
