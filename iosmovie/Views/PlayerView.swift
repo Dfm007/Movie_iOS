@@ -53,7 +53,7 @@ struct PlayerView: View {
                     .background(Color.black)
                     .ignoresSafeArea(edges: model.isFullScreen ? .all : [])
                     .overlay(alignment: .leading) {
-                        if model.isFullScreen {
+                        if model.isFullScreen && (model.isLocked || model.controlsVisible) {
                             VPCLockButton(isLocked: model.isLocked) { model.toggleLock() }
                                 .padding(.leading, lockLeadingPadding)
                         }
