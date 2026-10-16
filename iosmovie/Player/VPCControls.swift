@@ -76,8 +76,10 @@ struct VPCSeekBar: View {
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 0.5)) { _ in
-            let total = max(context.render.player.currentItem?.duration.seconds ?? 0, 1)
-            let current = min(max(context.render.player.currentTime().seconds, 0), total)
+            let rawDuration = context.render.player.currentItem?.duration.seconds ?? 0
+            let total = rawDuration.isFinite && rawDuration > 0 ? rawDuration : 1
+            let rawCurrent = context.render.player.currentTime().seconds
+            let current = rawCurrent.isFinite ? min(max(rawCurrent, 0), total) : 0
             let value = isEditing ? editingValue : current
 
             Slider(
