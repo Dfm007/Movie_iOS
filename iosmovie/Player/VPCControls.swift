@@ -197,8 +197,10 @@ struct VPCHalfScreenBottomControls: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            VPCTimeLabel()
-            VPCSeekBar()
+            VPCTimeLabel(metrics: model.metrics)
+            VPCSeekBar(metrics: model.metrics) { seconds in
+                model.seek(to: seconds)
+            }
             VPCFullScreenButton(isFullScreen: false) { model.enterFullScreen() }
         }
         .padding(.horizontal, 10)
@@ -226,8 +228,10 @@ struct VPCFullScreenBottomControls: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            VPCTimeLabel()
-            VPCSeekBar()
+            VPCTimeLabel(metrics: model.metrics)
+            VPCSeekBar(metrics: model.metrics) { seconds in
+                model.seek(to: seconds)
+            }
             VPCDanmakuToggleButton(isOn: model.isDanmakuVisible) { model.toggleDanmaku() }
             VPCSpeedMenu()
             VPCFullScreenButton(isFullScreen: true) { model.exitFullScreen() }
@@ -262,68 +266,141 @@ struct VPCPlaybackButton: View {
 }
 
 struct VPCTimeLabel: View {
-    @EnvironmentObject private var context: Context
+    @ObservedObject var metrics: VPCPlaybackMetrics
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 0.5)) { _ in
-            let current = context.render.player.currentTime().seconds
-            let total = context.render.player.currentItem?.duration.seconds ?? 0
-            Text("\(Self.format(current)) / \(Self.format(total))")
-                .font(.caption.monospacedDigit())
-                .foregroundColor(.white)
-                .lineLimit(1)
-        }
-    }
-
-    private static func format(_ seconds: Double) -> String {
-        guard seconds.isFinite, seconds > 0 else { return "00:00" }
-        let total = Int(seconds.rounded())
-        let hours = total / 3600
-        let minutes = (total % 3600) / 60
-        let secs = total % 60
-        if hours > 0 {
-            return String(format: "%d:%02d:%02d", hours, minutes, secs)
-        }
-        return String(format: "%02d:%02d", minutes, secs)
+        Text("\(VPCPlaybackMetrics.formatTime(metrics.displayTime)) / \(VPCPlaybackMetrics.formatTime(metrics.duration))")
+            .font(.caption.monospacedDigit())
+            .foregroundColor(.white)
+            .lineLimit(1)
     }
 }
 
 struct VPCSeekBar: View {
-    @EnvironmentObject private var context: Context
-    @State private var isEditing = false
-    @State private var editingValue: Double = 0
+    @ObservedObject var metrics: VPCPlaybackMetrics
+    let onSeek: (Double) -> Void
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 0.5)) { _ in
-            let rawDuration = context.render.player.currentItem?.duration.seconds ?? 0
-            let total = rawDuration.isFinite && rawDuration > 0 ? rawDuration : 1
-            let rawCurrent = context.render.player.currentTime().seconds
-            let current = rawCurrent.isFinite ? min(max(rawCurrent, 0), total) : 0
-            let value = isEditing ? editingValue : current
+        GeometryReader { proxy in
+            let width = max(proxy.size.width, 1)
 
-            Slider(
-                value: Binding(
-                    get: { value },
-                    set: { newValue in
-                        editingValue = newValue
-                        isEditing = true
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.white.opacity(0.22))
+
+                Capsule()
+                    .fill(Color.white.opacity(0.45))
+                    .frame(width: width * metrics.bufferedProgress)
+
+                Capsule()
+                    .fill(VPCTheme.accent)
+                    .frame(width: width * metrics.playbackProgress)
+
+                Circle()
+                    .fill(Color.white)
+                    .frame(
+                        width: metrics.isDragging ? 14 : 10,
+                        height: metrics.isDragging ? 14 : 10
+                    )
+                    .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
+                    .offset(x: width * metrics.playbackProgress - (metrics.isDragging ? 7 : 5))
+            }
+            .frame(height: 4)
+            .frame(maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .highPriorityGesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        guard metrics.duration > 0 else { return }
+                        metrics.beginDragging(to: target(for: value.location.x, width: width))
                     }
-                ),
-                in: 0...total,
-                onEditingChanged: { editing in
-                    if !editing {
-                        context.render.player.seek(
-                            to: CMTime(seconds: editingValue, preferredTimescale: 600),
-                            toleranceBefore: .zero,
-                            toleranceAfter: .zero
-                        )
-                        isEditing = false
+                    .onEnded { value in
+                        guard metrics.duration > 0 else { return }
+                        let target = target(for: value.location.x, width: width)
+                        metrics.endDragging()
+                        onSeek(target)
                     }
-                }
             )
-            .tint(VPCTheme.accent)
+            .overlay(alignment: .top) {
+                if metrics.isDragging {
+                    VPCSeekTargetBubble(
+                        text: "\(VPCPlaybackMetrics.formatTime(metrics.dragTargetTime)) / \(VPCPlaybackMetrics.formatTime(metrics.duration))"
+                    )
+                    .fixedSize()
+                    .offset(x: bubbleOffset(width: width), y: -30)
+                }
+            }
         }
-        .frame(height: 24)
+        .frame(height: 32)
+    }
+
+    private func target(for x: CGFloat, width: CGFloat) -> Double {
+        guard metrics.duration > 0 else { return 0 }
+        let ratio = min(max(x / width, 0), 1)
+        return ratio * metrics.duration
+    }
+
+    private func bubbleOffset(width: CGFloat) -> CGFloat {
+        let knobX = width * metrics.playbackProgress
+        let clampedX = min(max(knobX, 52), max(width - 52, 52))
+        return clampedX - width / 2
+    }
+}
+
+private struct VPCSeekTargetBubble: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.caption2.monospacedDigit().weight(.semibold))
+            .foregroundColor(.white)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color.black.opacity(0.75))
+            .clipShape(Capsule())
+    }
+}
+
+/// 只订阅高频播放状态，手势提示变化不会刷新整个播放页。
+struct VPCGestureHintOverlay: View {
+    @ObservedObject var hint: VPCGestureHintModel
+
+    var body: some View {
+        if let text = hint.text {
+            VPCGestureHintView(text: text)
+                .padding(.top, 82)
+                .transition(.opacity)
+        }
+    }
+}
+
+/// 长视频拖动进度时，在画面中央显示大号目标时间和相对偏移。
+struct VPCSeekPreviewOverlay: View {
+    @ObservedObject var metrics: VPCPlaybackMetrics
+
+    var body: some View {
+        if metrics.isDragging, metrics.isLongVideo {
+            VStack(spacing: 3) {
+                Text(VPCPlaybackMetrics.formatTime(metrics.dragTargetTime))
+                    .font(.system(size: 28, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                Text(offsetText)
+                    .font(.caption.weight(.medium))
+                    .foregroundColor(.white.opacity(0.8))
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 12)
+            .background(Color.black.opacity(0.62))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .transition(.opacity)
+        }
+    }
+
+    private var offsetText: String {
+        let offset = Int(metrics.dragOffset.rounded())
+        if offset == 0 { return "当前进度" }
+        return offset > 0 ? "快进 \(offset) 秒" : "后退 \(abs(offset)) 秒"
     }
 }
 

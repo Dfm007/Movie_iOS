@@ -87,6 +87,7 @@ struct PlayerView: View {
                 set: { if !$0 { model.errorMessage = nil } }
             )
         ) {
+            Button("重试") { model.retry() }
             Button("好", role: .cancel) {}
         } message: {
             Text(model.errorMessage ?? "")
@@ -109,10 +110,7 @@ struct PlayerView: View {
                 }
             }
             .overlay(alignment: .top) {
-                if let hint = model.gestureHint {
-                    VPCGestureHintView(text: hint)
-                        .padding(.top, 82)
-                }
+                VPCGestureHintOverlay(hint: model.hint)
             }
             .overlay(alignment: .top) {
                 if model.controlsVisible && !model.isLocked {
@@ -148,6 +146,9 @@ struct PlayerView: View {
                         .environmentObject(model.context)
                         .transition(.opacity)
                 }
+            }
+            .overlay(alignment: .center) {
+                VPCSeekPreviewOverlay(metrics: model.metrics)
             }
             .animation(.easeInOut(duration: 0.2), value: model.controlsVisible)
             .animation(.easeInOut(duration: 0.2), value: model.isLocked)

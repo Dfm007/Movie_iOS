@@ -18,6 +18,9 @@ enum VPCPlaybackState: Equatable {
 
 final class VPCPlayerModel: ObservableObject {
     let context = Context()
+    /// 高频播放状态：只由进度条、时间标签和提示层订阅。
+    let metrics = VPCPlaybackMetrics()
+    let hint = VPCGestureHintModel()
     let movieTitle: String
 
     @Published var currentSource: PlaySource
@@ -25,7 +28,6 @@ final class VPCPlayerModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var isDanmakuVisible = true
     @Published var state: VPCPlaybackState = .idle
-    @Published var gestureHint: String?
     @Published var controlsVisible = true
     @Published var isLocked = false
 
@@ -34,17 +36,21 @@ final class VPCPlayerModel: ObservableObject {
     var onClose: () -> Void
 
     private var startAt: Double
-    private var currentTime: Double = 0
-    private var duration: Double = 0
     private var timeObserver: Any?
     private var timeControlObservation: NSKeyValueObservation?
     private var statusObservation: NSKeyValueObservation?
+    private var loadedRangeObservation: NSKeyValueObservation?
+    private var bufferEmptyObservation: NSKeyValueObservation?
+    private var keepUpObservation: NSKeyValueObservation?
     private var endObserver: NSObjectProtocol?
     private var failObserver: NSObjectProtocol?
     private var didApplyStartPosition = false
     private var didConfigure = false
     private var failedSourceIDs: Set<String> = []
     private var gestureCancellables = Set<AnyCancellable>()
+    private var metricsCancellables = Set<AnyCancellable>()
+    private var lastReportedProgressTime: Double = -1
+    private var handledFailureItemID: ObjectIdentifier?
     private var dragStartTime: Double?
     private var dragStartBrightness: CGFloat?
     private var dragStartVolume: Float?
@@ -85,6 +91,7 @@ final class VPCPlayerModel: ObservableObject {
 
         installPlayerObservers()
         installGestureObservers()
+        installMetricsObservers()
         showControls()
         load(source: currentSource, startAt: startAt)
     }
@@ -99,7 +106,11 @@ final class VPCPlayerModel: ObservableObject {
         }
         timeControlObservation = nil
         statusObservation = nil
+        loadedRangeObservation = nil
+        bufferEmptyObservation = nil
+        keepUpObservation = nil
         gestureCancellables.removeAll()
+        metricsCancellables.removeAll()
         controlsHideWorkItem?.cancel()
         controlsHideWorkItem = nil
 
@@ -113,6 +124,8 @@ final class VPCPlayerModel: ObservableObject {
         }
 
         state = .idle
+        metrics.reset()
+        hint.clearImmediately()
     }
 
     func selectSource(_ source: PlaySource) {
@@ -120,12 +133,24 @@ final class VPCPlayerModel: ObservableObject {
         selectSourceForPlayback(source)
     }
 
-    private func selectSourceForPlayback(_ source: PlaySource) {
+    /// 播放失败后从当前进度重试当前播放源。
+    func retry() {
+        failedSourceIDs.remove(currentSource.id)
+        errorMessage = nil
+        let resumeAt = metrics.currentTime
+        startAt = resumeAt
+        didApplyStartPosition = false
+        metrics.prepareForNewItem(startAt: resumeAt)
+        load(source: currentSource, startAt: resumeAt)
+    }
+
+    private func selectSourceForPlayback(_ source: PlaySource, startAt: Double = 0) {
         currentSource = source
-        startAt = 0
+        self.startAt = max(startAt, 0)
         didApplyStartPosition = false
         errorMessage = nil
-        load(source: source, startAt: 0)
+        metrics.prepareForNewItem(startAt: self.startAt)
+        load(source: source, startAt: self.startAt)
     }
 
     func togglePlayPause() {
@@ -139,8 +164,10 @@ final class VPCPlayerModel: ObservableObject {
 
     func seek(to seconds: Double) {
         guard seconds.isFinite, seconds >= 0 else { return }
+        let target = metrics.duration > 0 ? min(seconds, metrics.duration) : seconds
+        metrics.applySeek(to: target)
         context.render.player.seek(
-            to: CMTime(seconds: seconds, preferredTimescale: 600),
+            to: CMTime(seconds: target, preferredTimescale: 600),
             toleranceBefore: .zero,
             toleranceAfter: .zero
         )
@@ -207,7 +234,7 @@ final class VPCPlayerModel: ObservableObject {
     }
 
     func reportProgress() {
-        onProgress(currentTime, duration)
+        onProgress(metrics.currentTime, metrics.duration)
     }
 
     private func load(source: PlaySource, startAt: Double) {
@@ -219,9 +246,13 @@ final class VPCPlayerModel: ObservableObject {
 
         state = .loading
         let item = AVPlayerItem(url: url)
+        handledFailureItemID = nil
+        lastReportedProgressTime = -1
+        hint.clearImmediately()
         context.render.player.replaceCurrentItem(with: item)
         context.render.player.play()
         observeStatus(for: item)
+        observeBuffering(for: item)
     }
 
     private func installPlayerObservers() {
@@ -234,15 +265,21 @@ final class VPCPlayerModel: ObservableObject {
         }
 
         timeObserver = player.addPeriodicTimeObserver(
-            forInterval: CMTime(seconds: 1, preferredTimescale: 600),
+            forInterval: CMTime(seconds: 0.25, preferredTimescale: 600),
             queue: .main
         ) { [weak self] time in
             guard let self = self, let item = self.context.render.player.currentItem else { return }
             let seconds = max(0, time.seconds)
             let total = item.duration.seconds
-            self.currentTime = seconds
-            self.duration = total.isFinite && total > 0 ? total : 0
-            self.onProgress(self.currentTime, self.duration)
+            let safeDuration = total.isFinite && total > 0 ? total : 0
+            // 失败后保留最后一次有效进度，避免 AVPlayer 回零覆盖续播位置。
+            if self.state != .failed, item.status != .failed {
+                self.metrics.update(currentTime: seconds, duration: safeDuration)
+                if self.lastReportedProgressTime < 0 || abs(seconds - self.lastReportedProgressTime) >= 1 {
+                    self.lastReportedProgressTime = seconds
+                    self.onProgress(seconds, safeDuration)
+                }
+            }
         }
 
         endObserver = NotificationCenter.default.addObserver(
@@ -265,7 +302,7 @@ final class VPCPlayerModel: ObservableObject {
                   let item = notification.object as? AVPlayerItem,
                   item === self.context.render.player.currentItem else { return }
             let message = item.error?.localizedDescription ?? "播放失败"
-            self.handleFailure(message: message)
+            self.handleFailure(message: message, for: item)
         }
     }
 
@@ -277,7 +314,8 @@ final class VPCPlayerModel: ObservableObject {
                 case .readyToPlay:
                     self.applyStartPositionIfNeeded()
                 case .failed:
-                    self.handleFailure(message: observedItem.error?.localizedDescription ?? "播放失败")
+                    guard observedItem === self.context.render.player.currentItem else { return }
+                    self.handleFailure(message: observedItem.error?.localizedDescription ?? "播放失败", for: observedItem)
                 default:
                     break
                 }
@@ -285,11 +323,72 @@ final class VPCPlayerModel: ObservableObject {
         }
     }
 
+    private func observeBuffering(for item: AVPlayerItem) {
+        loadedRangeObservation = item.observe(\.loadedTimeRanges, options: [.initial, .new]) { [weak self] item, _ in
+            DispatchQueue.main.async {
+                self?.syncBufferedTime(for: item)
+            }
+        }
+
+        bufferEmptyObservation = item.observe(\.isPlaybackBufferEmpty, options: [.initial, .new]) { [weak self] item, _ in
+            DispatchQueue.main.async {
+                guard let self, item === self.context.render.player.currentItem else { return }
+                if item.isPlaybackBufferEmpty, self.context.render.player.rate > 0 {
+                    self.state = .buffering
+                }
+            }
+        }
+
+        keepUpObservation = item.observe(\.isPlaybackLikelyToKeepUp, options: [.initial, .new]) { [weak self] item, _ in
+            DispatchQueue.main.async {
+                guard let self, item === self.context.render.player.currentItem else { return }
+                self.updatePlaybackState(for: self.context.render.player)
+            }
+        }
+    }
+
+    /// 取包含当前播放位置的已缓冲区间末端；不连续区间不会把中间空洞算作已缓冲。
+    private func syncBufferedTime(for item: AVPlayerItem) {
+        guard item === context.render.player.currentItem else { return }
+        let ranges = item.loadedTimeRanges
+            .compactMap { $0.timeRangeValue }
+            .filter {
+                $0.start.seconds.isFinite &&
+                CMTimeGetSeconds(CMTimeRangeGetEnd($0)).isFinite
+            }
+        guard !ranges.isEmpty else {
+            metrics.updateBufferedTime(0)
+            return
+        }
+
+        let current = max(metrics.currentTime, 0)
+        let containingEnd = ranges
+            .filter { range in
+                let start = range.start.seconds
+                let end = CMTimeGetSeconds(CMTimeRangeGetEnd(range))
+                return start <= current + 0.5 && end >= current - 0.5
+            }
+            .map { CMTimeGetSeconds(CMTimeRangeGetEnd($0)) }
+            .max()
+
+        // 当前时间尚未落在任何缓冲段时，只回退到它之前最后一个缓冲段末端，
+        // 不把中间存在空洞的远端缓冲算进来。
+        let previousEnd = ranges
+            .filter { $0.start.seconds <= current + 0.5 }
+            .map { CMTimeGetSeconds(CMTimeRangeGetEnd($0)) }
+            .max()
+        metrics.updateBufferedTime(containingEnd ?? previousEnd ?? 0)
+    }
+
     private func applyStartPositionIfNeeded() {
         guard !didApplyStartPosition else { return }
         didApplyStartPosition = true
         guard startAt > 1 else { return }
-        seek(to: startAt)
+        let itemDuration = context.render.player.currentItem?.duration.seconds ?? 0
+        let target = itemDuration.isFinite && itemDuration > 0
+            ? min(startAt, max(itemDuration - 0.5, 0))
+            : startAt
+        seek(to: target)
     }
 
     private func playNextEpisodeIfAvailable() {
@@ -309,11 +408,18 @@ final class VPCPlayerModel: ObservableObject {
         return nil
     }
 
-    private func handleFailure(message: String) {
+    private func handleFailure(message: String, for item: AVPlayerItem) {
+        guard item === context.render.player.currentItem else { return }
+        let itemID = ObjectIdentifier(item)
+        guard handledFailureItemID != itemID else { return }
+        handledFailureItemID = itemID
+
         failedSourceIDs.insert(currentSource.id)
+        let resumeAt = max(metrics.currentTime, 0)
+        reportProgress()
 
         if let next = nextSourceForSameEpisode() {
-            selectSourceForPlayback(next)
+            selectSourceForPlayback(next, startAt: resumeAt)
             return
         }
 
@@ -357,35 +463,61 @@ final class VPCPlayerModel: ObservableObject {
         }.store(in: &gestureCancellables)
     }
 
+    private func installMetricsObservers() {
+        metrics.$isDragging
+            .removeDuplicates()
+            .sink { [weak self] dragging in
+                guard let self else { return }
+                if dragging {
+                    self.controlsHideWorkItem?.cancel()
+                    self.controlsHideWorkItem = nil
+                } else if self.controlsVisible {
+                    self.showControls()
+                }
+            }
+            .store(in: &metricsCancellables)
+    }
+
     private func seek(by delta: Double) {
         guard !isLocked else { return }
-        guard duration.isFinite, duration > 0 else { return }
-        let target = min(max(currentTime + delta, 0), duration)
+        guard metrics.duration.isFinite, metrics.duration > 0 else { return }
+        let target = min(max(metrics.currentTime + delta, 0), metrics.duration)
         seek(to: target)
-        gestureHint = delta > 0 ? "快进 10 秒" : "后退 10 秒"
-        clearGestureHintLater()
+        hint.show(delta > 0 ? "快进 10 秒" : "后退 10 秒")
+        hint.clear(after: 0.6)
     }
 
     private func handleHorizontalDrag(_ event: GestureService.GestureEvent) {
-        guard !isLocked else { return }
+        guard !isLocked, !metrics.isDragging else { return }
         guard case let .drag(value) = event.value else { return }
-        guard duration.isFinite, duration > 0 else { return }
+        guard metrics.duration.isFinite, metrics.duration > 0 else { return }
+
+        // 底部是进度条区域，避免和进度条自身的拖动手势重复处理。
+        let height = CGFloat(context.viewSize.height)
+        if height > 0, value.startLocation.y >= height - 64 {
+            return
+        }
 
         if dragStartTime == nil {
-            dragStartTime = currentTime
+            dragStartTime = metrics.currentTime
         }
 
         let width = max(CGFloat(context.viewSize.width), 1)
-        let delta = Double(value.translation.width / width) * duration
-        let target = min(max((dragStartTime ?? currentTime) + delta, 0), duration)
+        let delta = Double(value.translation.width / width) * metrics.duration
+        let target = min(max((dragStartTime ?? metrics.currentTime) + delta, 0), metrics.duration)
 
         switch event.action {
         case .start:
-            gestureHint = "\(Self.formatTime(target)) / \(Self.formatTime(duration))"
+            hint.show("\(VPCPlaybackMetrics.formatTime(target)) / \(VPCPlaybackMetrics.formatTime(metrics.duration))")
         case .end:
+            // 进度条自身正在拖动时，忽略播放器容器的水平拖动结束事件。
+            if metrics.isDragging {
+                dragStartTime = nil
+                return
+            }
             seek(to: target)
             dragStartTime = nil
-            clearGestureHintLater()
+            hint.clear(after: 0.6)
         }
     }
 
@@ -400,11 +532,11 @@ final class VPCPlayerModel: ObservableObject {
         let delta = -Double(value.translation.height / height)
         let target = min(max(Double(dragStartBrightness ?? UIScreen.main.brightness) + delta, 0), 1)
         UIScreen.main.brightness = CGFloat(target)
-        gestureHint = "亮度 \(Int(target * 100))%"
+        hint.show("亮度 \(Int(target * 100))%")
 
         if event.action == .end {
             dragStartBrightness = nil
-            clearGestureHintLater()
+            hint.clear(after: 0.6)
         }
     }
 
@@ -419,11 +551,11 @@ final class VPCPlayerModel: ObservableObject {
         let delta = Float(-value.translation.height / height)
         let target = min(max((dragStartVolume ?? AVAudioSession.sharedInstance().outputVolume) + delta, 0), 1)
         Self.setSystemVolume(target)
-        gestureHint = "音量 \(Int(target * 100))%"
+        hint.show("音量 \(Int(target * 100))%")
 
         if event.action == .end {
             dragStartVolume = nil
-            clearGestureHintLater()
+            hint.clear(after: 0.6)
         }
     }
 
@@ -434,12 +566,12 @@ final class VPCPlayerModel: ObservableObject {
             longPressActive = true
             previousRate = context.render.player.rate > 0 ? context.render.player.rate : 1
             context.render.player.rate = 2
-            gestureHint = "2x 快进中"
+            hint.show("2x 快进中")
         } else {
             guard longPressActive else { return }
             longPressActive = false
             context.render.player.rate = previousRate
-            clearGestureHintLater()
+            hint.clear(after: 0.6)
         }
     }
 
@@ -454,24 +586,6 @@ final class VPCPlayerModel: ObservableObject {
         } else {
             seek(by: 10)
         }
-    }
-
-    private func clearGestureHintLater() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
-            self?.gestureHint = nil
-        }
-    }
-
-    private static func formatTime(_ seconds: Double) -> String {
-        guard seconds.isFinite, seconds > 0 else { return "00:00" }
-        let total = Int(seconds.rounded())
-        let hours = total / 3600
-        let minutes = (total % 3600) / 60
-        let secs = total % 60
-        if hours > 0 {
-            return String(format: "%d:%02d:%02d", hours, minutes, secs)
-        }
-        return String(format: "%02d:%02d", minutes, secs)
     }
 
     private static let volumeView = MPVolumeView(frame: .zero)
