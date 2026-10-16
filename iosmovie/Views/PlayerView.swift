@@ -83,6 +83,11 @@ struct PlayerView: View {
     private var playerWidget: some View {
         PlayerWidget(model.context)
             .background(Color.black)
+            .overlay {
+                VPCDanmakuView()
+                    .allowsHitTesting(false)
+                    .opacity(model.isDanmakuVisible ? 1 : 0)
+            }
     }
 
     private var episodeListView: some View {
@@ -140,6 +145,7 @@ struct PlayerView: View {
         context.control.configure(.halfScreen(.top1)) {
             [
                 AnyView(VPCCloseButton(action: onClose)),
+                AnyView(VPCTitleView(title: model.currentSource.name)),
                 AnyView(VPCSpacer())
             ]
         }
@@ -156,7 +162,7 @@ struct PlayerView: View {
 
         context.control.configure(.fullScreen(.top1)) {
             [
-                AnyView(VPCCloseButton(action: model.exitFullScreen)),
+                AnyView(VPCBackButton(action: model.exitFullScreen)),
                 AnyView(VPCTitleView(title: model.currentSource.name)),
                 AnyView(VPCSpacer()),
                 AnyView(VPCEpisodeButton { showEpisodePicker = true })
@@ -169,6 +175,7 @@ struct PlayerView: View {
             [
                 AnyView(VPCTimeLabel()),
                 AnyView(VPCSeekBar()),
+                AnyView(VPCDanmakuToggleButton(isOn: model.isDanmakuVisible) { model.toggleDanmaku() }),
                 AnyView(VPCSpeedMenu()),
                 AnyView(VPCFullScreenButton(isFullScreen: true) { model.exitFullScreen() })
             ]

@@ -13,6 +13,7 @@ final class VPCPlayerModel: ObservableObject {
     @Published var currentTime: Double = 0
     @Published var duration: Double = 0
     @Published var errorMessage: String?
+    @Published var isDanmakuVisible = true
 
     var allSources: [PlaySource]
     var onProgress: (Double, Double) -> Void
@@ -47,13 +48,6 @@ final class VPCPlayerModel: ObservableObject {
 
         context.status.toHalfScreen()
         context.render.player.actionAtItemEnd = .none
-        context.container.configure(overlay: .render) { [weak self] in
-            guard let self = self else { return AnyView(EmptyView()) }
-            return AnyView(
-                VPCDanmakuView()
-                    .allowsHitTesting(false)
-            )
-        }
 
         installPlayerObservers()
         load(source: currentSource, startAt: startAt)
@@ -111,6 +105,10 @@ final class VPCPlayerModel: ObservableObject {
 
     func setRate(_ rate: Float) {
         context.render.player.rate = rate
+    }
+
+    func toggleDanmaku() {
+        isDanmakuVisible.toggle()
     }
 
     func enterFullScreen() {

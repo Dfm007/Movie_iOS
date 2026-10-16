@@ -4,6 +4,11 @@ import SwiftUI
 import UIKit
 import VideoPlayerContainer
 
+enum VPCTheme {
+    static let accent = Color(red: 0.98, green: 0.45, blue: 0.60)
+    static let controlBackground = Color.black.opacity(0.55)
+}
+
 struct VPCDanmakuView: UIViewRepresentable {
     func makeUIView(context: UIViewRepresentableContext<VPCDanmakuView>) -> DanmakuView {
         let view = DanmakuView(frame: .zero)
@@ -26,6 +31,22 @@ struct VPCCloseButton: View {
                 .foregroundColor(.white)
                 .frame(width: 36, height: 36)
                 .background(Color.black.opacity(0.5))
+                .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct VPCBackButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "chevron.left")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(width: 36, height: 36)
+                .background(VPCTheme.controlBackground)
                 .clipShape(Circle())
         }
         .buttonStyle(.plain)
@@ -116,7 +137,7 @@ struct VPCSeekBar: View {
                     }
                 }
             )
-            .tint(.white)
+            .tint(VPCTheme.accent)
         }
         .frame(height: 24)
     }
@@ -141,9 +162,26 @@ struct VPCSpeedMenu: View {
                 .foregroundColor(.white)
                 .padding(.horizontal, 10)
                 .frame(height: 32)
-                .background(Color.black.opacity(0.45))
+                .background(VPCTheme.controlBackground)
                 .clipShape(Capsule())
         }
+    }
+}
+
+struct VPCDanmakuToggleButton: View {
+    let isOn: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: isOn ? "text.bubble.fill" : "text.bubble")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(isOn ? VPCTheme.accent : .white)
+                .frame(width: 36, height: 36)
+                .background(VPCTheme.controlBackground)
+                .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -157,7 +195,7 @@ struct VPCFullScreenButton: View {
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(.white)
                 .frame(width: 36, height: 36)
-                .background(Color.black.opacity(0.5))
+                .background(VPCTheme.controlBackground)
                 .clipShape(Circle())
         }
         .buttonStyle(.plain)
@@ -177,7 +215,7 @@ struct VPCEpisodeButton: View {
             .foregroundColor(.white)
             .padding(.horizontal, 10)
             .frame(height: 36)
-            .background(Color.black.opacity(0.5))
+            .background(VPCTheme.controlBackground)
             .clipShape(Capsule())
         }
         .buttonStyle(.plain)
