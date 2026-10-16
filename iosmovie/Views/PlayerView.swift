@@ -586,8 +586,8 @@ final class ZFPlayerViewController: UIViewController {
             self.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 
             let shouldAnimate = !UIAccessibility.isReduceMotionEnabled
-            let startTransform = CGAffineTransform(rotationAngle: .pi / 2)
-                .scaledBy(x: 0.5, y: 0.5)
+            let orientation = Self.currentLandscapeOrientation(in: fullVC.view.window)
+            let startTransform = Self.portraitSimulationTransform(for: orientation)
             self.view.transform = shouldAnimate ? startTransform : .identity
             fullVC.view.addSubview(self.view)
             self.didMove(toParent: fullVC)
@@ -637,16 +637,32 @@ final class ZFPlayerViewController: UIViewController {
             return
         }
 
+        let orientation = Self.currentLandscapeOrientation(in: view.window)
+        let endTransform = Self.portraitSimulationTransform(for: orientation)
         UIView.animate(
             withDuration: 0.28,
             delay: 0,
             options: [.curveEaseInOut, .beginFromCurrentState]
         ) {
-            self.view.transform = CGAffineTransform(rotationAngle: .pi / 2)
-                .scaledBy(x: 0.5, y: 0.5)
+            self.view.transform = endTransform
         } completion: { _ in
             finish()
         }
+    }
+
+    private static func portraitSimulationTransform(for orientation: UIInterfaceOrientation) -> CGAffineTransform {
+        // 横屏窗口已经转过的方向需要反向抵消，否则会先出现 180° 倒置。
+        let angle: CGFloat = orientation == .landscapeLeft ? .pi / 2 : -.pi / 2
+        return CGAffineTransform(rotationAngle: angle)
+            .scaledBy(x: 0.5, y: 0.5)
+    }
+
+    private static func currentLandscapeOrientation(in window: UIWindow?) -> UIInterfaceOrientation {
+        guard let orientation = window?.windowScene?.interfaceOrientation,
+              orientation == .landscapeLeft || orientation == .landscapeRight else {
+            return .landscapeRight
+        }
+        return orientation
     }
 
     private func updateFullScreenChrome() {
