@@ -47,6 +47,12 @@ struct PlayerView: View {
                     .frame(maxHeight: model.isFullScreen ? .infinity : nil)
                     .background(Color.black)
                     .ignoresSafeArea(edges: model.isFullScreen ? .all : [])
+                    .overlay(alignment: .leading) {
+                        if model.isFullScreen {
+                            VPCLockButton(isLocked: model.isLocked) { model.toggleLock() }
+                                .padding(.leading, max(72, proxy.safeAreaInsets.leading + 12))
+                        }
+                    }
 
                 if !model.isFullScreen {
                     episodeListView
@@ -66,6 +72,8 @@ struct PlayerView: View {
             ) { selected in
                 model.selectSource(selected)
             }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
         }
         .alert(
             "播放失败",
@@ -134,12 +142,6 @@ struct PlayerView: View {
                     VPCPlaybackButton()
                         .environmentObject(model.context)
                         .transition(.opacity)
-                }
-            }
-            .overlay(alignment: .leading) {
-                if model.isFullScreen {
-                    VPCLockButton(isLocked: model.isLocked) { model.toggleLock() }
-                        .padding(.leading, 24)
                 }
             }
             .animation(.easeInOut(duration: 0.2), value: model.controlsVisible)

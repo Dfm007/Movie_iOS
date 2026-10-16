@@ -429,23 +429,61 @@ struct VPCEpisodePickerView: View {
     let onSelect: (PlaySource) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @State private var selectedGroupID: String
+
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 4)
+
+    init(
+        groups: [PlaySource],
+        currentSourceID: String,
+        onSelect: @escaping (PlaySource) -> Void
+    ) {
+        self.groups = groups
+        self.currentSourceID = currentSourceID
+        self.onSelect = onSelect
+        let initialGroup = groups.first(where: { group in
+            group.episodes.contains(where: { $0.id == currentSourceID })
+        })?.id ?? groups.first?.id ?? ""
+        _selectedGroupID = State(initialValue: initialGroup)
+    }
 
     var body: some View {
         NavigationView {
-            List {
-                ForEach(groups) { group in
-                    Section(header: Text(group.name)) {
-                        if group.episodes.isEmpty {
-                            episodeButton(group)
-                        } else {
-                            ForEach(group.episodes) { episode in
-                                episodeButton(episode)
+            VStack(spacing: 0) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(groups) { group in
+                            Button {
+                                selectedGroupID = group.id
+                            } label: {
+                                Text(group.name)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(selectedGroupID == group.id ? .white : AppTheme.textPrimary)
+                                    .padding(.horizontal, 14)
+                                    .frame(height: 34)
+                                    .background(selectedGroupID == group.id ? VPCTheme.accent : AppTheme.mutedFill)
+                                    .clipShape(Capsule())
                             }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                }
+
+                Divider()
+
+                ScrollView {
+                    if let selectedGroup {
+                        if selectedGroup.episodes.isEmpty {
+                            episodeGrid([selectedGroup])
+                        } else {
+                            episodeGrid(selectedGroup.episodes)
                         }
                     }
                 }
             }
-            .listStyle(.insetGrouped)
+            .background(AppTheme.background)
             .navigationTitle("选集")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -456,20 +494,34 @@ struct VPCEpisodePickerView: View {
         }
     }
 
-    private func episodeButton(_ source: PlaySource) -> some View {
-        Button {
-            onSelect(source)
-            dismiss()
-        } label: {
-            HStack {
-                Text(source.name.isEmpty ? "正片" : source.name)
-                    .foregroundColor(AppTheme.textPrimary)
-                Spacer()
-                if source.id == currentSourceID {
-                    Image(systemName: "checkmark")
-                        .foregroundColor(AppTheme.accent)
+    private var selectedGroup: PlaySource? {
+        groups.first(where: { $0.id == selectedGroupID }) ?? groups.first
+    }
+
+    private func episodeGrid(_ episodes: [PlaySource]) -> some View {
+        LazyVGrid(columns: columns, spacing: 8) {
+            ForEach(episodes) { source in
+                Button {
+                    onSelect(source)
+                    dismiss()
+                } label: {
+                    Text(source.name.isEmpty ? "正片" : source.name)
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(source.id == currentSourceID ? .white : AppTheme.textPrimary)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 40)
+                        .background(source.id == currentSourceID ? VPCTheme.accent : AppTheme.surface)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppTheme.radiusSmall, style: .continuous)
+                                .stroke(AppTheme.border, lineWidth: 0.5)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.radiusSmall, style: .continuous))
                 }
+                .buttonStyle(.plain)
             }
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
     }
 }
