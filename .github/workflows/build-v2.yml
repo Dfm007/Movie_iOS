@@ -15,8 +15,26 @@ jobs:
       - name: Install xcodegen
         run: brew install xcodegen
 
-      - name: Set build number
-        run: /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.run_number }}" iosmovie/Info.plist
+      - name: Validate version source
+        run: |
+          MARKETING_VERSION=$(awk -F'"' '/MARKETING_VERSION:/ { print $2; exit }' project.yml)
+          PLIST_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" iosmovie/Info.plist)
+          PLIST_BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" iosmovie/Info.plist)
+
+          if [ -z "$MARKETING_VERSION" ]; then
+            echo "project.yml is missing targets.iosmovie.settings.base.MARKETING_VERSION"
+            exit 1
+          fi
+          if [ "$PLIST_VERSION" != '$(MARKETING_VERSION)' ]; then
+            echo "Info.plist CFBundleShortVersionString must be \$(MARKETING_VERSION), got: $PLIST_VERSION"
+            exit 1
+          fi
+          if [ "$PLIST_BUILD" != '$(CURRENT_PROJECT_VERSION)' ]; then
+            echo "Info.plist CFBundleVersion must be \$(CURRENT_PROJECT_VERSION), got: $PLIST_BUILD"
+            exit 1
+          fi
+
+          echo "Version source: project.yml MARKETING_VERSION=$MARKETING_VERSION"
 
       - name: Generate xcodeproj
         run: xcodegen generate
@@ -38,7 +56,26 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGN_IDENTITY="" \
             PROVISIONING_PROFILE_SPECIFIER="" \
-            CODE_SIGN_ENTITLEMENTS=""
+            CODE_SIGN_ENTITLEMENTS="" \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}"
+
+      - name: Verify built app version
+        run: |
+          MARKETING_VERSION=$(awk -F'"' '/MARKETING_VERSION:/ { print $2; exit }' project.yml)
+          APP_INFO="build/Build/Products/Release-iphoneos/影视王.app/Info.plist"
+          BUILT_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP_INFO")
+          BUILT_BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP_INFO")
+
+          if [ "$BUILT_VERSION" != "$MARKETING_VERSION" ]; then
+            echo "Built app version mismatch: expected $MARKETING_VERSION, got $BUILT_VERSION"
+            exit 1
+          fi
+          if [ "$BUILT_BUILD" != "${{ github.run_number }}" ]; then
+            echo "Built app build number mismatch: expected ${{ github.run_number }}, got $BUILT_BUILD"
+            exit 1
+          fi
+
+          echo "Built app version: $BUILT_VERSION ($BUILT_BUILD)"
 
       - name: Create unsigned IPA
         run: |
