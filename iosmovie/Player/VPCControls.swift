@@ -5,7 +5,7 @@ import UIKit
 import VideoPlayerContainer
 
 struct VPCDanmakuView: UIViewRepresentable {
-    func makeUIView(context: Context) -> DanmakuView {
+    func makeUIView(context: UIViewRepresentableContext<VPCDanmakuView>) -> DanmakuView {
         let view = DanmakuView(frame: .zero)
         view.backgroundColor = .clear
         view.isOpaque = false
@@ -13,7 +13,7 @@ struct VPCDanmakuView: UIViewRepresentable {
         return view
     }
 
-    func updateUIView(_ uiView: DanmakuView, context: Context) {}
+    func updateUIView(_ uiView: DanmakuView, context: UIViewRepresentableContext<VPCDanmakuView>) {}
 }
 
 struct VPCCloseButton: View {
