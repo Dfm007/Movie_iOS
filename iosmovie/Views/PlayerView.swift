@@ -13,6 +13,7 @@ struct PlayerView: View {
 
     @StateObject private var model: VPCPlayerModel
     @State private var showEpisodePicker = false
+    private let lockLeadingPadding: CGFloat = 56
 
     private let episodeColumns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 4)
 
@@ -40,15 +41,6 @@ struct PlayerView: View {
                 onClose: onClose
             )
         )
-    }
-
-    private var lockLeadingPadding: CGFloat {
-        let inset = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap(\.windows)
-            .first(where: { $0.isKeyWindow })?
-            .safeAreaInsets.left ?? 0
-        return max(8, inset + 6)
     }
 
     var body: some View {
