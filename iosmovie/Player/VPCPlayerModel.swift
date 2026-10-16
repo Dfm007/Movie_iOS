@@ -25,6 +25,8 @@ final class VPCPlayerModel: ObservableObject {
     @Published var isDanmakuVisible = true
     @Published var state: VPCPlaybackState = .idle
     @Published var gestureHint: String?
+    @Published var controlsVisible = true
+    @Published var isLocked = false
 
     var allSources: [PlaySource]
     var onProgress: (Double, Double) -> Void
@@ -46,6 +48,7 @@ final class VPCPlayerModel: ObservableObject {
     private var dragStartBrightness: CGFloat?
     private var dragStartVolume: Float?
     private var previousRate: Float = 1
+    private var controlsHideWorkItem: DispatchWorkItem?
 
     init(
         source: PlaySource,
@@ -67,10 +70,12 @@ final class VPCPlayerModel: ObservableObject {
 
         context.status.toHalfScreen()
         context.render.player.actionAtItemEnd = .none
+        context.container.enable(overlays: [.render])
         state = .loading
 
         installPlayerObservers()
         installGestureObservers()
+        showControls()
         load(source: currentSource, startAt: startAt)
     }
 
@@ -85,6 +90,8 @@ final class VPCPlayerModel: ObservableObject {
         timeControlObservation = nil
         statusObservation = nil
         gestureCancellables.removeAll()
+        controlsHideWorkItem?.cancel()
+        controlsHideWorkItem = nil
 
         if let endObserver = endObserver {
             NotificationCenter.default.removeObserver(endObserver)
@@ -112,6 +119,7 @@ final class VPCPlayerModel: ObservableObject {
     }
 
     func togglePlayPause() {
+        guard !isLocked else { return }
         if context.render.player.rate == 0 {
             context.render.player.play()
         } else {
@@ -129,6 +137,7 @@ final class VPCPlayerModel: ObservableObject {
     }
 
     func setRate(_ rate: Float) {
+        guard !isLocked else { return }
         context.render.player.rate = rate
     }
 
@@ -137,15 +146,54 @@ final class VPCPlayerModel: ObservableObject {
     }
 
     func enterFullScreen() {
-        guard !isFullScreen else { return }
+        guard !isFullScreen, !isLocked else { return }
         isFullScreen = true
         context.status.toFullScreen()
+        showControls()
     }
 
     func exitFullScreen() {
-        guard isFullScreen else { return }
+        guard isFullScreen, !isLocked else { return }
         isFullScreen = false
         context.status.toHalfScreen()
+        showControls()
+    }
+
+    func toggleLock() {
+        isLocked.toggle()
+        if isLocked {
+            controlsVisible = false
+            controlsHideWorkItem?.cancel()
+            controlsHideWorkItem = nil
+        } else {
+            showControls()
+        }
+    }
+
+    func toggleControls() {
+        guard !isLocked else { return }
+        controlsVisible.toggle()
+        if controlsVisible {
+            scheduleControlsHide()
+        } else {
+            controlsHideWorkItem?.cancel()
+            controlsHideWorkItem = nil
+        }
+    }
+
+    func showControls() {
+        guard !isLocked else { return }
+        controlsVisible = true
+        scheduleControlsHide()
+    }
+
+    private func scheduleControlsHide() {
+        controlsHideWorkItem?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            self?.controlsVisible = false
+        }
+        controlsHideWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: work)
     }
 
     func reportProgress() {
@@ -282,12 +330,8 @@ final class VPCPlayerModel: ObservableObject {
     }
 
     private func installGestureObservers() {
-        context.gesture.observe(.doubleTap(.left)) { [weak self] _ in
-            self?.seek(by: -10)
-        }.store(in: &gestureCancellables)
-
-        context.gesture.observe(.doubleTap(.right)) { [weak self] _ in
-            self?.seek(by: 10)
+        context.gesture.observe(.tap(.all)) { [weak self] _ in
+            self?.toggleControls()
         }.store(in: &gestureCancellables)
 
         context.gesture.observe(.drag(.horizontal)) { [weak self] event in
@@ -304,6 +348,7 @@ final class VPCPlayerModel: ObservableObject {
     }
 
     private func seek(by delta: Double) {
+        guard !isLocked else { return }
         guard duration.isFinite, duration > 0 else { return }
         let target = min(max(currentTime + delta, 0), duration)
         seek(to: target)
@@ -312,6 +357,7 @@ final class VPCPlayerModel: ObservableObject {
     }
 
     private func handleHorizontalDrag(_ event: GestureService.GestureEvent) {
+        guard !isLocked else { return }
         guard case let .drag(value) = event.value else { return }
         guard duration.isFinite, duration > 0 else { return }
 
@@ -334,6 +380,7 @@ final class VPCPlayerModel: ObservableObject {
     }
 
     private func handleBrightnessDrag(_ event: GestureService.GestureEvent) {
+        guard !isLocked else { return }
         guard case let .drag(value) = event.value else { return }
         if dragStartBrightness == nil {
             dragStartBrightness = UIScreen.main.brightness
@@ -352,6 +399,7 @@ final class VPCPlayerModel: ObservableObject {
     }
 
     private func handleVolumeDrag(_ event: GestureService.GestureEvent) {
+        guard !isLocked else { return }
         guard case let .drag(value) = event.value else { return }
         if dragStartVolume == nil {
             dragStartVolume = AVAudioSession.sharedInstance().outputVolume
@@ -370,6 +418,7 @@ final class VPCPlayerModel: ObservableObject {
     }
 
     func setLongPressActive(_ active: Bool) {
+        guard !isLocked else { return }
         if active {
             previousRate = context.render.player.rate > 0 ? context.render.player.rate : 1
             context.render.player.rate = 2
@@ -377,6 +426,18 @@ final class VPCPlayerModel: ObservableObject {
         } else {
             context.render.player.rate = previousRate
             clearGestureHintLater()
+        }
+    }
+
+    func handleDoubleTap(at x: CGFloat, width: CGFloat) {
+        guard !isLocked, width > 0 else { return }
+        let ratio = x / width
+        if ratio < 0.3 {
+            seek(by: -10)
+        } else if ratio < 0.7 {
+            togglePlayPause()
+        } else {
+            seek(by: 10)
         }
     }
 

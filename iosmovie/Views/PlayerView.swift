@@ -41,7 +41,7 @@ struct PlayerView: View {
     var body: some View {
         GeometryReader { proxy in
             VStack(spacing: 0) {
-                playerWidget
+                playerWidget(width: proxy.size.width)
                     .frame(maxWidth: .infinity)
                     .frame(height: model.isFullScreen ? nil : proxy.size.width * 9 / 16)
                     .frame(maxHeight: model.isFullScreen ? .infinity : nil)
@@ -80,7 +80,7 @@ struct PlayerView: View {
         }
     }
 
-    private var playerWidget: some View {
+    private func playerWidget(width: CGFloat) -> some View {
         PlayerWidget(model.context)
             .background(Color.black)
             .overlay {
@@ -95,13 +95,63 @@ struct PlayerView: View {
                     VPCBufferingView(text: "缓冲中")
                 }
             }
-            .overlay {
+            .overlay(alignment: .top) {
                 if let hint = model.gestureHint {
                     VPCGestureHintView(text: hint)
+                        .padding(.top, 82)
                 }
             }
+            .overlay(alignment: .top) {
+                if model.controlsVisible && !model.isLocked {
+                    Group {
+                        if model.isFullScreen {
+                            VPCFullScreenTopControls(model: model) {
+                                showEpisodePicker = true
+                            }
+                        } else {
+                            VPCHalfScreenTopControls(model: model, onClose: onClose)
+                        }
+                    }
+                    .padding(.top, 8)
+                    .transition(.opacity)
+                }
+            }
+            .overlay(alignment: .bottom) {
+                if model.controlsVisible && !model.isLocked {
+                    Group {
+                        if model.isFullScreen {
+                            VPCFullScreenBottomControls(model: model)
+                        } else {
+                            VPCHalfScreenBottomControls(model: model)
+                        }
+                    }
+                    .padding(.bottom, 10)
+                    .transition(.opacity)
+                }
+            }
+            .overlay(alignment: .center) {
+                if model.controlsVisible && !model.isLocked {
+                    VPCPlaybackButton()
+                        .environmentObject(model.context)
+                        .transition(.opacity)
+                }
+            }
+            .overlay(alignment: .leading) {
+                if model.isFullScreen && (model.isLocked || model.controlsVisible) {
+                    VPCLockButton(isLocked: model.isLocked) { model.toggleLock() }
+                        .padding(.leading, 12)
+                }
+            }
+            .animation(.easeInOut(duration: 0.2), value: model.controlsVisible)
+            .animation(.easeInOut(duration: 0.2), value: model.isLocked)
             .simultaneousGesture(
-                LongPressGesture(minimumDuration: 0.4)
+                SpatialTapGesture(count: 2)
+                    .onEnded { value in
+                        model.handleDoubleTap(at: value.location.x, width: width)
+                    }
+            )
+            .simultaneousGesture(
+                LongPressGesture(minimumDuration: 0.5, maximumDistance: 12)
                     .onChanged { model.setLongPressActive($0) }
                     .onEnded { _ in model.setLongPressActive(false) }
             )
@@ -153,50 +203,6 @@ struct PlayerView: View {
 
     private func configurePlayer() {
         model.start()
-
-        let context = model.context
-        context.control.configure(displayStyle: .auto(firstAppear: true, animation: .easeInOut, duration: 3))
-        context.control.configure(.halfScreen, insets: EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
-        context.control.configure(.fullScreen, insets: EdgeInsets(top: 0, leading: 24, bottom: 18, trailing: 24))
-
-        context.control.configure(.halfScreen(.top1)) {
-            [
-                AnyView(VPCCloseButton(action: onClose)),
-                AnyView(VPCTitleView(title: model.currentSource.name)),
-                AnyView(VPCSpacer())
-            ]
-        }
-        context.control.configure(.halfScreen(.center)) {
-            [AnyView(VPCPlaybackButton())]
-        }
-        context.control.configure(.halfScreen(.bottom1)) {
-            [
-                AnyView(VPCTimeLabel()),
-                AnyView(VPCSeekBar()),
-                AnyView(VPCFullScreenButton(isFullScreen: false) { model.enterFullScreen() })
-            ]
-        }
-
-        context.control.configure(.fullScreen(.top1)) {
-            [
-                AnyView(VPCBackButton(action: model.exitFullScreen)),
-                AnyView(VPCTitleView(title: model.currentSource.name)),
-                AnyView(VPCSpacer()),
-                AnyView(VPCEpisodeButton { showEpisodePicker = true })
-            ]
-        }
-        context.control.configure(.fullScreen(.center)) {
-            [AnyView(VPCPlaybackButton())]
-        }
-        context.control.configure(.fullScreen(.bottom1)) {
-            [
-                AnyView(VPCTimeLabel()),
-                AnyView(VPCSeekBar()),
-                AnyView(VPCDanmakuToggleButton(isOn: model.isDanmakuVisible) { model.toggleDanmaku() }),
-                AnyView(VPCSpeedMenu()),
-                AnyView(VPCFullScreenButton(isFullScreen: true) { model.exitFullScreen() })
-            ]
-        }
     }
 }
 

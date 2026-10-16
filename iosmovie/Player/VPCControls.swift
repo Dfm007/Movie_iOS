@@ -85,6 +85,82 @@ struct VPCBackButton: View {
     }
 }
 
+struct VPCLockButton: View {
+    let isLocked: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: isLocked ? "lock.fill" : "lock.open")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(width: 36, height: 36)
+                .background(VPCTheme.controlBackground)
+                .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct VPCHalfScreenTopControls: View {
+    @ObservedObject var model: VPCPlayerModel
+    let onClose: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            VPCCloseButton(action: onClose)
+            VPCTitleView(title: model.currentSource.name)
+            Spacer(minLength: 8)
+        }
+        .padding(.horizontal, 10)
+    }
+}
+
+struct VPCHalfScreenBottomControls: View {
+    @ObservedObject var model: VPCPlayerModel
+
+    var body: some View {
+        HStack(spacing: 8) {
+            VPCTimeLabel()
+            VPCSeekBar()
+            VPCFullScreenButton(isFullScreen: false) { model.enterFullScreen() }
+        }
+        .padding(.horizontal, 10)
+        .environmentObject(model.context)
+    }
+}
+
+struct VPCFullScreenTopControls: View {
+    @ObservedObject var model: VPCPlayerModel
+    let onShowEpisodes: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            VPCBackButton { model.exitFullScreen() }
+            VPCTitleView(title: model.currentSource.name)
+            Spacer(minLength: 8)
+            VPCEpisodeButton(action: onShowEpisodes)
+        }
+        .padding(.horizontal, 12)
+    }
+}
+
+struct VPCFullScreenBottomControls: View {
+    @ObservedObject var model: VPCPlayerModel
+
+    var body: some View {
+        HStack(spacing: 8) {
+            VPCTimeLabel()
+            VPCSeekBar()
+            VPCDanmakuToggleButton(isOn: model.isDanmakuVisible) { model.toggleDanmaku() }
+            VPCSpeedMenu()
+            VPCFullScreenButton(isFullScreen: true) { model.exitFullScreen() }
+        }
+        .padding(.horizontal, 14)
+        .environmentObject(model.context)
+    }
+}
+
 struct VPCPlaybackButton: View {
     @EnvironmentObject private var context: Context
 
