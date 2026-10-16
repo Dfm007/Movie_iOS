@@ -1,6 +1,20 @@
 import AVFoundation
+import DanmakuKit
 import SwiftUI
+import UIKit
 import VideoPlayerContainer
+
+struct VPCDanmakuView: UIViewRepresentable {
+    func makeUIView(context: Context) -> DanmakuView {
+        let view = DanmakuView(frame: .zero)
+        view.backgroundColor = .clear
+        view.isOpaque = false
+        view.isUserInteractionEnabled = false
+        return view
+    }
+
+    func updateUIView(_ uiView: DanmakuView, context: Context) {}
+}
 
 struct VPCCloseButton: View {
     let action: () -> Void

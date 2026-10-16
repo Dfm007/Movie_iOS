@@ -1,6 +1,5 @@
 import AVFoundation
 import Combine
-import DanmakuKit
 import Foundation
 import SwiftUI
 import UIKit
@@ -8,7 +7,6 @@ import VideoPlayerContainer
 
 final class VPCPlayerModel: ObservableObject {
     let context = Context()
-    let danmakuCoordinator = DanmakuViewAdapter.Coordinator()
 
     @Published var currentSource: PlaySource
     @Published var isFullScreen = false
@@ -52,7 +50,7 @@ final class VPCPlayerModel: ObservableObject {
         context.container.configure(overlay: .render) { [weak self] in
             guard let self = self else { return AnyView(EmptyView()) }
             return AnyView(
-                DanmakuViewAdapter(coordinator: self.danmakuCoordinator)
+                VPCDanmakuView()
                     .allowsHitTesting(false)
             )
         }
