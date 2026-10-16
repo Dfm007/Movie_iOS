@@ -13,7 +13,7 @@ struct PlayerView: View {
 
     @StateObject private var model: VPCPlayerModel
     @State private var showEpisodePicker = false
-    private let lockLeadingPadding: CGFloat = 56
+    private let lockLeadingPadding: CGFloat = -6
 
     private let episodeColumns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 4)
 
