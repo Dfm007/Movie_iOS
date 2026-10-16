@@ -2,20 +2,30 @@ name: iosmovie
 options:
   bundleIdPrefix: com.iosmovie
   deploymentTarget:
-    iOS: "15.0"
+    iOS: "16.0"
   createIntermediateGroups: true
 packages:
   CryptoSwift:
     url: https://github.com/krzyzanowskim/CryptoSwift.git
     from: "1.8.0"
+  VideoPlayerContainer:
+    url: https://github.com/shayanbo/VideoPlayerContainer.git
+    from: "1.0.0"
+  DanmakuKit:
+    url: https://github.com/qyz777/DanmakuKit.git
+    from: "1.6.0"
 targets:
   iosmovie:
     type: application
     platform: iOS
-    deploymentTarget: "15.0"
+    deploymentTarget: "16.0"
     dependencies:
       - package: CryptoSwift
         product: CryptoSwift
+      - package: VideoPlayerContainer
+        product: VideoPlayerContainer
+      - package: DanmakuKit
+        product: DanmakuKit
     sources:
       - path: iosmovie
         excludes:
