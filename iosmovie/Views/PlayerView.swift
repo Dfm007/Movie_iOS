@@ -141,16 +141,19 @@ final class ZFPlayerViewController: UIViewController {
     var onEpisodeSelected: ((PlaySource) -> Void)?
     private var playerManager: ZFAVPlayerManager?
     private var player: ZFPlayerController?
+    /// 自定义控件挂在真正的播放器视图上，ZFPlayer 全屏旋转时才能一起移动。
+    private weak var playerView: UIView?
     private var lastURLString: String = ""
     private var closeButton: UIButton?
     private var fullScreenButton: UIButton?
     private var speedButton: UIButton?
     private var episodeDrawerButton: UIButton?
+    private var fullScreenBottomConstraint: NSLayoutConstraint?
+    private var speedBottomConstraint: NSLayoutConstraint?
     private var normalRate: Float = 1.0
     private var speedHintLabel: UILabel?
     private var speedMenuView: UIView?
     private var isFullScreen = false
-    private weak var fullScreenVC: FullScreenPlayerViewController?
     private var didBecomeReady = false
     private var loadWatchdog: DispatchWorkItem?
     /// 起播定位只做一次，避免用户手动拖动后被反复拽回
@@ -175,6 +178,11 @@ final class ZFPlayerViewController: UIViewController {
         setupCloseButton()
         setupSpeedButton()
         setupSpeedHintLabel()
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        bringPlayerControlsToFront()
     }
 
     deinit {
@@ -209,7 +217,22 @@ final class ZFPlayerViewController: UIViewController {
         let controlView = ZFPlayerControlView()
         player.controlView = controlView
         controlView.portraitControlView.fullScreenBtn.isHidden = true
+        // 横屏退出统一走页面自己的关闭按钮，避免两个返回按钮叠在左上角。
+        controlView.landScapeControlView.backBtn.isHidden = true
         self.player = player
+        self.playerView = manager.view
+
+        // 只响应显式全屏按钮；设备转动不自动触发全屏，避免用户侧躺时误旋转。
+        player.orientationObserver.allowOrientationRotation = false
+        player.orientationWillChange = { [weak self] _, isFullScreen in
+            self?.isFullScreen = isFullScreen
+            self?.updateFullScreenChrome()
+        }
+        player.orientationDidChanged = { [weak self] _, isFullScreen in
+            self?.isFullScreen = isFullScreen
+            self?.updateFullScreenChrome()
+            self?.bringPlayerControlsToFront()
+        }
 
         // 加载成功：撤销看门狗、清空失败记录，并按续播记录定位
         player.playerReadyToPlay = { [weak self] _, _ in
@@ -298,7 +321,8 @@ final class ZFPlayerViewController: UIViewController {
     }
 
     private func showPlaybackFailure(message: String) {
-        guard presentedViewController == nil else { return }
+        let presenter = topMostViewController(from: playerView?.window) ?? self
+        guard presenter.presentedViewController == nil else { return }
         let alert = UIAlertController(
             title: "播放失败",
             message: message,
@@ -308,7 +332,7 @@ final class ZFPlayerViewController: UIViewController {
             self?.retryCurrentSource()
         })
         alert.addAction(UIAlertAction(title: "好", style: .cancel))
-        present(alert, animated: true)
+        presenter.present(alert, animated: true)
     }
 
     // MARK: - 播放失败换源
@@ -387,6 +411,8 @@ final class ZFPlayerViewController: UIViewController {
     }
 
     private func setupFullScreenButton() {
+        guard let overlay = playerView else { return }
+
         let button = UIButton(type: .system)
         button.setImage(UIImage(systemName: "arrow.up.left.and.arrow.down.right"), for: .normal)
         button.tintColor = .white
@@ -394,19 +420,23 @@ final class ZFPlayerViewController: UIViewController {
         button.layer.cornerRadius = 18
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(fullScreenTapped), for: .touchUpInside)
-        view.addSubview(button)
-        view.bringSubviewToFront(button)
+        overlay.addSubview(button)
+        overlay.bringSubviewToFront(button)
         self.fullScreenButton = button
 
+        let bottom = button.bottomAnchor.constraint(equalTo: overlay.bottomAnchor, constant: -16)
+        fullScreenBottomConstraint = bottom
         NSLayoutConstraint.activate([
-            button.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
-            button.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -16),
+            button.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -12),
+            bottom,
             button.widthAnchor.constraint(equalToConstant: 36),
             button.heightAnchor.constraint(equalToConstant: 36)
         ])
     }
 
     private func setupEpisodeDrawerButton() {
+        guard let overlay = playerView else { return }
+
         let button = UIButton(type: .system)
         button.setImage(UIImage(systemName: "list.bullet"), for: .normal)
         button.setTitle("选集", for: .normal)
@@ -419,18 +449,20 @@ final class ZFPlayerViewController: UIViewController {
         button.isHidden = true
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(showEpisodeDrawer), for: .touchUpInside)
-        view.addSubview(button)
+        overlay.addSubview(button)
         episodeDrawerButton = button
 
         NSLayoutConstraint.activate([
-            button.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
-            button.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 12),
+            button.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -12),
+            button.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 12),
             button.widthAnchor.constraint(equalToConstant: 72),
             button.heightAnchor.constraint(equalToConstant: 36)
         ])
     }
 
     private func setupCloseButton() {
+        guard let overlay = playerView else { return }
+
         let button = UIButton(type: .system)
         button.setImage(UIImage(systemName: "chevron.left"), for: .normal)
         button.tintColor = .white
@@ -438,19 +470,21 @@ final class ZFPlayerViewController: UIViewController {
         button.layer.cornerRadius = 18
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
-        view.addSubview(button)
-        view.bringSubviewToFront(button)
+        overlay.addSubview(button)
+        overlay.bringSubviewToFront(button)
         self.closeButton = button
 
         NSLayoutConstraint.activate([
-            button.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 12),
-            button.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 12),
+            button.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 12),
+            button.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 12),
             button.widthAnchor.constraint(equalToConstant: 36),
             button.heightAnchor.constraint(equalToConstant: 36)
         ])
     }
 
     private func setupSpeedButton() {
+        guard let overlay = playerView else { return }
+
         let speed = UIButton(type: .system)
         speed.setTitle("1.0x", for: .normal)
         speed.titleLabel?.font = .systemFont(ofSize: 13, weight: .semibold)
@@ -459,19 +493,23 @@ final class ZFPlayerViewController: UIViewController {
         speed.layer.cornerRadius = 6
         speed.translatesAutoresizingMaskIntoConstraints = false
         speed.addTarget(self, action: #selector(toggleSpeedMenu), for: .touchUpInside)
-        view.addSubview(speed)
-        view.bringSubviewToFront(speed)
+        overlay.addSubview(speed)
+        overlay.bringSubviewToFront(speed)
         speedButton = speed
 
+        let bottom = speed.bottomAnchor.constraint(equalTo: overlay.bottomAnchor, constant: -16)
+        speedBottomConstraint = bottom
         NSLayoutConstraint.activate([
-            speed.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -60),
-            speed.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -16),
+            speed.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -60),
+            bottom,
             speed.widthAnchor.constraint(equalToConstant: 48),
             speed.heightAnchor.constraint(equalToConstant: 36)
         ])
     }
 
     private func setupSpeedHintLabel() {
+        guard let overlay = playerView else { return }
+
         let label = UILabel()
         label.text = "2x快进中"
         label.font = .systemFont(ofSize: 14, weight: .medium)
@@ -482,13 +520,13 @@ final class ZFPlayerViewController: UIViewController {
         label.layer.masksToBounds = true
         label.translatesAutoresizingMaskIntoConstraints = false
         label.isHidden = true
-        view.addSubview(label)
-        view.bringSubviewToFront(label)
+        overlay.addSubview(label)
+        overlay.bringSubviewToFront(label)
         speedHintLabel = label
 
         NSLayoutConstraint.activate([
-            label.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            label.topAnchor.constraint(equalTo: view.topAnchor, constant: 80),
+            label.centerXAnchor.constraint(equalTo: overlay.centerXAnchor),
+            label.topAnchor.constraint(equalTo: overlay.topAnchor, constant: 80),
             label.widthAnchor.constraint(equalToConstant: 120),
             label.heightAnchor.constraint(equalToConstant: 40)
         ])
@@ -516,39 +554,61 @@ final class ZFPlayerViewController: UIViewController {
             // 打开贴边模式，让横屏下保持底部卡片形态，下拉手势可用。
             sheet.prefersEdgeAttachedInCompactHeight = true
         }
-        present(nav, animated: true)
+        let presenter = topMostViewController(from: playerView?.window) ?? self
+        presenter.present(nav, animated: true)
+    }
+
+    private func topMostViewController(from window: UIWindow?) -> UIViewController? {
+        guard var controller = window?.rootViewController else { return nil }
+        while let presented = controller.presentedViewController {
+            controller = presented
+        }
+        return controller
     }
 
     @objc private func fullScreenTapped() {
-        if isFullScreen {
-            exitFullScreen()
-        } else {
-            presentFullScreen()
-        }
+        setFullScreen(!isFullScreen)
     }
 
-    private func presentFullScreen() {
-        guard !isFullScreen else { return }
-        isFullScreen = true
-
-        let fullVC = FullScreenPlayerViewController()
-        fullVC.modalPresentationStyle = .fullScreen
-        fullVC.onClose = { [weak self] in
-            self?.isFullScreen = false
+    private func setFullScreen(_ fullScreen: Bool) {
+        guard let player, isFullScreen != fullScreen else { return }
+        if fullScreen {
+            dismissSpeedMenu()
         }
-        fullScreenVC = fullVC
 
-        present(fullVC, animated: false) { [weak self] in
-            guard let self = self else { return }
+        isFullScreen = fullScreen
+        updateFullScreenChrome()
+        player.enterFullScreen(fullScreen, animated: !UIAccessibility.isReduceMotionEnabled)
+    }
 
-            fullVC.addChild(self)
-            self.view.frame = fullVC.view.bounds
-            self.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-            fullVC.view.addSubview(self.view)
-            self.didMove(toParent: fullVC)
-            self.episodeDrawerButton?.isHidden = false
-            if let button = self.episodeDrawerButton {
-                self.view.bringSubviewToFront(button)
+    private func updateFullScreenChrome() {
+        episodeDrawerButton?.isHidden = !isFullScreen
+        fullScreenButton?.setImage(
+            UIImage(systemName: isFullScreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right"),
+            for: .normal
+        )
+        fullScreenButton?.accessibilityLabel = isFullScreen ? "退出全屏" : "全屏"
+
+        // 横屏底部有进度条和播放按钮，把自定义按钮抬到工具栏上方。
+        let bottomInset: CGFloat = isFullScreen ? -100 : -16
+        speedBottomConstraint?.constant = bottomInset
+        fullScreenBottomConstraint?.constant = bottomInset
+        bringPlayerControlsToFront()
+    }
+
+    private func bringPlayerControlsToFront() {
+        guard let playerView else { return }
+        let controls: [UIView?] = [
+            closeButton,
+            fullScreenButton,
+            speedButton,
+            episodeDrawerButton,
+            speedHintLabel,
+            speedMenuView
+        ]
+        for control in controls {
+            if let control = control {
+                playerView.bringSubviewToFront(control)
             }
         }
     }
@@ -563,20 +623,7 @@ final class ZFPlayerViewController: UIViewController {
     }
 
     func exitFullScreen() {
-        guard isFullScreen, let fullVC = fullScreenVC else { return }
-        isFullScreen = false
-
-        episodeDrawerButton?.isHidden = true
-
-        self.willMove(toParent: nil)
-        self.view.removeFromSuperview()
-        self.removeFromParent()
-
-        fullVC.dismiss(animated: false) { [weak self] in
-            guard let self = self else { return }
-            self.view.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.width * 9 / 16)
-            self.view.autoresizingMask = []
-        }
+        setFullScreen(false)
     }
 
     func updateSpeedMenuToken(_ token: Int) {
@@ -608,19 +655,7 @@ final class ZFPlayerViewController: UIViewController {
         playerManager?.assetURL = assetURL
         scheduleLoadWatchdog()
 
-        // 重新把控件提到最前
-        if let close = closeButton {
-            view.bringSubviewToFront(close)
-        }
-        if let fullScreen = fullScreenButton {
-            view.bringSubviewToFront(fullScreen)
-        }
-        if let speed = speedButton {
-            view.bringSubviewToFront(speed)
-        }
-        if let episodes = episodeDrawerButton {
-            view.bringSubviewToFront(episodes)
-        }
+        bringPlayerControlsToFront()
     }
 
     @objc private func toggleSpeedMenu() {
@@ -664,8 +699,9 @@ final class ZFPlayerViewController: UIViewController {
             stack.trailingAnchor.constraint(equalTo: menu.trailingAnchor, constant: -12)
         ])
 
-        view.addSubview(menu)
-        view.bringSubviewToFront(menu)
+        guard let overlay = playerView else { return }
+        overlay.addSubview(menu)
+        overlay.bringSubviewToFront(menu)
 
         if let speed = speedButton {
             NSLayoutConstraint.activate([
@@ -695,9 +731,10 @@ final class ZFPlayerViewController: UIViewController {
     }
 
     private func addLongPressSpeedGesture() {
+        guard let overlay = playerView else { return }
         let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
         longPress.minimumPressDuration = 0.4
-        view.addGestureRecognizer(longPress)
+        overlay.addGestureRecognizer(longPress)
     }
 
     @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
@@ -711,18 +748,6 @@ final class ZFPlayerViewController: UIViewController {
         default:
             break
         }
-    }
-}
-
-final class FullScreenPlayerViewController: UIViewController {
-    var onClose: (() -> Void)?
-
-    override var shouldAutorotate: Bool { true }
-    override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .landscape }
-
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        view.backgroundColor = .black
     }
 }
 
