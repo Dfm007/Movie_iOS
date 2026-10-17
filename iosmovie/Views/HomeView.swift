@@ -99,16 +99,10 @@ struct HomeView: View {
     private var homeHeader: some View {
         HStack(spacing: 10) {
             HStack(spacing: 10) {
-                RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .fill(AppTheme.textPrimary)
+                Image("AppLogo")
+                    .resizable()
+                    .scaledToFit()
                     .frame(width: 34, height: 34)
-                    .overlay {
-                        Image(systemName: "play.fill")
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundColor(AppTheme.background)
-                            .offset(x: 1)
-                    }
-                    .shadow(color: Color.black.opacity(0.16), radius: 8, x: 0, y: 6)
 
                 Text("影视王")
                     .font(.system(size: 28, weight: .heavy))
