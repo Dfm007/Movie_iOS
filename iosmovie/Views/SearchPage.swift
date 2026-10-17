@@ -18,8 +18,8 @@ struct SearchPage: View {
             }
         }
         .navigationTitle("搜索")
-        .navigationBarTitleDisplayMode(.large)
-        .background(AppTheme.background.ignoresSafeArea())
+        .navigationBarTitleDisplayMode(.inline)
+        .appScreenBackground()
         .background(
             NavigationLink(
                 destination: SearchResultView(keyword: resultKeyword),
@@ -42,22 +42,25 @@ struct SearchPage: View {
             Button("搜索") {
                 submitSearch()
             }
-            .font(.subheadline.weight(.semibold))
-            .foregroundColor(.black.opacity(0.86))
-            .padding(.horizontal, 15)
-            .padding(.vertical, 12)
-            .background(Capsule().fill(AppTheme.accent))
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundColor(.white)
+            .frame(width: 58, height: 48)
+            .background(
+                RoundedRectangle(cornerRadius: AppTheme.radiusMedium, style: .continuous)
+                    .fill(AppTheme.accent)
+            )
+            .shadow(color: AppTheme.accent.opacity(0.20), radius: 8, x: 0, y: 5)
             .buttonStyle(PressableScaleButtonStyle())
             .disabled(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             .opacity(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.45 : 1)
         }
         .padding(.horizontal, AppTheme.pagePadding)
-        .padding(.vertical, 12)
+        .padding(.vertical, 14)
     }
 
     private var historyListView: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 12) {
+            LazyVStack(alignment: .leading, spacing: 10) {
                 SectionHeader(
                     title: "搜索历史",
                     actionTitle: "清空"
@@ -70,7 +73,13 @@ struct SearchPage: View {
                 ForEach(history, id: \.self) { keyword in
                     HStack(spacing: 12) {
                         Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 15, weight: .medium))
                             .foregroundColor(AppTheme.textSecondary)
+                            .frame(width: 34, height: 34)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .fill(AppTheme.mutedFill.opacity(0.7))
+                            )
 
                         Button(keyword) {
                             submitSearch(keyword)
@@ -90,15 +99,16 @@ struct SearchPage: View {
                         .buttonStyle(PressableScaleButtonStyle())
                     }
                     .padding(.horizontal, 14)
-                    .padding(.vertical, 13)
+                    .padding(.vertical, 12)
                     .background(
                         RoundedRectangle(cornerRadius: AppTheme.radiusMedium, style: .continuous)
                             .fill(AppTheme.surface)
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: AppTheme.radiusMedium, style: .continuous)
-                            .stroke(AppTheme.border, lineWidth: 0.5)
+                            .stroke(AppTheme.border.opacity(0.7), lineWidth: 0.5)
                     )
+                    .shadow(color: AppTheme.cardShadow, radius: 10, x: 0, y: 5)
                     .padding(.horizontal, AppTheme.pagePadding)
                 }
             }

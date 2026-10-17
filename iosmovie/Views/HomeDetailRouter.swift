@@ -33,7 +33,7 @@ struct HomeDetailRouter: View {
                 LoadingStateView(title: "正在解析多源")
             }
         }
-        .background(AppTheme.background.ignoresSafeArea())
+        .appScreenBackground()
         .navigationTitle(movie.title)
         .task {
             await resolveSources()

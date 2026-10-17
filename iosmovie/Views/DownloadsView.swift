@@ -37,7 +37,9 @@ struct DownloadsView: View {
             EmptyDownloadsSection()
         }
         .listStyle(.insetGrouped)
-        .background(AppTheme.background.ignoresSafeArea())
+        .headerProminence(.increased)
+        .scrollContentBackground(.hidden)
+        .appScreenBackground()
         .tint(AppTheme.accent)
         .navigationTitle("我的下载")
         .navigationBarTitleDisplayMode(.inline)
@@ -454,8 +456,9 @@ private struct DownloadTaskCard: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.radiusMedium, style: .continuous)
-                .stroke(AppTheme.border, lineWidth: 0.5)
+                .stroke(AppTheme.border.opacity(0.7), lineWidth: 0.5)
         )
+        .shadow(color: AppTheme.cardShadow, radius: 10, x: 0, y: 5)
     }
 
     private var progressDetail: String {
@@ -551,6 +554,11 @@ private struct DownloadGroupHeader: View {
                 RoundedRectangle(cornerRadius: AppTheme.radiusMedium, style: .continuous)
                     .fill(AppTheme.surface)
             )
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.radiusMedium, style: .continuous)
+                    .stroke(AppTheme.border.opacity(0.7), lineWidth: 0.5)
+            )
+            .shadow(color: AppTheme.cardShadow, radius: 10, x: 0, y: 5)
             .contentShape(RoundedRectangle(cornerRadius: AppTheme.radiusMedium, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -590,6 +598,10 @@ private struct DownloadedEpisodeRow: View {
         .background(
             RoundedRectangle(cornerRadius: AppTheme.radiusSmall, style: .continuous)
                 .fill(AppTheme.surface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.radiusSmall, style: .continuous)
+                .stroke(AppTheme.border.opacity(0.55), lineWidth: 0.5)
         )
     }
 }
@@ -710,10 +722,10 @@ private enum DownloadFormat {
 private extension View {
     /// 让 List 行变成独立卡片：去掉分隔线与默认内边距，背景交给内容自己画
     func cardRow(
-        leading: CGFloat = 12,
-        trailing: CGFloat = 12,
-        top: CGFloat = 4,
-        bottom: CGFloat = 4
+        leading: CGFloat = 20,
+        trailing: CGFloat = 20,
+        top: CGFloat = 5,
+        bottom: CGFloat = 5
     ) -> some View {
         self
             .listRowInsets(EdgeInsets(top: top, leading: leading, bottom: bottom, trailing: trailing))

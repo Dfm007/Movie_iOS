@@ -19,7 +19,7 @@ struct FeedbackView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 18) {
                 SectionHeader(
                     title: "告诉我们你的想法",
                     subtitle: "你的反馈会直接发送到开发者邮箱"
@@ -48,9 +48,15 @@ struct FeedbackView: View {
                             .foregroundColor(AppTheme.textPrimary)
 
                         TextEditor(text: $content)
-                            .font(.body)
+                            .font(.system(size: 15))
                             .foregroundColor(AppTheme.textPrimary)
                             .frame(minHeight: 150)
+                            .scrollContentBackground(.hidden)
+                            .padding(10)
+                            .background(
+                                RoundedRectangle(cornerRadius: AppTheme.radiusSmall, style: .continuous)
+                                    .fill(AppTheme.mutedFill.opacity(0.35))
+                            )
                             .focused($focusedField, equals: .content)
                     }
                 }
@@ -62,7 +68,7 @@ struct FeedbackView: View {
                             .foregroundColor(AppTheme.textPrimary)
 
                         TextField("邮箱或 QQ", text: $contact)
-                            .font(.body)
+                            .font(.system(size: 15))
                             .foregroundColor(AppTheme.textPrimary)
                             .textFieldStyle(PlainTextFieldStyle())
                             .focused($focusedField, equals: .contact)
@@ -76,7 +82,7 @@ struct FeedbackView: View {
                         HStack {
                             Spacer()
                             ProgressView()
-                                .tint(.black.opacity(0.82))
+                                .tint(.white)
                             Spacer()
                         }
                     } else {
@@ -88,9 +94,9 @@ struct FeedbackView: View {
                 .opacity(content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.55 : 1)
             }
             .padding(.horizontal, AppTheme.pagePadding)
-            .padding(.vertical, 18)
+            .padding(.vertical, 20)
         }
-        .background(AppTheme.background.ignoresSafeArea())
+        .appScreenBackground()
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()

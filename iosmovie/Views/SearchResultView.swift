@@ -24,13 +24,29 @@ struct SearchResultView: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 18) {
                         HStack(alignment: .center, spacing: 12) {
-                            VStack(alignment: .leading, spacing: 3) {
+                            VStack(alignment: .leading, spacing: 5) {
                                 Text("搜索结果")
-                                    .font(.title3.weight(.bold))
+                                    .font(.system(size: 20, weight: .bold))
                                     .foregroundColor(AppTheme.textPrimary)
-                                Text("共 \(viewModel.results.count) 部影视")
-                                    .font(.caption)
-                                    .foregroundColor(AppTheme.textSecondary)
+
+                                HStack(spacing: 7) {
+                                    Text("共 \(viewModel.results.count) 部影视")
+                                        .font(.system(size: 11, weight: .medium))
+                                        .foregroundColor(AppTheme.textSecondary)
+
+                                    Text(keyword)
+                                        .font(.system(size: 10, weight: .semibold))
+                                        .foregroundColor(AppTheme.textSecondary)
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.75)
+                                        .frame(maxWidth: 120)
+                                        .padding(.horizontal, 7)
+                                        .frame(height: 21)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                                .fill(AppTheme.surface.opacity(0.78))
+                                        )
+                                }
                             }
 
                             Spacer(minLength: 8)
@@ -42,7 +58,12 @@ struct SearchResultView: View {
                             }
                             .pickerStyle(SegmentedPickerStyle())
                             .tint(AppTheme.accent)
-                            .frame(width: 118)
+                            .frame(width: 122)
+                            .padding(3)
+                            .background(
+                                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                                    .fill(AppTheme.surface.opacity(0.72))
+                            )
                         }
                         .padding(.horizontal, AppTheme.pagePadding)
 
@@ -54,7 +75,7 @@ struct SearchResultView: View {
                 }
             }
         }
-        .background(AppTheme.background.ignoresSafeArea())
+        .appScreenBackground()
         .navigationTitle("搜索：\(keyword)")
         .navigationBarTitleDisplayMode(.inline)
         .task {

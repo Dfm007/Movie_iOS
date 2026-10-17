@@ -166,9 +166,12 @@ struct SettingsView: View {
             }
         }
         .listStyle(.insetGrouped)
-        .background(AppTheme.background.ignoresSafeArea())
+        .headerProminence(.increased)
+        .scrollContentBackground(.hidden)
+        .appScreenBackground()
         .tint(AppTheme.accent)
         .navigationTitle("设置")
+        .navigationBarTitleDisplayMode(.inline)
         .task {
             sites = CMSSite.all
             defaultSiteID = CMSSite.selectedDefaultSite.id
@@ -266,9 +269,11 @@ struct AddSiteView: View {
                     .listRowBackground(Color.clear)
                 }
             }
-            .background(AppTheme.background.ignoresSafeArea())
+            .scrollContentBackground(.hidden)
+            .appScreenBackground()
             .tint(AppTheme.accent)
             .navigationTitle("添加源")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("取消") { dismiss() }
@@ -318,9 +323,11 @@ struct EditSiteView: View {
                     .listRowBackground(Color.clear)
                 }
             }
-            .background(AppTheme.background.ignoresSafeArea())
+            .scrollContentBackground(.hidden)
+            .appScreenBackground()
             .tint(AppTheme.accent)
             .navigationTitle("编辑源")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("取消") { dismiss() }

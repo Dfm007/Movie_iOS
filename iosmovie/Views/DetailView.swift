@@ -52,7 +52,7 @@ struct DetailView: View {
                 }
             }
         }
-        .background(AppTheme.background.ignoresSafeArea())
+        .appScreenBackground()
         .navigationTitle(viewModel.movieTitle)
         .navigationBarTitleDisplayMode(.inline)
         .task {
@@ -95,7 +95,7 @@ struct DetailView: View {
     }
 
     private var headerView: some View {
-        AppCard(padding: 14, radius: AppTheme.radiusLarge) {
+        AppCard(padding: 16, radius: AppTheme.radiusLarge) {
             HStack(alignment: .top, spacing: 16) {
                 PosterArtwork(
                     posterURL: viewModel.posterURL,
@@ -106,7 +106,8 @@ struct DetailView: View {
 
                 VStack(alignment: .leading, spacing: 10) {
                     Text(viewModel.movieTitle)
-                        .font(.title3.weight(.bold))
+                        .font(.system(size: 22, weight: .heavy))
+                        .tracking(-0.3)
                         .foregroundColor(AppTheme.textPrimary)
                         .lineLimit(3)
 
@@ -119,7 +120,7 @@ struct DetailView: View {
 
                     if !metadataText.isEmpty {
                         Text(metadataText)
-                            .font(.caption)
+                            .font(.system(size: 12, weight: .medium))
                             .foregroundColor(AppTheme.textSecondary)
                     }
 
@@ -180,16 +181,18 @@ struct DetailView: View {
         VStack(alignment: .leading, spacing: 10) {
             SectionHeader(title: "播放源", subtitle: "切换不同采集站")
 
-            Picker("采集站", selection: $viewModel.selectedSite) {
-                ForEach(viewModel.sites) { site in
-                    SitePickerLabel(site: site, latencyManager: latencyManager)
-                        .tag(site)
+            AppCard(padding: 10) {
+                Picker("采集站", selection: $viewModel.selectedSite) {
+                    ForEach(viewModel.sites) { site in
+                        SitePickerLabel(site: site, latencyManager: latencyManager)
+                            .tag(site)
+                    }
                 }
-            }
-            .pickerStyle(SegmentedPickerStyle())
-            .tint(AppTheme.accent)
-            .onChange(of: viewModel.selectedSite) { newSite in
-                Task { await viewModel.loadDetail(path: detailURL, site: newSite) }
+                .pickerStyle(SegmentedPickerStyle())
+                .tint(AppTheme.accent)
+                .onChange(of: viewModel.selectedSite) { newSite in
+                    Task { await viewModel.loadDetail(path: detailURL, site: newSite) }
+                }
             }
         }
         .padding(.horizontal, AppTheme.pagePadding)
@@ -244,7 +247,7 @@ struct DetailView: View {
                 } label: {
                     Image(systemName: "play.fill")
                         .font(.subheadline.weight(.bold))
-                        .foregroundColor(.black.opacity(0.82))
+                        .foregroundColor(.white)
                         .frame(width: 34, height: 34)
                         .background(Circle().fill(AppTheme.accent))
                 }
@@ -263,44 +266,46 @@ struct DetailView: View {
     }
 
     private func episodeGroup(_ source: PlaySource) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text(source.name)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(AppTheme.textPrimary)
+        AppCard(padding: 14) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text(source.name)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(AppTheme.textPrimary)
 
-                Spacer()
+                    Spacer()
 
-                Button("下载") {
-                    showDownloadPicker(for: source.episodes)
-                }
-                .font(.caption.weight(.semibold))
-                .foregroundColor(AppTheme.accent)
-                .buttonStyle(PressableScaleButtonStyle())
-            }
-
-            LazyVGrid(columns: episodeColumns, spacing: 8) {
-                ForEach(source.episodes) { episode in
-                    Button {
-                        playingSource = episode
-                        playerPresented = true
-                    } label: {
-                        Text(episode.name)
-                            .font(.caption.weight(.medium))
-                            .foregroundColor(AppTheme.textPrimary)
-                            .lineLimit(1)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 9)
-                            .background(
-                                RoundedRectangle(cornerRadius: AppTheme.radiusSmall, style: .continuous)
-                                    .fill(AppTheme.mutedFill)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: AppTheme.radiusSmall, style: .continuous)
-                                    .stroke(AppTheme.border, lineWidth: 0.5)
-                            )
+                    Button("下载") {
+                        showDownloadPicker(for: source.episodes)
                     }
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(AppTheme.accent)
                     .buttonStyle(PressableScaleButtonStyle())
+                }
+
+                LazyVGrid(columns: episodeColumns, spacing: 8) {
+                    ForEach(source.episodes) { episode in
+                        Button {
+                            playingSource = episode
+                            playerPresented = true
+                        } label: {
+                            Text(episode.name)
+                                .font(.caption.weight(.medium))
+                                .foregroundColor(AppTheme.textPrimary)
+                                .lineLimit(1)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(
+                                    RoundedRectangle(cornerRadius: AppTheme.radiusSmall, style: .continuous)
+                                        .fill(AppTheme.surfaceElevated)
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: AppTheme.radiusSmall, style: .continuous)
+                                        .stroke(AppTheme.border.opacity(0.7), lineWidth: 0.5)
+                                )
+                        }
+                        .buttonStyle(PressableScaleButtonStyle())
+                    }
                 }
             }
         }

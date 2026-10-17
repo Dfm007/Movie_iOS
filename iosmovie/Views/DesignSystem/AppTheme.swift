@@ -39,10 +39,11 @@ enum AppTheme {
         dark: UIColor(red: 0.17, green: 0.17, blue: 0.18, alpha: 1)
     )
 
-    static let radiusSmall: CGFloat = 10
-    static let radiusMedium: CGFloat = 14
-    static let radiusLarge: CGFloat = 20
-    static let pagePadding: CGFloat = 16
+    static let radiusSmall: CGFloat = 12
+    static let radiusMedium: CGFloat = 16
+    static let radiusLarge: CGFloat = 24
+    static let pagePadding: CGFloat = 20
+    static let cardShadow = Color.black.opacity(0.055)
 
     static func dynamic(light: UIColor, dark: UIColor) -> Color {
         Color(UIColor { traits in
@@ -54,7 +55,25 @@ enum AppTheme {
 struct AppScreenBackground: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .background(AppTheme.background.ignoresSafeArea())
+            .background {
+                ZStack {
+                    AppTheme.background
+
+                    RadialGradient(
+                        colors: [AppTheme.accent.opacity(0.08), .clear],
+                        center: .topTrailing,
+                        startRadius: 0,
+                        endRadius: 320
+                    )
+
+                    LinearGradient(
+                        colors: [AppTheme.surface.opacity(0.22), .clear],
+                        startPoint: .top,
+                        endPoint: .center
+                    )
+                }
+                .ignoresSafeArea()
+            }
     }
 }
 

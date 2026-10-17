@@ -12,7 +12,7 @@ struct NoticePopupView: View {
 
     var body: some View {
         ZStack {
-            Color.black.opacity(0.4)
+            Color.black.opacity(0.46)
                 .ignoresSafeArea()
                 .onTapGesture {
                     onDismiss()
@@ -21,15 +21,18 @@ struct NoticePopupView: View {
             VStack(spacing: 18) {
                 Image(systemName: icon)
                     .font(.system(size: 22, weight: .bold))
-                    .foregroundColor(.black.opacity(0.82))
-                    .frame(width: 48, height: 48)
-                    .background(Circle().fill(AppTheme.accent))
+                    .foregroundColor(AppTheme.accent)
+                    .frame(width: 52, height: 52)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(AppTheme.accentSoft)
+                    )
 
-                Text(attributedText(from: notice.titleSegments, fontSize: 18, fontWeight: .bold))
+                Text(attributedText(from: notice.titleSegments, fontSize: 20, fontWeight: .bold))
                     .multilineTextAlignment(.center)
                     .foregroundColor(AppTheme.textPrimary)
 
-                Text(attributedText(from: notice.messageSegments, fontSize: 15, fontWeight: .regular))
+                Text(attributedText(from: notice.messageSegments, fontSize: 14, fontWeight: .regular))
                     .multilineTextAlignment(.leading)
                     .foregroundColor(AppTheme.textSecondary)
                     .lineSpacing(4)
@@ -51,7 +54,7 @@ struct NoticePopupView: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: AppTheme.radiusLarge, style: .continuous)
-                    .stroke(AppTheme.border, lineWidth: 0.5)
+                    .stroke(AppTheme.border.opacity(0.7), lineWidth: 0.5)
             )
             .shadow(color: Color.black.opacity(0.18), radius: 24, x: 0, y: 12)
         }

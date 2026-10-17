@@ -46,7 +46,13 @@ struct DownloadPickerView: View {
                                     )
                                     .overlay(
                                         RoundedRectangle(cornerRadius: AppTheme.radiusMedium, style: .continuous)
-                                            .stroke(selectedIDs.contains(episode.id) ? AppTheme.accent.opacity(0.45) : AppTheme.border, lineWidth: 0.5)
+                                            .stroke(selectedIDs.contains(episode.id) ? AppTheme.accent.opacity(0.45) : AppTheme.border.opacity(0.7), lineWidth: 0.5)
+                                    )
+                                    .shadow(
+                                        color: selectedIDs.contains(episode.id) ? AppTheme.accent.opacity(0.08) : AppTheme.cardShadow,
+                                        radius: 8,
+                                        x: 0,
+                                        y: 4
                                     )
                                 }
                                 .buttonStyle(PressableScaleButtonStyle())
@@ -57,7 +63,7 @@ struct DownloadPickerView: View {
                     }
                 }
             }
-            .background(AppTheme.background.ignoresSafeArea())
+            .appScreenBackground()
             .navigationTitle("选择下载剧集")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
