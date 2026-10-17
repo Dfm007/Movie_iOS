@@ -1,4 +1,5 @@
 import AVKit
+import Combine
 import SwiftUI
 import UIKit
 import VideoPlayerContainer
@@ -12,6 +13,7 @@ struct PlayerView: View {
     var onClose: () -> Void
 
     @StateObject private var model: VPCPlayerModel
+    let orientationState: PlayerOrientationState
     @State private var showEpisodePicker = false
     private let lockLeadingPadding: CGFloat = -6
 
@@ -22,6 +24,7 @@ struct PlayerView: View {
         source: PlaySource,
         allSources: [PlaySource] = [],
         startAt: Double = 0,
+        orientationState: PlayerOrientationState,
         onProgress: @escaping (Double, Double) -> Void,
         onClose: @escaping () -> Void
     ) {
@@ -29,6 +32,7 @@ struct PlayerView: View {
         self.source = source
         self.allSources = allSources
         self.startAt = startAt
+        self.orientationState = orientationState
         self.onProgress = onProgress
         self.onClose = onClose
         _model = StateObject(
@@ -68,6 +72,7 @@ struct PlayerView: View {
         .onAppear { configurePlayer() }
         .onDisappear { model.stop() }
         .onChange(of: model.isFullScreen) { fullScreen in
+            orientationState.isFullScreen = fullScreen
             PlayerOrientation.setFullScreen(fullScreen)
         }
         .sheet(isPresented: $showEpisodePicker) {
@@ -136,7 +141,8 @@ struct PlayerView: View {
                             VPCHalfScreenBottomControls(model: model)
                         }
                     }
-                    .padding(.bottom, 10)
+                    // 全屏时给系统底部上滑手势留出安全距离，避免误触进度条。
+                    .padding(.bottom, model.isFullScreen ? 28 : 10)
                     .transition(.opacity)
                 }
             }
@@ -222,11 +228,15 @@ struct PlayerView: View {
     }
 }
 
+final class PlayerOrientationState: ObservableObject {
+    @Published var isFullScreen = false
+}
+
 enum PlayerOrientation {
     static func setFullScreen(_ fullScreen: Bool) {
-        guard let scene = UIApplication.shared.connectedScenes
-            .compactMap({ $0 as? UIWindowScene })
-            .first(where: { $0.activationState == .foregroundActive }) else {
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        guard let scene = scenes.first(where: { $0.activationState == .foregroundActive })
+            ?? scenes.first(where: { $0.activationState != .background }) else {
             return
         }
 

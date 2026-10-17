@@ -52,11 +52,19 @@ final class VPCPlayerModel: ObservableObject {
     private var lastReportedProgressTime: Double = -1
     private var handledFailureItemID: ObjectIdentifier?
     private var dragStartTime: Double?
+    private var horizontalDragLastTime: Date?
+    private var horizontalDragLastTranslation: CGFloat = 0
+    private var horizontalDragTargetTime: Double = 0
     private var dragStartBrightness: CGFloat?
     private var dragStartVolume: Float?
     private var previousRate: Float = 1
     private var controlsHideWorkItem: DispatchWorkItem?
     private var longPressActive = false
+
+    /// 手势防误触：位移超过阈值且方向明显占优后才开始处理。
+    private static let horizontalDragActivationDistance: CGFloat = 20
+    private static let verticalDragActivationDistance: CGFloat = 14
+    private static let dragDirectionDominance: CGFloat = 1.15
 
     init(
         movieTitle: String,
@@ -498,33 +506,71 @@ final class VPCPlayerModel: ObservableObject {
             return
         }
 
+        let horizontalDistance = abs(value.translation.width)
+        let verticalDistance = abs(value.translation.height)
+
         if dragStartTime == nil {
+            guard horizontalDistance >= Self.horizontalDragActivationDistance,
+                  horizontalDistance > verticalDistance * Self.dragDirectionDominance else {
+                return
+            }
             dragStartTime = metrics.currentTime
+            horizontalDragTargetTime = metrics.currentTime
+            horizontalDragLastTime = value.time
+            horizontalDragLastTranslation = value.translation.width
+        } else {
+            updateHorizontalDragTarget(with: value)
         }
 
-        let width = max(CGFloat(context.viewSize.width), 1)
-        let delta = Double(value.translation.width / width) * metrics.duration
-        let target = min(max((dragStartTime ?? metrics.currentTime) + delta, 0), metrics.duration)
+        let target = horizontalDragTargetTime
 
         switch event.action {
         case .start:
             hint.show("\(VPCPlaybackMetrics.formatTime(target)) / \(VPCPlaybackMetrics.formatTime(metrics.duration))")
         case .end:
+            guard dragStartTime != nil else { return }
             // 进度条自身正在拖动时，忽略播放器容器的水平拖动结束事件。
             if metrics.isDragging {
-                dragStartTime = nil
+                resetHorizontalDragState()
                 return
             }
-            seek(to: target)
-            dragStartTime = nil
+            seek(to: horizontalDragTargetTime)
+            resetHorizontalDragState()
             hint.clear(after: 0.6)
         }
+    }
+
+    /// 对齐 ZFPlayer 的水平手势：按拖动速度累计目标时间。
+    private func updateHorizontalDragTarget(with value: DragGesture.Value) {
+        guard let lastTime = horizontalDragLastTime else { return }
+        let dt = max(value.time.timeIntervalSince(lastTime), 1.0 / 120.0)
+        let dx = value.translation.width - horizontalDragLastTranslation
+        let velocityX = Double(dx) / dt
+        let next = horizontalDragTargetTime + velocityX / 200
+        horizontalDragTargetTime = min(max(next, 0), metrics.duration)
+        horizontalDragLastTime = value.time
+        horizontalDragLastTranslation = value.translation.width
+    }
+
+    private func resetHorizontalDragState() {
+        dragStartTime = nil
+        horizontalDragLastTime = nil
+        horizontalDragLastTranslation = 0
+        horizontalDragTargetTime = 0
     }
 
     private func handleBrightnessDrag(_ event: GestureService.GestureEvent) {
         guard !isLocked else { return }
         guard case let .drag(value) = event.value else { return }
+
+        let horizontalDistance = abs(value.translation.width)
+        let verticalDistance = abs(value.translation.height)
+
         if dragStartBrightness == nil {
+            guard verticalDistance >= Self.verticalDragActivationDistance,
+                  verticalDistance > horizontalDistance * Self.dragDirectionDominance else {
+                return
+            }
             dragStartBrightness = UIScreen.main.brightness
         }
 
@@ -543,7 +589,15 @@ final class VPCPlayerModel: ObservableObject {
     private func handleVolumeDrag(_ event: GestureService.GestureEvent) {
         guard !isLocked else { return }
         guard case let .drag(value) = event.value else { return }
+
+        let horizontalDistance = abs(value.translation.width)
+        let verticalDistance = abs(value.translation.height)
+
         if dragStartVolume == nil {
+            guard verticalDistance >= Self.verticalDragActivationDistance,
+                  verticalDistance > horizontalDistance * Self.dragDirectionDominance else {
+                return
+            }
             dragStartVolume = AVAudioSession.sharedInstance().outputVolume
         }
 

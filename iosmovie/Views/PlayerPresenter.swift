@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 import UIKit
 
@@ -96,6 +97,9 @@ final class PlayerWindowPresenter {
 }
 
 final class PlayerHostingController: UIHostingController<PlayerView> {
+    private let orientationState: PlayerOrientationState
+    private var orientationCancellable: AnyCancellable?
+
     init(
         title: String,
         source: PlaySource,
@@ -104,12 +108,15 @@ final class PlayerHostingController: UIHostingController<PlayerView> {
         onProgress: @escaping (Double, Double) -> Void,
         onClose: @escaping () -> Void
     ) {
+        let orientationState = PlayerOrientationState()
+        self.orientationState = orientationState
         super.init(
             rootView: PlayerView(
                 title: title,
                 source: source,
                 allSources: allSources,
                 startAt: startAt,
+                orientationState: orientationState,
                 onProgress: onProgress,
                 onClose: onClose
             )
@@ -120,11 +127,43 @@ final class PlayerHostingController: UIHostingController<PlayerView> {
         nil
     }
 
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAppDidBecomeActive),
+            name: UIApplication.didBecomeActiveNotification,
+            object: nil
+        )
+        orientationCancellable = orientationState.$isFullScreen
+            .removeDuplicates()
+            .sink { [weak self] _ in
+                self?.setNeedsUpdateOfSupportedInterfaceOrientations()
+            }
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    @objc private func handleAppDidBecomeActive() {
+        guard orientationState.isFullScreen else { return }
+        // 等 App 重新激活后的窗口布局完成，再请求一次横屏，避免被系统恢复成竖屏。
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.orientationState.isFullScreen else { return }
+            PlayerOrientation.setFullScreen(true)
+        }
+    }
+
     override var shouldAutorotate: Bool {
         true
     }
 
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
-        .all
+        orientationState.isFullScreen ? .landscapeRight : .portrait
+    }
+
+    override var preferredInterfaceOrientationForPresentation: UIInterfaceOrientation {
+        orientationState.isFullScreen ? .landscapeRight : .portrait
     }
 }
