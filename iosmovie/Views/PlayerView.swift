@@ -69,8 +69,13 @@ struct PlayerView: View {
             }
         }
         .background(AppTheme.background)
-        .onAppear { configurePlayer() }
-        .onDisappear { model.stop() }
+        .onAppear {
+            orientationState.isFullScreen = model.isFullScreen
+            configurePlayer()
+        }
+        .onDisappear {
+            model.stop()
+        }
         .onChange(of: model.isFullScreen) { fullScreen in
             orientationState.isFullScreen = fullScreen
             PlayerOrientation.setFullScreen(fullScreen)
@@ -229,6 +234,8 @@ struct PlayerView: View {
 }
 
 final class PlayerOrientationState: ObservableObject {
+    static let shared = PlayerOrientationState()
+
     @Published var isFullScreen = false
 }
 

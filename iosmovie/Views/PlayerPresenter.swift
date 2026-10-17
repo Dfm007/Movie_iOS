@@ -64,8 +64,16 @@ final class PlayerWindowPresenter {
     }
 
     func dismiss() {
-        playerVC?.dismiss(animated: false)
-        playerVC = nil
+        guard let vc = playerVC else { return }
+
+        // 先解除播放器的横屏锁定，再关闭；关闭完成后再确保根页面回到竖屏。
+        vc.prepareForDismissal()
+        PlayerOrientation.setFullScreen(false)
+        vc.dismiss(animated: false) { [weak self] in
+            self?.playerVC = nil
+            PlayerOrientation.setFullScreen(false)
+            Self.keyWindow()?.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
+        }
     }
 
     private static func topViewController() -> UIViewController? {
@@ -108,7 +116,7 @@ final class PlayerHostingController: UIHostingController<PlayerView> {
         onProgress: @escaping (Double, Double) -> Void,
         onClose: @escaping () -> Void
     ) {
-        let orientationState = PlayerOrientationState()
+        let orientationState = PlayerOrientationState.shared
         self.orientationState = orientationState
         super.init(
             rootView: PlayerView(
@@ -125,6 +133,11 @@ final class PlayerHostingController: UIHostingController<PlayerView> {
 
     @MainActor required dynamic init?(coder aDecoder: NSCoder) {
         nil
+    }
+
+    func prepareForDismissal() {
+        orientationState.isFullScreen = false
+        setNeedsUpdateOfSupportedInterfaceOrientations()
     }
 
     override func viewDidLoad() {

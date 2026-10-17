@@ -1,7 +1,9 @@
 import SwiftUI
+import UIKit
 
 @main
 struct iosmovieApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @AppStorage("appearance_mode") private var appearanceMode = "system"
 
     init() {
@@ -23,5 +25,15 @@ struct iosmovieApp: App {
         case "dark": return .dark
         default: return nil
         }
+    }
+}
+
+final class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(
+        _ application: UIApplication,
+        supportedInterfaceOrientationsFor window: UIWindow?
+    ) -> UIInterfaceOrientationMask {
+        // 普通页面固定竖屏；只有播放器全屏时才允许横屏。
+        PlayerOrientationState.shared.isFullScreen ? .landscapeRight : .portrait
     }
 }
